@@ -41,6 +41,8 @@ struct ContentView: View {
     @State private var previewFile: PDFFile?
     @State private var renameTarget: PDFFile?
     @State private var renameText: String = ""
+    @State private var deleteTarget: PDFFile?
+    @State private var showDeleteDialog = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -53,7 +55,8 @@ struct ContentView: View {
                     onConvertFiles: { convertPhotosToPDF() },
                     onPreview: { previewSavedFile($0) },
                     onShare: { shareSavedFile($0) },
-                    onRename: { beginRenamingFile($0) }
+                    onRename: { beginRenamingFile($0) },
+                    onDelete: { confirmDeletion(for: $0) }
                 )
                 .tabItem { Label("Files", systemImage: "doc") }
                 .tag(Tab.files)
@@ -136,6 +139,17 @@ struct ContentView: View {
                 shareItem = nil
             }
         }
+        .confirmationDialog("Delete PDF?", isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
+            Button("🗑️ Delete", role: .destructive) {
+                deleteFile(file)
+            }
+            Button("Cancel", role: .cancel) {
+                deleteTarget = nil
+                showDeleteDialog = false
+            }
+        } message: { file in
+            Text("This will remove \"\(file.name)\" from your device.")
+        }
         .alert(item: $alertContext) { context in
             Alert(
                 title: Text(context.title),
@@ -191,6 +205,29 @@ struct ContentView: View {
     private func beginRenamingFile(_ file: PDFFile) {
         renameText = file.name
         renameTarget = file
+    }
+
+    private func confirmDeletion(for file: PDFFile) {
+        deleteTarget = file
+        showDeleteDialog = true
+    }
+
+    private func deleteFile(_ file: PDFFile) {
+        do {
+            try PDFStorage.delete(file: file)
+            files.removeAll { $0.url == file.url }
+            deleteTarget = nil
+            showDeleteDialog = false
+        } catch {
+            alertContext = ScanAlert(
+                title: "Delete Failed",
+                message: "We couldn't remove the PDF. Please try again.",
+                onDismiss: {
+                    deleteTarget = nil
+                    showDeleteDialog = false
+                }
+            )
+        }
     }
 
     private func loadInitialFiles() {
@@ -327,6 +364,8 @@ struct FilesView: View {
     let onPreview: (PDFFile) -> Void
     let onShare: (PDFFile) -> Void
     let onRename: (PDFFile) -> Void
+    let onDelete: (PDFFile) -> Void
+    private let thumbnailSize = CGSize(width: 58, height: 78)
 
     var body: some View {
         NavigationView {
@@ -344,24 +383,36 @@ struct FilesView: View {
         } else {
             List {
                 ForEach(files) { file in
-                    HStack(spacing: 12) {
-                        Image(systemName: "doc.richtext")
-                            .font(.system(size: 24))
-                            .foregroundStyle(Color.accentColor)
+                    HStack(alignment: .top, spacing: 16) {
+                        PDFThumbnailView(file: file, size: thumbnailSize)
 
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text(file.name)
                                 .font(.headline)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Text(file.detailsSummary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                             Text(file.formattedDate)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
-                        Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Spacer(minLength: 0)
 
                         Menu {
-                            Button("Preview") { onPreview(file) }
-                            Button("Share") { onShare(file) }
-                            Button("Rename") { onRename(file) }
+                            Button("👀 Preview") { onPreview(file) }
+                            Button("📤 Share") { onShare(file) }
+                            Button("✏️ Rename") { onRename(file) }
+                            Divider()
+                            Button("🗑️ Delete", role: .destructive) { onDelete(file) }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                                 .font(.system(size: 18, weight: .semibold))
@@ -376,6 +427,7 @@ struct FilesView: View {
                     .onTapGesture {
                         onPreview(file)
                     }
+                    .padding(.vertical, 10)
                 }
             }
             .navigationTitle("Files")
@@ -413,7 +465,7 @@ private struct EmptyFilesView: View {
                 Button {
                     onScanDocuments()
                 } label: {
-                    Label("Scan Documents", systemImage: "camera")
+                    Label("Scan Docs", systemImage: "camera")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -437,15 +489,41 @@ struct PDFFile: Identifiable {
     let url: URL
     var name: String
     let date: Date
+    let pageCount: Int
+    let fileSize: Int64
 
     var id: URL { url }
 
     var formattedDate: String {
+        Self.dateFormatter.string(from: date)
+    }
+
+    var pageSummary: String {
+        let count = max(pageCount, 0)
+        return count == 1 ? "1 Page" : "\(count) Pages"
+    }
+
+    var formattedSize: String {
+        Self.sizeFormatter.string(fromByteCount: fileSize)
+    }
+
+    var detailsSummary: String {
+        "\(pageSummary) - \(formattedSize)"
+    }
+
+    private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short
-        return f.string(from: date)
-    }
+        return f
+    }()
+
+    private static let sizeFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.allowsNonnumericFormatting = false
+        return formatter
+    }()
 }
 
 struct ScannedDocument: Identifiable {
@@ -670,6 +748,53 @@ struct PDFPreviewView: UIViewRepresentable {
     }
 }
 
+struct PDFThumbnailView: View {
+    let file: PDFFile
+    let size: CGSize
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .transition(.opacity.combined(with: .scale))
+            } else {
+                Image(systemName: "doc")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .task(id: file.url) {
+            await loadThumbnail()
+        }
+        .onChange(of: file.url) { _, _ in
+            image = nil
+        }
+    }
+
+    private func loadThumbnail() async {
+        if image != nil { return }
+        if let generated = await PDFThumbnailGenerator.shared.thumbnail(for: file.url, size: size) {
+            await MainActor.run {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    image = generated
+                }
+            }
+        }
+    }
+}
+
 struct SavedPDFDetailView: View {
     let file: PDFFile
 
@@ -881,7 +1006,7 @@ enum PDFStorage {
         guard let directory = documentsDirectory(),
               let urls = try? FileManager.default.contentsOfDirectory(
                 at: directory,
-                includingPropertiesForKeys: [.contentModificationDateKey, .creationDateKey],
+                includingPropertiesForKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey],
                 options: [.skipsHiddenFiles]
               ) else {
             return []
@@ -890,9 +1015,17 @@ enum PDFStorage {
         let pdfs = urls.filter { $0.pathExtension.lowercased() == "pdf" }
 
         return pdfs.compactMap { url in
-            let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey])
+            let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
             let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
-            return PDFFile(url: url, name: url.deletingPathExtension().lastPathComponent, date: date)
+            let size = Int64(resourceValues?.fileSize ?? 0)
+            let pageCount = PDFDocument(url: url)?.pageCount ?? 0
+            return PDFFile(
+                url: url,
+                name: url.deletingPathExtension().lastPathComponent,
+                date: date,
+                pageCount: pageCount,
+                fileSize: size
+            )
         }
     }
 
@@ -910,10 +1043,17 @@ enum PDFStorage {
             throw ScanWorkflowError.underlying(error)
         }
 
+        let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+        let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+        let size = Int64(resourceValues?.fileSize ?? 0)
+        let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+
         return PDFFile(
             url: destination,
             name: destination.deletingPathExtension().lastPathComponent,
-            date: Date()
+            date: date,
+            pageCount: pageCount,
+            fileSize: size
         )
     }
 
@@ -923,7 +1063,13 @@ enum PDFStorage {
         let currentBase = file.url.deletingPathExtension().lastPathComponent
 
         if currentBase == sanitized {
-            return PDFFile(url: file.url, name: sanitized, date: file.date)
+            return PDFFile(
+                url: file.url,
+                name: sanitized,
+                date: file.date,
+                pageCount: file.pageCount,
+                fileSize: file.fileSize
+            )
         }
 
         let destination = uniqueURL(for: sanitized, in: directory, excluding: file.url)
@@ -934,14 +1080,26 @@ enum PDFStorage {
             throw ScanWorkflowError.underlying(error)
         }
 
-        let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey])
+        let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
         let updatedDate = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? file.date
+        let size = Int64(resourceValues?.fileSize ?? Int(file.fileSize))
+        let pageCount = PDFDocument(url: destination)?.pageCount ?? file.pageCount
 
         return PDFFile(
             url: destination,
             name: destination.deletingPathExtension().lastPathComponent,
-            date: updatedDate
+            date: updatedDate,
+            pageCount: pageCount,
+            fileSize: size
         )
+    }
+
+    static func delete(file: PDFFile) throws {
+        do {
+            try FileManager.default.removeItem(at: file.url)
+        } catch {
+            throw ScanWorkflowError.underlying(error)
+        }
     }
 
     static func prepareShareURL(for document: ScannedDocument) throws -> URL {
@@ -987,6 +1145,28 @@ enum PDFStorage {
             return String(filtered.dropLast(4))
         }
         return filtered
+    }
+}
+
+actor PDFThumbnailGenerator {
+    static let shared = PDFThumbnailGenerator()
+    private var cache: [URL: UIImage] = [:]
+
+    func thumbnail(for url: URL, size: CGSize) async -> UIImage? {
+        if let cached = cache[url] {
+            return cached
+        }
+
+        guard let document = PDFDocument(url: url),
+              let page = document.page(at: 0) else {
+            return nil
+        }
+
+        let scale = await MainActor.run { UIScreen.main.scale }
+        let targetSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let image = page.thumbnail(of: targetSize, for: .cropBox)
+        cache[url] = image
+        return image
     }
 }
 
