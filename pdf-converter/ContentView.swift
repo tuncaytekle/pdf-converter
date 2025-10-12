@@ -49,6 +49,8 @@ struct ContentView: View {
     @State private var showImporter = false
     @State private var importerTrigger = UUID()
     @State private var showConvertPicker = false
+    @State private var showWebURLPrompt = false
+    @State private var webURLInput: String = ""
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
 
@@ -147,6 +149,21 @@ struct ContentView: View {
                 shareItem = nil
             }
         }
+        .sheet(isPresented: $showWebURLPrompt) {
+            WebConversionPrompt(
+                urlString: $webURLInput,
+                onConvert: { input in
+                    let success = handleWebConversion(urlString: input)
+                    if success {
+                        showWebURLPrompt = false
+                    }
+                    return success
+                },
+                onCancel: {
+                    showWebURLPrompt = false
+                }
+            )
+        }
         .background(
             EmptyView()
                 .id(importerTrigger)
@@ -237,6 +254,12 @@ struct ContentView: View {
     }
 
     @MainActor
+    private func promptWebConversion() {
+        showCreateActions = false
+        showWebURLPrompt = true
+    }
+
+    @MainActor
     private func handleToolAction(_ action: ToolAction) {
         switch action {
         case .scanDocuments:
@@ -246,9 +269,10 @@ struct ContentView: View {
         case .convertFiles:
             convertFilesToPDF()
         case .importDocuments:
-            showCreateActions = false
             importDocuments()
-        case .convertWebPage, .editDocuments:
+        case .convertWebPage:
+            promptWebConversion()
+        case .editDocuments:
             break
         }
     }
@@ -408,6 +432,124 @@ struct ContentView: View {
                 onDismiss: nil
             )
         }
+    }
+
+    @MainActor
+    private func handleWebConversion(urlString: String) -> Bool {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            alertContext = ScanAlert(
+                title: "Invalid URL",
+                message: "Please enter a web address to convert.",
+                onDismiss: nil
+            )
+            return false
+        }
+
+        guard let resolvedURL = normalizedWebURL(from: trimmed) else {
+            alertContext = ScanAlert(
+                title: "Invalid URL",
+                message: "We couldn't understand that web address. Try including the full URL (for example, https://example.com).",
+                onDismiss: nil
+            )
+            return false
+        }
+
+        do {
+            let placeholderURL = try makeWebPlaceholderPDF(for: resolvedURL)
+            let host = resolvedURL.host?
+                .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
+                ?? "Web Page"
+            let suggestedName = defaultFileName(prefix: host)
+            pendingDocument = ScannedDocument(pdfURL: placeholderURL, fileName: suggestedName)
+            webURLInput = resolvedURL.absoluteString
+            return true
+        } catch {
+            alertContext = ScanAlert(
+                title: "Conversion Failed",
+                message: "We couldn't create a placeholder PDF. Please try again.",
+                onDismiss: nil
+            )
+            return false
+        }
+    }
+
+    private func normalizedWebURL(from input: String) -> URL? {
+        var candidate = input
+        if !candidate.contains("://") {
+            candidate = "https://\(candidate)"
+        }
+
+        guard var components = URLComponents(string: candidate) else {
+            return nil
+        }
+
+        if components.scheme == nil || components.scheme?.isEmpty == true {
+            components.scheme = "https"
+        }
+
+        guard let scheme = components.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              let host = components.host,
+              !host.isEmpty else {
+            return nil
+        }
+
+        return components.url
+    }
+
+    private func makeWebPlaceholderPDF(for url: URL) throws -> URL {
+        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("pdf")
+
+        try renderer.writePDF(to: destination) { context in
+            context.beginPage()
+
+            let currentContext = UIGraphicsGetCurrentContext()
+            currentContext?.setFillColor(UIColor.systemBackground.cgColor)
+            currentContext?.fill(pageRect)
+
+            let title = "Web Page Placeholder"
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 28, weight: .semibold),
+                .foregroundColor: UIColor.label
+            ]
+            let titleSize = title.size(withAttributes: titleAttributes)
+            let titleOrigin = CGPoint(x: (pageRect.width - titleSize.width) / 2, y: 72)
+            title.draw(at: titleOrigin, withAttributes: titleAttributes)
+
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.lineSpacing = 6
+
+            let bodyAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 14, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel,
+                .paragraphStyle: paragraphStyle
+            ]
+
+            let message = """
+            URL: \(url.absoluteString)
+
+            This is a placeholder PDF for preview and annotation.
+            TODO: Replace with the converted content fetched from the live web page.
+            """
+            let messageRect = CGRect(x: 48, y: titleOrigin.y + titleSize.height + 32, width: pageRect.width - 96, height: pageRect.height - (titleOrigin.y + titleSize.height + 64))
+            (message as NSString).draw(in: messageRect, withAttributes: bodyAttributes)
+
+            let footerAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 10, weight: .medium),
+                .foregroundColor: UIColor.tertiaryLabel
+            ]
+            let footer = "Generated on \(Self.fileNameFormatter.string(from: Date()))"
+            let footerSize = footer.size(withAttributes: footerAttributes)
+            let footerOrigin = CGPoint(x: (pageRect.width - footerSize.width) / 2, y: pageRect.height - footerSize.height - 40)
+            footer.draw(at: footerOrigin, withAttributes: footerAttributes)
+        }
+
+        return destination
     }
 
     private func makePlaceholderPDF(for originalURL: URL) throws -> URL {
@@ -1266,6 +1408,71 @@ struct AccountView: View {
             }
             .buttonStyle(.borderedProminent)
         }
+    }
+}
+
+struct WebConversionPrompt: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var urlString: String
+    let onConvert: (String) -> Bool
+    let onCancel: () -> Void
+    @FocusState private var isFieldFocused: Bool
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Web Page URL") {
+                    TextField("https://example.com/article", text: $urlString)
+                        .keyboardType(.URL)
+                        .textContentType(.URL)
+                        .autocorrectionDisabled(true)
+                        .textInputAutocapitalization(.never)
+                        .focused($isFieldFocused)
+                }
+
+                Section {
+                    Button {
+                        performConversion()
+                    } label: {
+                        Label("Convert", systemImage: "arrow.down.doc")
+                    }
+                    .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    Button("Cancel", role: .cancel) {
+                        cancel()
+                    }
+                }
+            }
+            .navigationTitle("Convert Web Page")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { cancel() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Convert") { performConversion() }
+                        .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    isFieldFocused = true
+                }
+            }
+        }
+    }
+
+    private func performConversion() {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if onConvert(trimmed) {
+            dismiss()
+        }
+    }
+
+    private func cancel() {
+        onCancel()
+        dismiss()
     }
 }
 
