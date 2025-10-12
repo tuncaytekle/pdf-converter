@@ -5,6 +5,7 @@ import PDFKit
 import UIKit
 import UniformTypeIdentifiers
 import LocalAuthentication
+import PencilKit
 
 enum Tab: Hashable {
     case files, tools, settings, account
@@ -146,8 +147,9 @@ struct ContentView: View {
                 shareItem = nil
             }
         }
-        .background(                                    // <- isolated host for “Import Documents”
+        .background(
             EmptyView()
+                .id(importerTrigger)
                 .fileImporter(
                     isPresented: $showImporter,
                     allowedContentTypes: [.pdf],
@@ -216,8 +218,16 @@ struct ContentView: View {
 
     @MainActor
     private func presentImporter() {
-        // no UUID/id hacks — just present
-        showImporter = true
+        importerTrigger = UUID()
+        let alreadyPresenting = showImporter
+        showImporter = false
+
+        Task { @MainActor in
+            if alreadyPresenting {
+                try? await Task.sleep(nanoseconds: 150_000_000)
+            }
+            showImporter = true
+        }
     }
 
     @MainActor
@@ -937,7 +947,7 @@ private struct CenterActionButton: View {
 
 struct SettingsView: View {
     @State private var showSignatureSheet = false
-    @State private var savedSignatureName: String? = nil
+    @State private var savedSignature: SignatureStore.Signature? = SignatureStore.load()
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @State private var infoSheet: InfoSheet?
     @State private var shareItem: ShareItem?
@@ -993,9 +1003,7 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showSignatureSheet) {
-                NavigationView {
-                    SignaturePlaceholderView(savedSignatureName: $savedSignatureName)
-                }
+                SignatureEditorView(signature: $savedSignature)
             }
             .sheet(item: $shareItem) { item in
                 ShareSheet(activityItems: [item.url]) {
@@ -1011,6 +1019,13 @@ struct SettingsView: View {
                         settingsAlert = nil
                     }
                 )
+            }
+        }
+        .onChange(of: savedSignature) { _, newValue in
+            if let signature = newValue {
+                SignatureStore.save(signature)
+            } else {
+                SignatureStore.clear()
             }
         }
     }
@@ -1065,9 +1080,9 @@ struct SettingsView: View {
                 HStack {
                     Image(systemName: "signature")
                     VStack(alignment: .leading) {
-                        Text(savedSignatureName == nil ? "Add signature" : "Update signature")
-                        if let savedSignatureName {
-                            Text("Current: \(savedSignatureName)")
+                        Text(savedSignature == nil ? "Add signature" : "Update signature")
+                        if let savedSignature {
+                            Text("Current: \(savedSignature.name)")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -1256,36 +1271,172 @@ struct AccountView: View {
 
 struct CreateSomethingView: View { var body: some View { NavigationView { Text("Create flow").navigationTitle("New Item") } } }
 
-struct SignaturePlaceholderView: View {
+struct SignatureEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var savedSignatureName: String?
-    @State private var signatureName: String = ""
+    @Binding var signature: SignatureStore.Signature?
+    @State private var drawing: PKDrawing
+    @State private var signatureName: String
+    @State private var showEmptyAlert = false
+
+    init(signature: Binding<SignatureStore.Signature?>) {
+        _signature = signature
+        let existingSignature = signature.wrappedValue
+        _drawing = State(initialValue: existingSignature?.drawing ?? PKDrawing())
+        _signatureName = State(initialValue: existingSignature?.name ?? "My Signature")
+    }
 
     var body: some View {
-        Form {
-            Section("Signature") {
-                TextField("Signature name", text: $signatureName)
-                Text("Draw signature feature coming soon. For now, give it a name so we can remember it for documents.")
+        NavigationView {
+            VStack(spacing: 24) {
+                SignatureCanvasView(drawing: $drawing)
+                    .frame(height: 260)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(Color(.systemBackground))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Signature Name")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    TextField("My Signature", text: $signatureName)
+                        .textFieldStyle(.roundedBorder)
+                        .textInputAutocapitalization(.words)
+                        .disableAutocorrection(true)
+                }
+
+                Spacer()
+
+                Text("Use Apple Pencil or your finger to draw your signature. Tap Clear to start over.")
                     .font(.footnote)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
             }
-
-            Section {
-                Button("Save") {
-                    savedSignatureName = signatureName.isEmpty ? "My Signature" : signatureName
-                    dismiss()
+            .padding()
+            .navigationTitle(signature == nil ? "Add Signature" : "Update Signature")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
                 }
-                .buttonStyle(.borderedProminent)
-
-                Button("Cancel", role: .cancel) {
-                    dismiss()
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveSignature() }
+                        .disabled(drawing.bounds.isEmpty)
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Clear", role: .destructive) { drawing = PKDrawing() }
+                        .disabled(drawing.bounds.isEmpty)
                 }
             }
+            .alert("Empty Signature", isPresented: $showEmptyAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Please draw your signature before saving.")
+            }
         }
-        .navigationTitle("Signature")
-        .onAppear {
-            signatureName = savedSignatureName ?? ""
+    }
+
+    private func saveSignature() {
+        guard !drawing.bounds.isEmpty else {
+            showEmptyAlert = true
+            return
         }
+
+        let trimmedName = signatureName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = trimmedName.isEmpty ? "My Signature" : trimmedName
+        let existingID = signature?.id ?? UUID()
+
+        let updatedSignature = SignatureStore.Signature(id: existingID, name: resolvedName, drawing: drawing)
+        signature = updatedSignature
+        dismiss()
+    }
+}
+
+struct SignatureCanvasView: UIViewRepresentable {
+    @Binding var drawing: PKDrawing
+
+    func makeUIView(context: Context) -> PKCanvasView {
+        let canvas = PKCanvasView()
+        canvas.delegate = context.coordinator
+        canvas.drawing = drawing
+        if #available(iOS 14.0, *) {
+            canvas.drawingPolicy = .anyInput
+        } else {
+            canvas.allowsFingerDrawing = true
+        }
+        canvas.maximumZoomScale = 1.0
+        canvas.minimumZoomScale = 1.0
+        canvas.backgroundColor = .clear
+        canvas.isOpaque = false
+        canvas.tool = PKInkingTool(.pen, color: .label, width: 5)
+        return canvas
+    }
+
+    func updateUIView(_ uiView: PKCanvasView, context: Context) {
+        if uiView.drawing != drawing {
+            uiView.drawing = drawing
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(drawing: $drawing)
+    }
+
+    final class Coordinator: NSObject, PKCanvasViewDelegate {
+        private var drawing: Binding<PKDrawing>
+
+        init(drawing: Binding<PKDrawing>) {
+            self.drawing = drawing
+        }
+
+        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            drawing.wrappedValue = canvasView.drawing
+        }
+    }
+}
+
+enum SignatureStore {
+    private static let storageKey = "SignatureStore.savedSignature"
+
+    struct Signature: Codable, Identifiable, Equatable {
+        let id: UUID
+        var name: String
+        private var drawingData: Data
+
+        init(id: UUID = UUID(), name: String, drawing: PKDrawing) {
+            self.id = id
+            self.name = name
+            self.drawingData = drawing.dataRepresentation()
+        }
+
+        var drawing: PKDrawing {
+            get {
+                (try? PKDrawing(data: drawingData)) ?? PKDrawing()
+            }
+            set {
+                drawingData = newValue.dataRepresentation()
+            }
+        }
+    }
+
+    static func load() -> Signature? {
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return nil }
+        return try? JSONDecoder().decode(Signature.self, from: data)
+    }
+
+    static func save(_ signature: Signature) {
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(signature) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: storageKey)
     }
 }
 
