@@ -4,6 +4,7 @@ import PhotosUI
 import PDFKit
 import UIKit
 import UniformTypeIdentifiers
+import LocalAuthentication
 
 enum Tab: Hashable {
     case files, tools, settings, account
@@ -45,6 +46,8 @@ struct ContentView: View {
     @State private var deleteTarget: PDFFile?
     @State private var showDeleteDialog = false
     @State private var showImporter = false
+    @State private var showConvertPicker = false
+    @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -54,7 +57,8 @@ struct ContentView: View {
                 FilesView(
                     files: $files,
                     onScanDocuments: { scanDocumentsToPDF() },
-                    onConvertFiles: { convertPhotosToPDF() },
+                    onConvertPhotos: { convertPhotosToPDF() },
+                    onConvertFiles: { convertFilesToPDF() },
                     onPreview: { previewSavedFile($0) },
                     onShare: { shareSavedFile($0) },
                     onRename: { beginRenamingFile($0) },
@@ -144,6 +148,9 @@ struct ContentView: View {
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
             handleImportResult(result)
         }
+        .fileImporter(isPresented: $showConvertPicker, allowedContentTypes: Self.convertibleContentTypes, allowsMultipleSelection: false) { result in
+            handleConvertResult(result)
+        }
         .confirmationDialog("Delete PDF?", isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
             Button("🗑️ Delete", role: .destructive) {
                 deleteFile(file)
@@ -168,6 +175,7 @@ struct ContentView: View {
         .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
             Button("📄 Scan Documents to PDF") { scanDocumentsToPDF() }
             Button("🖼️ Convert Photos to PDF") { convertPhotosToPDF() }
+            Button("📁 Convert Files to PDF") { convertFilesToPDF() }
             Button("Cancel", role: .cancel) { }
         }
     }
@@ -188,6 +196,11 @@ struct ContentView: View {
         activeScanFlow = .photoLibrary
     }
 
+    private func convertFilesToPDF() {
+        showCreateActions = false
+        showConvertPicker = true
+    }
+
     private func handleToolAction(_ action: ToolAction) {
         switch action {
         case .scanDocuments:
@@ -195,7 +208,7 @@ struct ContentView: View {
         case .convertPhotos:
             convertPhotosToPDF()
         case .convertFiles:
-            showCreateActions = true
+            convertFilesToPDF()
         case .importDocuments:
             showImporter = true
         case .convertWebPage, .editDocuments:
@@ -203,9 +216,84 @@ struct ContentView: View {
         }
     }
 
+    @MainActor
     private func previewSavedFile(_ file: PDFFile) {
-        previewFile = file
+        guard requireBiometrics else {
+            previewFile = file
+            return
+        }
+
+        Task { @MainActor in
+            await authenticateForPreview(file)
+        }
     }
+
+    @MainActor
+    private func authenticateForPreview(_ file: PDFFile) async {
+        let reason = "Preview requires Face ID / Passcode"
+        let biometricContext = LAContext()
+        biometricContext.localizedFallbackTitle = "Use Passcode"
+
+        var biometricError: NSError?
+        let canUseBiometrics = biometricContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &biometricError)
+
+        let fallbackContext = LAContext()
+        var passcodeError: NSError?
+        let canUsePasscode = fallbackContext.canEvaluatePolicy(.deviceOwnerAuthentication, error: &passcodeError)
+
+        guard canUseBiometrics || canUsePasscode else {
+            let unavailableMessage = biometricError?.localizedDescription
+                ?? passcodeError?.localizedDescription
+                ?? "This device cannot perform Face ID or passcode authentication."
+            alertContext = ScanAlert(
+                title: "Authentication Unavailable",
+                message: unavailableMessage,
+                onDismiss: nil
+            )
+            return
+        }
+
+        do {
+            let granted: Bool
+            if canUseBiometrics {
+                do {
+                    granted = try await biometricContext.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
+                } catch let laError as LAError {
+                    switch laError.code {
+                    case .userFallback, .biometryLockout:
+                        guard canUsePasscode else { throw laError }
+                        granted = try await fallbackContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
+                    default:
+                        throw laError
+                    }
+                }
+            } else {
+                granted = try await fallbackContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
+            }
+
+            handleBiometricResult(granted: granted, file: file)
+        } catch {
+            alertContext = ScanAlert(
+                title: "Authentication Error",
+                message: error.localizedDescription,
+                onDismiss: nil
+            )
+        }
+    }
+
+    @MainActor
+    private func handleBiometricResult(granted: Bool, file: PDFFile) {
+        if granted {
+            previewFile = file
+        } else {
+            alertContext = ScanAlert(
+                title: "Authentication Failed",
+                message: "We couldn't verify your identity.",
+                onDismiss: nil
+            )
+        }
+    }
+
 
     private func shareSavedFile(_ file: PDFFile) {
         shareItem = nil
@@ -281,6 +369,87 @@ struct ContentView: View {
                 onDismiss: nil
             )
         }
+    }
+
+    private func handleConvertResult(_ result: Result<[URL], Error>) {
+        showConvertPicker = false
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            do {
+                let placeholder = try makePlaceholderPDF(for: url)
+                let baseName = url.deletingPathExtension().lastPathComponent
+                let suggestedName = "\(baseName) PDF"
+                pendingDocument = ScannedDocument(pdfURL: placeholder, fileName: suggestedName)
+            } catch {
+                alertContext = ScanAlert(
+                    title: "Conversion Failed",
+                    message: "We couldn't prepare a PDF preview. Please try again.",
+                    onDismiss: nil
+                )
+            }
+        case .failure(let error):
+            if let nsError = error as NSError?, nsError.code == NSUserCancelledError {
+                return
+            }
+            alertContext = ScanAlert(
+                title: "Conversion Failed",
+                message: "We couldn't access the selected file. Please try again.",
+                onDismiss: nil
+            )
+        }
+    }
+
+    private func makePlaceholderPDF(for originalURL: URL) throws -> URL {
+        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter-ish
+        let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+        let data = renderer.pdfData { context in
+            context.beginPage()
+
+            let title = originalURL.deletingPathExtension().lastPathComponent
+            let subtitle = originalURL.pathExtension.isEmpty ? "Original file" : "Original file: .\(originalURL.pathExtension.lowercased())"
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 28, weight: .semibold),
+                .paragraphStyle: paragraphStyle
+            ]
+
+            let subtitleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel,
+                .paragraphStyle: paragraphStyle
+            ]
+
+            let messageAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 14, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel,
+                .paragraphStyle: paragraphStyle
+            ]
+
+            let titleString = "PDF Converter"
+            let convertedTitle = "\(title)\n"
+            let message = "Placeholder preview\nThe actual conversion will happen once the online service is connected."
+
+            let titleRect = CGRect(x: 40, y: 150, width: pageRect.width - 80, height: 40)
+            titleString.draw(in: titleRect, withAttributes: titleAttributes)
+
+            let subtitleRect = CGRect(x: 60, y: titleRect.maxY + 16, width: pageRect.width - 120, height: 24)
+            subtitle.draw(in: subtitleRect, withAttributes: subtitleAttributes)
+
+            let fileRect = CGRect(x: 60, y: subtitleRect.maxY + 12, width: pageRect.width - 120, height: 26)
+            convertedTitle.draw(in: fileRect, withAttributes: titleAttributes)
+
+            let messageRect = CGRect(x: 60, y: fileRect.maxY + 20, width: pageRect.width - 120, height: 80)
+            message.draw(in: messageRect, withAttributes: messageAttributes)
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("pdf")
+        try data.write(to: tempURL, options: .atomic)
+        return tempURL
     }
 
     private func loadInitialFiles() {
@@ -403,6 +572,26 @@ struct ContentView: View {
         formatter.timeStyle = .short
         return formatter
     }()
+
+    private static let convertibleExtensions: [String] = [
+        "123","602","abw","bib","bmp","cdr","cgm","cmx","csv","cwk","dbf","dif","doc","docm","docx","dot","dotm","dotx","dxf","emf","eps","epub","fodg","fodp","fods","fodt","fopd","gif","htm","html","hwp","jpeg","jpg","key","ltx","lwp","mcw","met","mml","mw","numbers","odd","odg","odm","odp","ods","odt","otg","oth","otp","ots","ott","pages","pbm","pcd","pct","pcx","pdb","pdf","pgm","png","pot","potm","potx","ppm","pps","ppt","pptm","pptx","psd","psw","pub","pwp","pxl","ras","rtf","sda","sdc","sdd","sdp","sdw","sgl","slk","smf","stc","std","sti","stw","svg","svm","swf","sxc","sxd","sxg","sxi","sxm","sxw","tga","tif","tiff","txt","uof","uop","uos","uot","vdx","vor","vsd","vsdm","vsdx","wb2","wk1","wks","wmf","wpd","wpg","wps","xbm","xhtml","xls","xlsb","xlsm","xlsx","xlt","xltm","xltx","xlw","xml","xpm","zabw"
+    ]
+
+    private static let convertibleContentTypes: [UTType] = {
+        var types = Set<UTType>()
+        for ext in convertibleExtensions {
+            if let type = UTType(filenameExtension: ext) {
+                types.insert(type)
+            } else if let type = UTType(filenameExtension: ext, conformingTo: .data) {
+                types.insert(type)
+            }
+        }
+        types.insert(.pdf)
+        if types.isEmpty {
+            types.insert(.data)
+        }
+        return Array(types)
+    }()
 }
 
 // MARK: - FilesView (replaces HomeView)
@@ -413,6 +602,7 @@ struct FilesView: View {
 
     // Callbacks provided by parent to trigger creation flows
     let onScanDocuments: () -> Void
+    let onConvertPhotos: () -> Void
     let onConvertFiles: () -> Void
     let onPreview: (PDFFile) -> Void
     let onShare: (PDFFile) -> Void
@@ -429,7 +619,11 @@ struct FilesView: View {
     @ViewBuilder
     private var filesContent: some View {
         if files.isEmpty {
-            EmptyFilesView(onScanDocuments: onScanDocuments, onConvertFiles: onConvertFiles)
+            EmptyFilesView(
+                onScanDocuments: onScanDocuments,
+                onConvertPhotos: onConvertPhotos,
+                onConvertFiles: onConvertFiles
+            )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
                 .navigationTitle("Files")
@@ -490,6 +684,7 @@ struct FilesView: View {
 
 private struct EmptyFilesView: View {
     let onScanDocuments: () -> Void
+    let onConvertPhotos: () -> Void
     let onConvertFiles: () -> Void
 
     var body: some View {
@@ -514,18 +709,20 @@ private struct EmptyFilesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            HStack(spacing: 12) {
-                Button {
-                    onScanDocuments()
-                } label: {
-                    Label("Scan Docs", systemImage: "camera")
+            VStack(spacing: 12) {
+                Button(action: onScanDocuments) {
+                    Label("Scan Documents", systemImage: "camera")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button {
-                    onConvertFiles()
-                } label: {
+                Button(action: onConvertPhotos) {
+                    Label("Convert Photos", systemImage: "photo.on.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button(action: onConvertFiles) {
                     Label("Convert Files", systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
@@ -663,9 +860,303 @@ private struct CenterActionButton: View {
 
 // MARK: - Example tab content
 
-struct SettingsView: View { var body: some View { NavigationView { Text("Settings").navigationTitle("Settings") } } }
-struct AccountView: View { var body: some View { NavigationView { Text("Account").navigationTitle("Account") } } }
+struct SettingsView: View {
+    @State private var showSignatureSheet = false
+    @State private var savedSignatureName: String? = nil
+    @SceneStorage("requireBiometrics") private var requireBiometrics = false
+    @State private var infoSheet: InfoSheet?
+    @State private var shareItem: ShareItem?
+    @State private var showSupportAlert = false
+
+    private enum InfoSheet: Identifiable {
+        case faq, terms, privacy
+
+        var id: Int {
+            switch self {
+            case .faq: return 0
+            case .terms: return 1
+            case .privacy: return 2
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .faq: return "FAQ"
+            case .terms: return "Terms of Use"
+            case .privacy: return "Privacy Policy"
+            }
+        }
+
+        var message: String {
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi commodo quam eget ligula consectetur, ut fermentum massa luctus."
+        }
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                subscriptionSection
+                settingsSection
+                infoSection
+                supportSection
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Settings")
+            .sheet(item: $infoSheet) { sheet in
+                NavigationView {
+                    ScrollView {
+                        Text(sheet.message)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .navigationTitle(sheet.title)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { infoSheet = nil }
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showSignatureSheet) {
+                NavigationView {
+                    SignaturePlaceholderView(savedSignatureName: $savedSignatureName)
+                }
+            }
+            .sheet(item: $shareItem) { item in
+                ShareSheet(activityItems: [item.url]) {
+                    item.cleanupHandler?()
+                    shareItem = nil
+                }
+            }
+            .alert("Contact Support", isPresented: $showSupportAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Email us at pdfconverter@roguewaveapps.com and we’ll be happy to help!")
+            }
+        }
+    }
+
+    private var subscriptionSection: some View {
+        Section("Subscription") {
+            Button {
+                // TODO: Hook into real purchase flow
+            } label: {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .center, spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.12))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "sparkles")
+                                .font(.headline)
+                                .foregroundStyle(.blue)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Upgrade to PDF Converter Pro")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("Unlock unlimited conversions and pro tools")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Text("Start your free trial today and supercharge your workflow")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 56)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.12))
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var settingsSection: some View {
+        Section("Settings") {
+            Button {
+                showSignatureSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "signature")
+                    VStack(alignment: .leading) {
+                        Text(savedSignatureName == nil ? "Add signature" : "Update signature")
+                        if let savedSignatureName {
+                            Text("Current: \(savedSignatureName)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Toggle(isOn: $requireBiometrics) {
+                VStack(alignment: .leading) {
+                    Text("Require Face ID / Passcode")
+                    Text("Ask for Face ID or passcode before previewing files")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var infoSection: some View {
+        Section("Info") {
+            Button { infoSheet = .faq } label: {
+                Label("FAQ", systemImage: "questionmark.circle")
+            }
+            Button { infoSheet = .terms } label: {
+                Label("Terms of Use", systemImage: "doc.append")
+            }
+            Button { infoSheet = .privacy } label: {
+                Label("Privacy Policy", systemImage: "lock.shield")
+            }
+        }
+    }
+
+    private var supportSection: some View {
+        Section("Support") {
+            Button {
+                if let shareURL = URL(string: "https://roguewaveapps.com/pdf-converter") {
+                    shareItem = ShareItem(url: shareURL, cleanupHandler: nil)
+                }
+            } label: {
+                Label("Share App", systemImage: "square.and.arrow.up")
+            }
+
+            Button {
+                showSupportAlert = true
+            } label: {
+                Label("Contact Support", systemImage: "envelope")
+            }
+        }
+    }
+}
+
+struct AccountView: View {
+    // TODO: Replace with real subscription status
+    @State private var isSubscribed = false
+
+    private let featureList: [(String, String)] = [
+        ("🚀", "Unlimited document conversions"),
+        ("📸", "Batch photo to PDF conversion"),
+        ("🗂️", "Cloud backup for all your files"),
+        ("🖋️", "Advanced editing & annotations"),
+        ("🔒", "Secure passcode-protected PDFs"),
+        ("🤝", "Priority support & new features")
+    ]
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    statusSection
+                    featuresSection
+                    actionButton
+                }
+                .padding()
+            }
+            .navigationTitle("Account")
+        }
+    }
+
+    private var statusSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(isSubscribed ? "You're a Pro!" : "Go Pro to unlock more")
+                .font(.title2.weight(.semibold))
+            Text(isSubscribed ? "Thank you for supporting PDF Converter. You currently enjoy every premium feature." : "PDF Converter Pro gives you the power tools to work with any document, anywhere.")
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var featuresSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isSubscribed ? "Your Pro features" : "Unlock these features")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(featureList, id: \.0) { item in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(item.0)
+                            .font(.title3)
+                        Text(item.1)
+                            .font(.body)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        if isSubscribed {
+            Button {
+                // Placeholder for manage subscription
+            } label: {
+                Label("Manage Subscription", systemImage: "gearshape")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+        } else {
+            Button {
+                // Placeholder subscribe action
+            } label: {
+                Label("Start Free Trial", systemImage: "sparkles")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+}
+
 struct CreateSomethingView: View { var body: some View { NavigationView { Text("Create flow").navigationTitle("New Item") } } }
+
+struct SignaturePlaceholderView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var savedSignatureName: String?
+    @State private var signatureName: String = ""
+
+    var body: some View {
+        Form {
+            Section("Signature") {
+                TextField("Signature name", text: $signatureName)
+                Text("Draw signature feature coming soon. For now, give it a name so we can remember it for documents.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button("Save") {
+                    savedSignatureName = signatureName.isEmpty ? "My Signature" : signatureName
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Cancel", role: .cancel) {
+                    dismiss()
+                }
+            }
+        }
+        .navigationTitle("Signature")
+        .onAppear {
+            signatureName = savedSignatureName ?? ""
+        }
+    }
+}
 
 struct ToolsView: View {
     // Adaptive: fits as many columns as will cleanly fit (usually 2 on iPhone, 3 on iPad)
