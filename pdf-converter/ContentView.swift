@@ -230,52 +230,25 @@ struct ContentView: View {
 
     @MainActor
     private func authenticateForPreview(_ file: PDFFile) async {
-        let reason = "Preview requires Face ID / Passcode"
-        let biometricContext = LAContext()
-        biometricContext.localizedFallbackTitle = "Use Passcode"
+        let result = await BiometricAuthenticator.authenticate(reason: "Preview requires Face ID / Passcode")
 
-        var biometricError: NSError?
-        let canUseBiometrics = biometricContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &biometricError)
-
-        let fallbackContext = LAContext()
-        var passcodeError: NSError?
-        let canUsePasscode = fallbackContext.canEvaluatePolicy(.deviceOwnerAuthentication, error: &passcodeError)
-
-        guard canUseBiometrics || canUsePasscode else {
-            let unavailableMessage = biometricError?.localizedDescription
-                ?? passcodeError?.localizedDescription
-                ?? "This device cannot perform Face ID or passcode authentication."
+        switch result {
+        case .success:
+            handleBiometricResult(granted: true, file: file)
+        case .failed:
+            handleBiometricResult(granted: false, file: file)
+        case .cancelled:
+            break
+        case .unavailable(let message):
             alertContext = ScanAlert(
                 title: "Authentication Unavailable",
-                message: unavailableMessage,
+                message: message,
                 onDismiss: nil
             )
-            return
-        }
-
-        do {
-            let granted: Bool
-            if canUseBiometrics {
-                do {
-                    granted = try await biometricContext.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
-                } catch let laError as LAError {
-                    switch laError.code {
-                    case .userFallback, .biometryLockout:
-                        guard canUsePasscode else { throw laError }
-                        granted = try await fallbackContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
-                    default:
-                        throw laError
-                    }
-                }
-            } else {
-                granted = try await fallbackContext.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
-            }
-
-            handleBiometricResult(granted: granted, file: file)
-        } catch {
+        case .error(let message):
             alertContext = ScanAlert(
                 title: "Authentication Error",
-                message: error.localizedDescription,
+                message: message,
                 onDismiss: nil
             )
         }
@@ -829,6 +802,81 @@ enum ScanWorkflowError: Error {
     }
 }
 
+private enum BiometricAuthResult {
+    case success
+    case failed
+    case cancelled
+    case unavailable(String)
+    case error(String)
+}
+
+private enum BiometricAuthenticator {
+    @MainActor
+    static func authenticate(reason: String) async -> BiometricAuthResult {
+        let biometricContext = LAContext()
+        biometricContext.localizedFallbackTitle = "Use Passcode"
+
+        var biometricError: NSError?
+        let canUseBiometrics = biometricContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &biometricError)
+
+        let fallbackContext = LAContext()
+        var passcodeError: NSError?
+        let canUsePasscode = fallbackContext.canEvaluatePolicy(.deviceOwnerAuthentication, error: &passcodeError)
+
+        guard canUseBiometrics || canUsePasscode else {
+            let message = biometricError?.localizedDescription
+                ?? passcodeError?.localizedDescription
+                ?? "This device cannot perform Face ID or passcode authentication."
+            return .unavailable(message)
+        }
+
+        do {
+            if canUseBiometrics {
+                do {
+                    let granted = try await evaluate(policy: .deviceOwnerAuthenticationWithBiometrics, using: biometricContext, reason: reason)
+                    return granted ? .success : .failed
+                } catch let laError as LAError {
+                    switch laError.code {
+                    case .userFallback, .biometryLockout:
+                        guard canUsePasscode else { return .error(laError.localizedDescription) }
+                        let granted = try await evaluate(policy: .deviceOwnerAuthentication, using: fallbackContext, reason: reason)
+                        return granted ? .success : .failed
+                    case .userCancel, .systemCancel:
+                        return .cancelled
+                    default:
+                        return .error(laError.localizedDescription)
+                    }
+                }
+            }
+
+            let granted = try await evaluate(policy: .deviceOwnerAuthentication, using: fallbackContext, reason: reason)
+            return granted ? .success : .failed
+        } catch let laError as LAError {
+            switch laError.code {
+            case .userCancel, .systemCancel:
+                return .cancelled
+            default:
+                return .error(laError.localizedDescription)
+            }
+        } catch {
+            return .error(error.localizedDescription)
+        }
+    }
+
+    @MainActor
+    private static func evaluate(policy: LAPolicy, using context: LAContext, reason: String) async throws -> Bool {
+        try await withCheckedThrowingContinuation { continuation in
+            context.evaluatePolicy(policy, localizedReason: reason) { success, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: success)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Center Button
 
 private struct CenterActionButton: View {
@@ -866,7 +914,7 @@ struct SettingsView: View {
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @State private var infoSheet: InfoSheet?
     @State private var shareItem: ShareItem?
-    @State private var showSupportAlert = false
+    @State private var settingsAlert: SettingsAlert?
 
     private enum InfoSheet: Identifiable {
         case faq, terms, privacy
@@ -928,10 +976,14 @@ struct SettingsView: View {
                     shareItem = nil
                 }
             }
-            .alert("Contact Support", isPresented: $showSupportAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Email us at pdfconverter@roguewaveapps.com and we’ll be happy to help!")
+            .alert(item: $settingsAlert) { alert in
+                Alert(
+                    title: Text(alert.title),
+                    message: Text(alert.message),
+                    dismissButton: .default(Text("OK")) {
+                        settingsAlert = nil
+                    }
+                )
             }
         }
     }
@@ -996,7 +1048,20 @@ struct SettingsView: View {
                 }
             }
 
-            Toggle(isOn: $requireBiometrics) {
+            Toggle(isOn: Binding(
+                get: { requireBiometrics },
+                set: { newValue in
+                    guard newValue != requireBiometrics else { return }
+
+                    if newValue {
+                        requireBiometrics = true
+                    } else {
+                        Task { @MainActor in
+                            await promptToDisableBiometrics()
+                        }
+                    }
+                }
+            )) {
                 VStack(alignment: .leading) {
                     Text("Require Face ID / Passcode")
                     Text("Ask for Face ID or passcode before previewing files")
@@ -1004,6 +1069,36 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    @MainActor
+    private func promptToDisableBiometrics() async {
+        let result = await BiometricAuthenticator.authenticate(reason: "Turn off Face ID protection")
+
+        switch result {
+        case .success:
+            requireBiometrics = false
+        case .failed:
+            requireBiometrics = true
+            settingsAlert = SettingsAlert(
+                title: "Authentication Failed",
+                message: "We couldn't verify your identity."
+            )
+        case .cancelled:
+            requireBiometrics = true
+        case .unavailable(let message):
+            requireBiometrics = true
+            settingsAlert = SettingsAlert(
+                title: "Authentication Unavailable",
+                message: message
+            )
+        case .error(let message):
+            requireBiometrics = true
+            settingsAlert = SettingsAlert(
+                title: "Authentication Error",
+                message: message
+            )
         }
     }
 
@@ -1032,12 +1127,21 @@ struct SettingsView: View {
             }
 
             Button {
-                showSupportAlert = true
+                settingsAlert = SettingsAlert(
+                    title: "Contact Support",
+                    message: "Email us at pdfconverter@roguewaveapps.com and we’ll be happy to help!"
+                )
             } label: {
                 Label("Contact Support", systemImage: "envelope")
             }
         }
     }
+}
+
+private struct SettingsAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
 }
 
 struct AccountView: View {
