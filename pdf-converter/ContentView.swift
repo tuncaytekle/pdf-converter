@@ -3,6 +3,7 @@ import VisionKit
 import PhotosUI
 import PDFKit
 import UIKit
+import UniformTypeIdentifiers
 
 enum Tab: Hashable {
     case files, tools, settings, account
@@ -43,6 +44,7 @@ struct ContentView: View {
     @State private var renameText: String = ""
     @State private var deleteTarget: PDFFile?
     @State private var showDeleteDialog = false
+    @State private var showImporter = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -139,6 +141,9 @@ struct ContentView: View {
                 shareItem = nil
             }
         }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
+            handleImportResult(result)
+        }
         .confirmationDialog("Delete PDF?", isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
             Button("🗑️ Delete", role: .destructive) {
                 deleteFile(file)
@@ -154,7 +159,10 @@ struct ContentView: View {
             Alert(
                 title: Text(context.title),
                 message: Text(context.message),
-                dismissButton: .default(Text("OK"), action: context.onDismiss)
+                dismissButton: .default(Text("OK")) {
+                    alertContext = nil
+                    context.onDismiss?()
+                }
             )
         }
         .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
@@ -188,7 +196,9 @@ struct ContentView: View {
             convertPhotosToPDF()
         case .convertFiles:
             showCreateActions = true
-        case .importDocuments, .convertWebPage, .editDocuments:
+        case .importDocuments:
+            showImporter = true
+        case .convertWebPage, .editDocuments:
             break
         }
     }
@@ -226,6 +236,49 @@ struct ContentView: View {
                     deleteTarget = nil
                     showDeleteDialog = false
                 }
+            )
+        }
+    }
+
+    private func handleImportResult(_ result: Result<[URL], Error>) {
+        showImporter = false
+        switch result {
+        case .success(let urls):
+            guard !urls.isEmpty else { return }
+            do {
+                let imported = try PDFStorage.importDocuments(at: urls)
+                if imported.isEmpty {
+                    alertContext = ScanAlert(
+                        title: "No PDFs Imported",
+                        message: "We couldn't add any of the selected files. Please choose PDFs and try again.",
+                        onDismiss: nil
+                    )
+                    return
+                }
+                // Merge new files and keep list sorted by date desc
+                files.append(contentsOf: imported)
+                files.sort { $0.date > $1.date }
+                alertContext = ScanAlert(
+                    title: "Import Complete",
+                    message: imported.count == 1 ? "Added 1 PDF to your library." : "Added \(imported.count) PDFs to your library.",
+                    onDismiss: nil
+                )
+            } catch {
+                alertContext = ScanAlert(
+                    title: "Import Failed",
+                    message: "We couldn't import the selected files. Please try again.",
+                    onDismiss: nil
+                )
+            }
+        case .failure(let error):
+            if let nsError = error as NSError?, nsError.code == NSUserCancelledError {
+                // user cancelled, no action
+                return
+            }
+            alertContext = ScanAlert(
+                title: "Import Failed",
+                message: "We couldn't access the selected files. Please try again.",
+                onDismiss: nil
             )
         }
     }
@@ -1055,6 +1108,54 @@ enum PDFStorage {
             pageCount: pageCount,
             fileSize: size
         )
+    }
+
+    static func importDocuments(at urls: [URL]) throws -> [PDFFile] {
+        guard let directory = documentsDirectory() else {
+            throw ScanWorkflowError.failed("Unable to access the Documents folder.")
+        }
+
+        var imported: [PDFFile] = []
+
+        for sourceURL in urls {
+            var didAccess = false
+            if sourceURL.startAccessingSecurityScopedResource() {
+                didAccess = true
+            }
+            defer {
+                if didAccess {
+                    sourceURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            guard sourceURL.pathExtension.lowercased() == "pdf" else { continue }
+
+            let baseName = sanitizeFileName(sourceURL.deletingPathExtension().lastPathComponent)
+            let destination = uniqueURL(for: baseName, in: directory)
+
+            do {
+                if FileManager.default.fileExists(atPath: destination.path) {
+                    try FileManager.default.removeItem(at: destination)
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: destination)
+                let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+                let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+                let size = Int64(resourceValues?.fileSize ?? 0)
+                let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+                let file = PDFFile(
+                    url: destination,
+                    name: destination.deletingPathExtension().lastPathComponent,
+                    date: date,
+                    pageCount: pageCount,
+                    fileSize: size
+                )
+                imported.append(file)
+            } catch {
+                throw ScanWorkflowError.underlying(error)
+            }
+        }
+
+        return imported
     }
 
     static func rename(file: PDFFile, to newName: String) throws -> PDFFile {
