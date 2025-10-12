@@ -46,6 +46,7 @@ struct ContentView: View {
     @State private var deleteTarget: PDFFile?
     @State private var showDeleteDialog = false
     @State private var showImporter = false
+    @State private var importerTrigger = UUID()
     @State private var showConvertPicker = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
@@ -145,12 +146,24 @@ struct ContentView: View {
                 shareItem = nil
             }
         }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
-            handleImportResult(result)
-        }
-        .fileImporter(isPresented: $showConvertPicker, allowedContentTypes: Self.convertibleContentTypes, allowsMultipleSelection: false) { result in
-            handleConvertResult(result)
-        }
+        .background(                                    // <- isolated host for “Import Documents”
+            EmptyView()
+                .fileImporter(
+                    isPresented: $showImporter,
+                    allowedContentTypes: [.pdf],
+                    allowsMultipleSelection: true,
+                    onCompletion: handleImportResult
+                )
+        )
+        .background(                                    // <- isolated host for “Convert Files to PDF”
+            EmptyView()
+                .fileImporter(
+                    isPresented: $showConvertPicker,
+                    allowedContentTypes: Self.convertibleContentTypes,
+                    allowsMultipleSelection: false,
+                    onCompletion: handleConvertResult
+                )
+        )
         .confirmationDialog("Delete PDF?", isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
             Button("🗑️ Delete", role: .destructive) {
                 deleteFile(file)
@@ -201,6 +214,19 @@ struct ContentView: View {
         showConvertPicker = true
     }
 
+    @MainActor
+    private func presentImporter() {
+        // no UUID/id hacks — just present
+        showImporter = true
+    }
+
+    @MainActor
+    private func importDocuments() {
+        showCreateActions = false
+        presentImporter()
+    }
+
+    @MainActor
     private func handleToolAction(_ action: ToolAction) {
         switch action {
         case .scanDocuments:
@@ -210,7 +236,8 @@ struct ContentView: View {
         case .convertFiles:
             convertFilesToPDF()
         case .importDocuments:
-            showImporter = true
+            showCreateActions = false
+            importDocuments()
         case .convertWebPage, .editDocuments:
             break
         }
