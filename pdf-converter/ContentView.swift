@@ -1686,34 +1686,76 @@ struct PDFEditorView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
             PDFViewRepresentable(pdfView: controller.pdfView)
                 .edgesIgnoringSafeArea(.bottom)
+
+            if controller.hasActiveSignaturePlacement() {
+                SignaturePlacementOverlay(
+                    controller: controller,
+                    onConfirm: {
+                        if !controller.confirmSignaturePlacement() {
+                            inlineAlert = InlineAlert(
+                                title: "Placement Failed",
+                                message: "We couldn't add the signature to this page. Please try again."
+                            )
+                        }
+                    },
+                    onCancel: {
+                        controller.cancelSignaturePlacement()
+                    }
+                )
+            }
         }
         .background(Color(.systemBackground).ignoresSafeArea())
+        .onAppear {
+            cachedSignature = SignatureStore.load()
+        }
         .navigationTitle(context.file.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { onCancel() }
+                Button("Cancel") {
+                    if controller.hasActiveSignaturePlacement() {
+                        controller.cancelSignaturePlacement()
+                    }
+                    onCancel()
+                }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { onSave() }
+                Button("Save") {
+                    if controller.hasActiveSignaturePlacement() {
+                        if controller.confirmSignaturePlacement() {
+                            onSave()
+                        } else {
+                            inlineAlert = InlineAlert(
+                                title: "Placement Failed",
+                                message: "We couldn't add the signature to this page. Please try again."
+                            )
+                        }
+                    } else {
+                        onSave()
+                    }
+                }
             }
             ToolbarItemGroup(placement: .bottomBar) {
                 Button {
-                    guard let signature = cachedSignature ?? SignatureStore.load() else {
+                    if controller.hasActiveSignaturePlacement() {
+                        controller.cancelSignaturePlacement()
+                    }
+
+                    cachedSignature = SignatureStore.load()
+                    guard let signature = cachedSignature else {
                         inlineAlert = InlineAlert(
                             title: "No Signature Found",
                             message: "Add a signature in Settings before inserting it here."
                         )
-                        cachedSignature = SignatureStore.load()
                         return
                     }
 
-                    if !controller.addSignature(signature) {
+                    if !controller.beginSignaturePlacement(signature) {
                         inlineAlert = InlineAlert(
-                            title: "No Page Selected",
+                            title: "Can't Insert Signature",
                             message: "Navigate to the page where you want to place the signature, then tap Insert Signature."
                         )
                     }
@@ -1751,9 +1793,27 @@ struct PDFEditorView: View {
 }
 
 @MainActor
+final class SignaturePlacementState {
+    let signature: SignatureStore.Signature
+    let uiImage: UIImage
+    let page: PDFPage
+    var pdfRect: CGRect
+
+    init(signature: SignatureStore.Signature, uiImage: UIImage, page: PDFPage, pdfRect: CGRect) {
+        self.signature = signature
+        self.uiImage = uiImage
+        self.page = page
+        self.pdfRect = pdfRect
+    }
+}
+
+@MainActor
 final class PDFEditorController: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
     let pdfView: PDFView
+    private(set) var signaturePlacement: SignaturePlacementState? {
+        didSet { objectWillChange.send() }
+    }
 
     init(document: PDFDocument) {
         let view = PDFView()
@@ -1764,6 +1824,63 @@ final class PDFEditorController: ObservableObject {
         view.backgroundColor = .systemBackground
         view.usePageViewController(true, withViewOptions: nil)
         pdfView = view
+    }
+
+    func beginSignaturePlacement(_ signature: SignatureStore.Signature) -> Bool {
+        guard let page = pdfView.currentPage else { return false }
+        guard let image = signature.makeImage() else { return false }
+
+        let pageBounds = page.bounds(for: .cropBox)
+        let maxWidth = pageBounds.width * 0.5
+        let baseWidth = min(max(image.size.width, 10), maxWidth)
+        let aspect = image.size.height / max(image.size.width, 1)
+        let baseHeight = max(baseWidth * aspect, 10)
+        let rect = CGRect(
+            x: pageBounds.midX - baseWidth / 2,
+            y: pageBounds.midY - baseHeight / 2,
+            width: baseWidth,
+            height: baseHeight
+        )
+
+        signaturePlacement = SignaturePlacementState(signature: signature, uiImage: image, page: page, pdfRect: rect)
+        return true
+    }
+
+    func viewRectForCurrentPlacement() -> CGRect? {
+        guard let placement = signaturePlacement else { return nil }
+        return pdfView.convert(placement.pdfRect, from: placement.page)
+    }
+
+    func updateSignaturePlacement(viewRect: CGRect) {
+        guard let placement = signaturePlacement else { return }
+        var pdfRect = pdfView.convert(viewRect, to: placement.page)
+        let pageBounds = placement.page.bounds(for: .cropBox)
+
+        pdfRect.size.width = max(min(pdfRect.width, pageBounds.width), 20)
+        pdfRect.size.height = max(min(pdfRect.height, pageBounds.height), 20)
+
+        pdfRect.origin.x = min(max(pdfRect.origin.x, pageBounds.minX), pageBounds.maxX - pdfRect.width)
+        pdfRect.origin.y = min(max(pdfRect.origin.y, pageBounds.minY), pageBounds.maxY - pdfRect.height)
+
+        placement.pdfRect = pdfRect
+        objectWillChange.send()
+    }
+
+    func cancelSignaturePlacement() {
+        signaturePlacement = nil
+    }
+
+    @discardableResult
+    func confirmSignaturePlacement() -> Bool {
+        guard let placement = signaturePlacement else { return true }
+        let annotation = SignatureStampAnnotation(bounds: placement.pdfRect, image: placement.uiImage)
+        placement.page.addAnnotation(annotation)
+        signaturePlacement = nil
+        return true
+    }
+
+    func hasActiveSignaturePlacement() -> Bool {
+        signaturePlacement != nil
     }
 
     func addNote() -> Bool {
@@ -1777,27 +1894,6 @@ final class PDFEditorController: ObservableObject {
         let annotation = PDFAnnotation(bounds: CGRect(origin: origin, size: size), forType: .text, withProperties: nil)
         annotation.contents = "New Note"
         annotation.color = .systemYellow
-        page.addAnnotation(annotation)
-        return true
-    }
-
-    func addSignature(_ signature: SignatureStore.Signature) -> Bool {
-        guard let page = pdfView.currentPage else { return false }
-        guard let image = signature.makeImage() else { return false }
-
-        let pageBounds = page.bounds(for: .cropBox)
-        let maxWidth = pageBounds.width * 0.5
-        let targetWidth = min(max(image.size.width, 10), maxWidth)
-        let aspect = image.size.height / max(image.size.width, 1)
-        let targetHeight = max(targetWidth * aspect, 10)
-
-        let origin = CGPoint(
-            x: pageBounds.midX - targetWidth / 2,
-            y: pageBounds.midY - targetHeight / 2
-        )
-        let annotationRect = CGRect(origin: origin, size: CGSize(width: targetWidth, height: targetHeight))
-
-        let annotation = SignatureStampAnnotation(bounds: annotationRect, image: image)
         page.addAnnotation(annotation)
         return true
     }
@@ -1817,6 +1913,96 @@ struct PDFViewRepresentable: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PDFView, context: Context) { }
+}
+
+struct SignaturePlacementOverlay: View {
+    @ObservedObject var controller: PDFEditorController
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    @State private var dragBaseRect: CGRect?
+    @State private var scaleBaseRect: CGRect?
+
+    var body: some View {
+        GeometryReader { _ in
+            if let placement = controller.signaturePlacement,
+               let viewRect = controller.viewRectForCurrentPlacement() {
+                let image = placement.uiImage
+
+                let dragGesture = DragGesture()
+                    .onChanged { value in
+                        if dragBaseRect == nil {
+                            dragBaseRect = viewRect
+                        }
+                        guard let base = dragBaseRect else { return }
+                        let newRect = base.offsetBy(dx: value.translation.width, dy: value.translation.height)
+                        controller.updateSignaturePlacement(viewRect: newRect)
+                    }
+                    .onEnded { _ in
+                        dragBaseRect = nil
+                    }
+
+                let magnificationGesture = MagnificationGesture()
+                    .onChanged { scale in
+                        if scaleBaseRect == nil {
+                            scaleBaseRect = viewRect
+                        }
+                        guard let base = scaleBaseRect else { return }
+                        let clampedScale = max(scale, 0.2)
+                        let width = max(base.width * clampedScale, 20)
+                        let height = max(base.height * clampedScale, 20)
+                        let center = CGPoint(x: base.midX, y: base.midY)
+                        let newRect = CGRect(
+                            x: center.x - width / 2,
+                            y: center.y - height / 2,
+                            width: width,
+                            height: height
+                        )
+                        controller.updateSignaturePlacement(viewRect: newRect)
+                    }
+                    .onEnded { _ in
+                        scaleBaseRect = nil
+                    }
+
+                ZStack(alignment: .bottom) {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+
+                    Image(uiImage: image)
+                        .resizable()
+                        .frame(width: viewRect.width, height: viewRect.height)
+                        .position(x: viewRect.midX, y: viewRect.midY)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.accentColor.opacity(0.9), lineWidth: 2)
+                        )
+                        .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                        .gesture(dragGesture.simultaneously(with: magnificationGesture))
+
+                    HStack(spacing: 16) {
+                        Button(role: .cancel) {
+                            onCancel()
+                        } label: {
+                            Label("Cancel", systemImage: "xmark.circle")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            onConfirm()
+                        } label: {
+                            Label("Place", systemImage: "checkmark.circle")
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding(.bottom, 16)
+                }
+            }
+        }
+        .onDisappear {
+            dragBaseRect = nil
+            scaleBaseRect = nil
+        }
+    }
 }
 
 final class SignatureStampAnnotation: PDFAnnotation {
