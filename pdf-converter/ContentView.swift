@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import VisionKit
 import PhotosUI
 import PDFKit
@@ -51,6 +52,8 @@ struct ContentView: View {
     @State private var showConvertPicker = false
     @State private var showWebURLPrompt = false
     @State private var webURLInput: String = ""
+    @State private var showEditSelector = false
+    @State private var editingContext: PDFEditingContext?
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
 
@@ -164,6 +167,34 @@ struct ContentView: View {
                 }
             )
         }
+        .sheet(isPresented: $showEditSelector) {
+            NavigationView {
+                PDFEditorSelectionView(
+                    files: $files,
+                    onSelect: { file in
+                        beginEditing(file)
+                    },
+                    onCancel: {
+                        showEditSelector = false
+                    }
+                )
+            }
+            .navigationViewStyle(.stack)
+        }
+        .sheet(item: $editingContext) { context in
+            NavigationView {
+                PDFEditorView(
+                    context: context,
+                    onSave: {
+                        saveEditedDocument(context)
+                    },
+                    onCancel: {
+                        editingContext = nil
+                    }
+                )
+            }
+            .navigationViewStyle(.stack)
+        }
         .background(
             EmptyView()
                 .id(importerTrigger)
@@ -260,6 +291,64 @@ struct ContentView: View {
     }
 
     @MainActor
+    private func promptEditDocuments() {
+        showCreateActions = false
+        refreshFilesFromDisk()
+        guard !files.isEmpty else {
+            alertContext = ScanAlert(
+                title: "No PDFs Available",
+                message: "Add or import a PDF before trying to edit it.",
+                onDismiss: nil
+            )
+            return
+        }
+        showEditSelector = true
+    }
+
+    @MainActor
+    private func beginEditing(_ file: PDFFile) {
+        guard let document = PDFDocument(url: file.url) else {
+            alertContext = ScanAlert(
+                title: "Open Failed",
+                message: "We couldn't load that PDF for editing.",
+                onDismiss: nil
+            )
+            return
+        }
+
+        showEditSelector = false
+        let context = PDFEditingContext(file: file, document: document)
+        DispatchQueue.main.async {
+            editingContext = context
+        }
+    }
+
+    @MainActor
+    private func saveEditedDocument(_ context: PDFEditingContext) {
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("pdf")
+
+        do {
+            guard context.document.write(to: tempURL) else {
+                throw PDFEditingError.writeFailed
+            }
+
+            _ = try FileManager.default.replaceItemAt(context.file.url, withItemAt: tempURL)
+            try? FileManager.default.removeItem(at: tempURL)
+            refreshFilesFromDisk()
+            editingContext = nil
+        } catch {
+            try? FileManager.default.removeItem(at: tempURL)
+            alertContext = ScanAlert(
+                title: "Save Failed",
+                message: "We couldn't save your edits. Please try again.",
+                onDismiss: nil
+            )
+        }
+    }
+
+    @MainActor
     private func handleToolAction(_ action: ToolAction) {
         switch action {
         case .scanDocuments:
@@ -273,7 +362,7 @@ struct ContentView: View {
         case .convertWebPage:
             promptWebConversion()
         case .editDocuments:
-            break
+            promptEditDocuments()
         }
     }
 
@@ -505,6 +594,7 @@ struct ContentView: View {
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("pdf")
 
+        // TODO: Replace placeholder generation with real web-to-PDF conversion once the API is ready.
         try renderer.writePDF(to: destination) { context in
             context.beginPage()
 
@@ -606,8 +696,12 @@ struct ContentView: View {
 
     private func loadInitialFiles() {
         guard !hasLoadedInitialFiles else { return }
-        files = PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
+        refreshFilesFromDisk()
         hasLoadedInitialFiles = true
+    }
+
+    private func refreshFilesFromDisk() {
+        files = PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
     }
 
     private func handleScanResult(_ result: Result<[UIImage], ScanWorkflowError>, suggestedName: String) {
@@ -1476,6 +1570,286 @@ struct WebConversionPrompt: View {
     }
 }
 
+private enum PDFEditingError: Error {
+    case writeFailed
+}
+
+final class PDFEditingContext: Identifiable {
+    let id = UUID()
+    let file: PDFFile
+    let document: PDFDocument
+
+    init(file: PDFFile, document: PDFDocument) {
+        self.file = file
+        self.document = document
+    }
+}
+
+struct PDFEditorSelectionView: View {
+    @Binding var files: [PDFFile]
+    let onSelect: (PDFFile) -> Void
+    let onCancel: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let sortedFiles = files.sorted { $0.date > $1.date }
+
+        return List {
+            if sortedFiles.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "doc")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Text("No PDFs found")
+                        .font(.headline)
+                    Text("Add or import a PDF to start editing.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 48)
+            } else {
+                ForEach(sortedFiles) { file in
+                    Button {
+                        select(file)
+                    } label: {
+                        HStack(spacing: 16) {
+                            Image(systemName: "doc.richtext")
+                                .font(.system(size: 28, weight: .regular))
+                                .foregroundStyle(Color.accentColor)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(file.name)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                Text(file.detailsSummary)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Text(file.formattedDate)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Choose PDF")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    onCancel()
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private func select(_ file: PDFFile) {
+        dismiss()
+        DispatchQueue.main.async {
+            onSelect(file)
+        }
+    }
+}
+
+struct PDFEditorView: View {
+    private struct InlineAlert: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+
+    let context: PDFEditingContext
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    @StateObject private var controller: PDFEditorController
+    @State private var inlineAlert: InlineAlert?
+    @State private var cachedSignature: SignatureStore.Signature? = SignatureStore.load()
+
+    init(context: PDFEditingContext, onSave: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        self.context = context
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _controller = StateObject(wrappedValue: PDFEditorController(document: context.document))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            PDFViewRepresentable(pdfView: controller.pdfView)
+                .edgesIgnoringSafeArea(.bottom)
+        }
+        .background(Color(.systemBackground).ignoresSafeArea())
+        .navigationTitle(context.file.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { onCancel() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { onSave() }
+            }
+            ToolbarItemGroup(placement: .bottomBar) {
+                Button {
+                    guard let signature = cachedSignature ?? SignatureStore.load() else {
+                        inlineAlert = InlineAlert(
+                            title: "No Signature Found",
+                            message: "Add a signature in Settings before inserting it here."
+                        )
+                        cachedSignature = SignatureStore.load()
+                        return
+                    }
+
+                    if !controller.addSignature(signature) {
+                        inlineAlert = InlineAlert(
+                            title: "No Page Selected",
+                            message: "Navigate to the page where you want to place the signature, then tap Insert Signature."
+                        )
+                    }
+                } label: {
+                    Label("Insert Signature", systemImage: "signature")
+                }
+
+                Button {
+                    if !controller.addNote() {
+                        inlineAlert = InlineAlert(
+                            title: "No Page Selected",
+                            message: "Navigate to the page where you want the note, then tap Add Note."
+                        )
+                    }
+                } label: {
+                    Label("Add Note", systemImage: "note.text")
+                }
+
+                Button {
+                    if !controller.undoLastAction() {
+                        inlineAlert = InlineAlert(
+                            title: "Nothing to Undo",
+                            message: "You haven't made any changes that can be undone yet."
+                        )
+                    }
+                } label: {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                }
+            }
+        }
+        .alert(item: $inlineAlert) { info in
+            Alert(title: Text(info.title), message: Text(info.message), dismissButton: .default(Text("OK")))
+        }
+    }
+}
+
+@MainActor
+final class PDFEditorController: ObservableObject {
+    let objectWillChange = ObservableObjectPublisher()
+    let pdfView: PDFView
+
+    init(document: PDFDocument) {
+        let view = PDFView()
+        view.document = document
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = .systemBackground
+        view.usePageViewController(true, withViewOptions: nil)
+        pdfView = view
+    }
+
+    func addNote() -> Bool {
+        guard let page = pdfView.currentPage else { return false }
+        let pageBounds = page.bounds(for: .cropBox)
+        let size = CGSize(width: 36, height: 36)
+        let origin = CGPoint(
+            x: pageBounds.midX - size.width / 2,
+            y: pageBounds.midY - size.height / 2
+        )
+        let annotation = PDFAnnotation(bounds: CGRect(origin: origin, size: size), forType: .text, withProperties: nil)
+        annotation.contents = "New Note"
+        annotation.color = .systemYellow
+        page.addAnnotation(annotation)
+        return true
+    }
+
+    func addSignature(_ signature: SignatureStore.Signature) -> Bool {
+        guard let page = pdfView.currentPage else { return false }
+        guard let image = signature.makeImage() else { return false }
+
+        let pageBounds = page.bounds(for: .cropBox)
+        let maxWidth = pageBounds.width * 0.5
+        let targetWidth = min(max(image.size.width, 10), maxWidth)
+        let aspect = image.size.height / max(image.size.width, 1)
+        let targetHeight = max(targetWidth * aspect, 10)
+
+        let origin = CGPoint(
+            x: pageBounds.midX - targetWidth / 2,
+            y: pageBounds.midY - targetHeight / 2
+        )
+        let annotationRect = CGRect(origin: origin, size: CGSize(width: targetWidth, height: targetHeight))
+
+        let annotation = SignatureStampAnnotation(bounds: annotationRect, image: image)
+        page.addAnnotation(annotation)
+        return true
+    }
+
+    func undoLastAction() -> Bool {
+        guard let undoManager = pdfView.undoManager, undoManager.canUndo else { return false }
+        undoManager.undo()
+        return true
+    }
+}
+
+struct PDFViewRepresentable: UIViewRepresentable {
+    let pdfView: PDFView
+
+    func makeUIView(context: Context) -> PDFView {
+        pdfView
+    }
+
+    func updateUIView(_ uiView: PDFView, context: Context) { }
+}
+
+final class SignatureStampAnnotation: PDFAnnotation {
+    private let signatureImage: UIImage
+
+    init(bounds: CGRect, image: UIImage) {
+        self.signatureImage = image
+        super.init(bounds: bounds, forType: .stamp, withProperties: nil)
+        color = .clear
+        border = nil
+    }
+
+    required init?(coder: NSCoder) {
+        signatureImage = UIImage()
+        super.init(coder: coder)
+    }
+
+    override func draw(with box: PDFDisplayBox, in context: CGContext) {
+        guard let cgImage = signatureImage.cgImage else { return }
+
+        context.saveGState()
+
+        if let page = page {
+            context.concatenate(page.transform(for: box))
+        }
+
+        let rect = bounds
+        context.draw(cgImage, in: rect)
+
+        context.restoreGState()
+    }
+}
+
 struct CreateSomethingView: View { var body: some View { NavigationView { Text("Create flow").navigationTitle("New Item") } } }
 
 struct SignatureEditorView: View {
@@ -1628,6 +2002,12 @@ enum SignatureStore {
             set {
                 drawingData = newValue.dataRepresentation()
             }
+        }
+
+        func makeImage(scale: CGFloat = UIScreen.main.scale) -> UIImage? {
+            let bounds = drawing.bounds
+            guard !bounds.isEmpty else { return nil }
+            return drawing.image(from: bounds, scale: max(scale, 1))
         }
     }
 
