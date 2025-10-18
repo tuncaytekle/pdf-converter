@@ -1762,6 +1762,7 @@ struct PDFEditorView: View {
                 } label: {
                     Label("Insert Signature", systemImage: "signature")
                 }
+                .tint(controller.hasActiveSignaturePlacement() ? .orange : nil)
 
                 Button {
                     if !controller.addNote() {
@@ -1798,12 +1799,14 @@ final class SignaturePlacementState {
     let uiImage: UIImage
     let page: PDFPage
     var pdfRect: CGRect
+    var rotation: CGFloat
 
-    init(signature: SignatureStore.Signature, uiImage: UIImage, page: PDFPage, pdfRect: CGRect) {
+    init(signature: SignatureStore.Signature, uiImage: UIImage, page: PDFPage, pdfRect: CGRect, rotation: CGFloat = 0) {
         self.signature = signature
         self.uiImage = uiImage
         self.page = page
         self.pdfRect = pdfRect
+        self.rotation = rotation
     }
 }
 
@@ -1873,7 +1876,7 @@ final class PDFEditorController: ObservableObject {
     @discardableResult
     func confirmSignaturePlacement() -> Bool {
         guard let placement = signaturePlacement else { return true }
-        let annotation = SignatureStampAnnotation(bounds: placement.pdfRect, image: placement.uiImage)
+        let annotation = SignatureStampAnnotation(bounds: placement.pdfRect, image: placement.uiImage, rotation: placement.rotation)
         placement.page.addAnnotation(annotation)
         signaturePlacement = nil
         return true
@@ -1881,6 +1884,16 @@ final class PDFEditorController: ObservableObject {
 
     func hasActiveSignaturePlacement() -> Bool {
         signaturePlacement != nil
+    }
+
+    func updateSignatureRotation(radians: CGFloat) {
+        guard let placement = signaturePlacement else { return }
+        placement.rotation = radians
+        objectWillChange.send()
+    }
+
+    var currentRotation: CGFloat {
+        signaturePlacement?.rotation ?? 0
     }
 
     func addNote() -> Bool {
@@ -1922,6 +1935,9 @@ struct SignaturePlacementOverlay: View {
 
     @State private var dragBaseRect: CGRect?
     @State private var scaleBaseRect: CGRect?
+    @State private var rotationBase: CGFloat = 0
+    @State private var rotationDelta: CGFloat = 0
+    @State private var activeViewRect: CGRect?
 
     var body: some View {
         GeometryReader { _ in
@@ -1932,20 +1948,22 @@ struct SignaturePlacementOverlay: View {
                 let dragGesture = DragGesture()
                     .onChanged { value in
                         if dragBaseRect == nil {
-                            dragBaseRect = viewRect
+                            dragBaseRect = activeViewRect ?? viewRect
                         }
                         guard let base = dragBaseRect else { return }
                         let newRect = base.offsetBy(dx: value.translation.width, dy: value.translation.height)
+                        activeViewRect = newRect
                         controller.updateSignaturePlacement(viewRect: newRect)
                     }
                     .onEnded { _ in
                         dragBaseRect = nil
+                        activeViewRect = controller.viewRectForCurrentPlacement()
                     }
 
                 let magnificationGesture = MagnificationGesture()
                     .onChanged { scale in
                         if scaleBaseRect == nil {
-                            scaleBaseRect = viewRect
+                            scaleBaseRect = activeViewRect ?? viewRect
                         }
                         guard let base = scaleBaseRect else { return }
                         let clampedScale = max(scale, 0.2)
@@ -1958,10 +1976,24 @@ struct SignaturePlacementOverlay: View {
                             width: width,
                             height: height
                         )
+                        activeViewRect = newRect
                         controller.updateSignaturePlacement(viewRect: newRect)
                     }
                     .onEnded { _ in
                         scaleBaseRect = nil
+                        activeViewRect = controller.viewRectForCurrentPlacement()
+                    }
+
+                let rotationGesture = RotationGesture()
+                    .onChanged { angle in
+                        if rotationBase == 0 {
+                            rotationBase = rotationDelta
+                        }
+                        rotationDelta = rotationBase + CGFloat(angle.radians)
+                        controller.updateSignatureRotation(radians: rotationDelta)
+                    }
+                    .onEnded { _ in
+                        rotationBase = rotationDelta
                     }
 
                 ZStack(alignment: .bottom) {
@@ -1971,13 +2003,18 @@ struct SignaturePlacementOverlay: View {
                     Image(uiImage: image)
                         .resizable()
                         .frame(width: viewRect.width, height: viewRect.height)
+                        .rotationEffect(Angle(radians: controller.currentRotation))
                         .position(x: viewRect.midX, y: viewRect.midY)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(Color.accentColor.opacity(0.9), lineWidth: 2)
                         )
                         .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
-                        .gesture(dragGesture.simultaneously(with: magnificationGesture))
+                        .gesture(
+                            dragGesture
+                                .simultaneously(with: magnificationGesture)
+                                .simultaneously(with: rotationGesture)
+                        )
 
                     HStack(spacing: 16) {
                         Button(role: .cancel) {
@@ -2007,9 +2044,11 @@ struct SignaturePlacementOverlay: View {
 
 final class SignatureStampAnnotation: PDFAnnotation {
     private let signatureImage: UIImage
+    private let rotation: CGFloat
 
-    init(bounds: CGRect, image: UIImage) {
+    init(bounds: CGRect, image: UIImage, rotation: CGFloat = 0) {
         self.signatureImage = image
+        self.rotation = rotation
         super.init(bounds: bounds, forType: .stamp, withProperties: nil)
         color = .clear
         border = nil
@@ -2017,6 +2056,7 @@ final class SignatureStampAnnotation: PDFAnnotation {
 
     required init?(coder: NSCoder) {
         signatureImage = UIImage()
+        rotation = 0
         super.init(coder: coder)
     }
 
@@ -2030,6 +2070,9 @@ final class SignatureStampAnnotation: PDFAnnotation {
         }
 
         let rect = bounds
+        context.translateBy(x: rect.midX, y: rect.midY)
+        context.rotate(by: rotation)
+        context.translateBy(x: -rect.midX, y: -rect.midY)
         context.draw(cgImage, in: rect)
 
         context.restoreGState()
