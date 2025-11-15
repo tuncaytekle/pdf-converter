@@ -8,10 +8,12 @@ import UniformTypeIdentifiers
 import LocalAuthentication
 import PencilKit
 
+/// Top-level tabs presented by the floating tab bar.
 enum Tab: Hashable {
     case files, tools, settings, account
 }
 
+/// High-level tool actions surfaced inside `ToolsView`.
 enum ToolAction: Hashable {
     case convertFiles
     case scanDocuments
@@ -21,6 +23,7 @@ enum ToolAction: Hashable {
     case editDocuments
 }
 
+/// Available scanning entry points controlled by the floating compose button.
 private enum ScanFlow: Identifiable {
     case documentCamera
     case photoLibrary
@@ -33,6 +36,7 @@ private enum ScanFlow: Identifiable {
     }
 }
 
+/// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
     @State private var selection: Tab = .files
     @State private var showCreateActions = false
@@ -58,59 +62,7 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        ZStack {
-            // 1) Native TabView
-            TabView(selection: $selection) {
-                FilesView(
-                    files: $files,
-                    onScanDocuments: { scanDocumentsToPDF() },
-                    onConvertPhotos: { convertPhotosToPDF() },
-                    onConvertFiles: { convertFilesToPDF() },
-                    onPreview: { previewSavedFile($0) },
-                    onShare: { shareSavedFile($0) },
-                    onRename: { beginRenamingFile($0) },
-                    onDelete: { confirmDeletion(for: $0) }
-                )
-                .tabItem { Label("Files", systemImage: "doc") }
-                .tag(Tab.files)
-
-                ToolsView(onAction: handleToolAction)
-                    .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
-                    .tag(Tab.tools)
-
-                SettingsView()
-                    .tabItem { Label("Settings", systemImage: "gearshape") }
-                    .tag(Tab.settings)
-
-                AccountView()
-                    .tabItem { Label("Account", systemImage: "person.crop.circle") }
-                    .tag(Tab.account)
-            }
-
-            // 2) Floating center button overlay
-            VStack {
-                Spacer()
-
-                HStack {
-                    Spacer()
-
-                    CenterActionButton {
-                        // Haptic feedback (optional)
-                        let gen = UIImpactFeedbackGenerator(style: .medium)
-                        gen.impactOccurred()
-                        showCreateActions = true
-                    }
-                    .accessibilityLabel("Create")
-                    .accessibilityAddTraits(.isButton)
-
-                    Spacer()
-                }
-                // Lift the button slightly above the tab bar
-                .padding(.bottom, 10)
-            }
-            // Ensure taps pass through where the button isn't
-            .allowsHitTesting(true)
-        }
+        rootContent
         .onAppear(perform: loadInitialFiles)
         // Present whatever flow you need
         .sheet(item: $activeScanFlow) { flow in
@@ -242,7 +194,74 @@ struct ContentView: View {
             Button("Cancel", role: .cancel) { }
         }
     }
+
+    // MARK: - Body Builders
+
+    /// Outer container holding the tab interface and floating compose button.
+    private var rootContent: some View {
+        ZStack {
+            tabInterface
+            floatingCreateButton
+        }
+    }
+
+    /// Hosts the four main tabs and wires callbacks back into `ContentView`.
+    private var tabInterface: some View {
+        TabView(selection: $selection) {
+            FilesView(
+                files: $files,
+                onScanDocuments: { scanDocumentsToPDF() },
+                onConvertPhotos: { convertPhotosToPDF() },
+                onConvertFiles: { convertFilesToPDF() },
+                onPreview: { previewSavedFile($0) },
+                onShare: { shareSavedFile($0) },
+                onRename: { beginRenamingFile($0) },
+                onDelete: { confirmDeletion(for: $0) }
+            )
+            .tabItem { Label("Files", systemImage: "doc") }
+            .tag(Tab.files)
+
+            ToolsView(onAction: handleToolAction)
+                .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
+                .tag(Tab.tools)
+
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(Tab.settings)
+
+            AccountView()
+                .tabItem { Label("Account", systemImage: "person.crop.circle") }
+                .tag(Tab.account)
+        }
+    }
+
+    /// Floating action button anchored to the bottom bar that surfaces quick actions.
+    private var floatingCreateButton: some View {
+        VStack {
+            Spacer()
+
+            HStack {
+                Spacer()
+
+                CenterActionButton {
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    showCreateActions = true
+                }
+                .accessibilityLabel("Create")
+                .accessibilityAddTraits(.isButton)
+
+                Spacer()
+            }
+            .padding(.bottom, 10)
+        }
+        // Taps outside the button should fall through to the tab bar underneath.
+        .allowsHitTesting(true)
+    }
     
+    // MARK: - Quick Action Routing
+
+    /// Presents the document camera flow when the hardware supports it.
     private func scanDocumentsToPDF() {
         guard VNDocumentCameraViewController.isSupported else {
             alertContext = ScanAlert(
@@ -255,15 +274,20 @@ struct ContentView: View {
         activeScanFlow = .documentCamera
     }
 
+    /// Opens the shared photo picker so the user can turn images into a PDF.
     private func convertPhotosToPDF() {
         activeScanFlow = .photoLibrary
     }
 
+    /// Opens the "convert files" importer after collapsing the quick action sheet.
     private func convertFilesToPDF() {
         showCreateActions = false
         showConvertPicker = true
     }
 
+    // MARK: - Import & Conversion Flows
+
+    /// Forces SwiftUI to re-present the file importer by toggling a hidden anchor view.
     @MainActor
     private func presentImporter() {
         importerTrigger = UUID()
@@ -278,18 +302,21 @@ struct ContentView: View {
         }
     }
 
+    /// Entry point for `Import Documents` that routes through the shared importer.
     @MainActor
     private func importDocuments() {
         showCreateActions = false
         presentImporter()
     }
 
+    /// Prompts the user for a URL that will later be rendered into a placeholder PDF.
     @MainActor
     private func promptWebConversion() {
         showCreateActions = false
         showWebURLPrompt = true
     }
 
+    /// Ensures PDFs are loaded, then surfaces the edit selection sheet.
     @MainActor
     private func promptEditDocuments() {
         showCreateActions = false
@@ -305,6 +332,7 @@ struct ContentView: View {
         showEditSelector = true
     }
 
+    /// Loads the selected PDF into the editing context and presents the editor sheet.
     @MainActor
     private func beginEditing(_ file: PDFFile) {
         guard let document = PDFDocument(url: file.url) else {
@@ -323,6 +351,7 @@ struct ContentView: View {
         }
     }
 
+    /// Writes the edited PDF to disk, replacing the original file atomically.
     @MainActor
     private func saveEditedDocument(_ context: PDFEditingContext) {
         let tempURL = FileManager.default.temporaryDirectory
@@ -348,6 +377,7 @@ struct ContentView: View {
         }
     }
 
+    /// Routes each `ToolAction` tap back into the same flows used by the quick actions.
     @MainActor
     private func handleToolAction(_ action: ToolAction) {
         switch action {
@@ -366,6 +396,9 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Preview & Biometrics
+
+    /// Handles the preview tap by optionally gating behind biometrics.
     @MainActor
     private func previewSavedFile(_ file: PDFFile) {
         guard requireBiometrics else {
@@ -378,6 +411,7 @@ struct ContentView: View {
         }
     }
 
+    /// Requests biometric authentication when required and surfaces clear alerts per scenario.
     @MainActor
     private func authenticateForPreview(_ file: PDFFile) async {
         let result = await BiometricAuthenticator.authenticate(reason: "Preview requires Face ID / Passcode")
@@ -404,6 +438,7 @@ struct ContentView: View {
         }
     }
 
+    /// Presents the requested file or alerts when authentication fails.
     @MainActor
     private func handleBiometricResult(granted: Bool, file: PDFFile) {
         if granted {
@@ -417,22 +452,27 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - File Management & Sharing
 
+    /// Prepares a share sheet for an already-saved PDF.
     private func shareSavedFile(_ file: PDFFile) {
         shareItem = nil
         shareItem = ShareItem(url: file.url, cleanupHandler: nil)
     }
 
+    /// Seeds the rename sheet with the existing file name.
     private func beginRenamingFile(_ file: PDFFile) {
         renameText = file.name
         renameTarget = file
     }
 
+    /// Stores the pending deletion target and presents the destructive dialog.
     private func confirmDeletion(for file: PDFFile) {
         deleteTarget = file
         showDeleteDialog = true
     }
 
+    /// Deletes a PDF from storage and reconciles the in-memory list.
     private func deleteFile(_ file: PDFFile) {
         do {
             try PDFStorage.delete(file: file)
@@ -451,6 +491,9 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Import Helpers
+
+    /// Finishes the document importer by persisting selected URLs into the app sandbox.
     private func handleImportResult(_ result: Result<[URL], Error>) {
         showImporter = false
         switch result {
@@ -494,6 +537,7 @@ struct ContentView: View {
         }
     }
 
+    /// Handles the "convert files to PDF" importer by building placeholder PDFs.
     private func handleConvertResult(_ result: Result<[URL], Error>) {
         showConvertPicker = false
         switch result {
@@ -523,6 +567,9 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Web Conversion Helpers
+
+    /// Validates the supplied URL, builds a placeholder PDF, and stages it inside the review sheet.
     @MainActor
     private func handleWebConversion(urlString: String) -> Bool {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -563,6 +610,7 @@ struct ContentView: View {
         }
     }
 
+    /// Normalizes partial URLs (missing scheme, etc.) into a canonical form we can fetch later.
     private func normalizedWebURL(from input: String) -> URL? {
         var candidate = input
         if !candidate.contains("://") {
@@ -587,6 +635,7 @@ struct ContentView: View {
         return components.url
     }
 
+    /// Generates an on-device placeholder PDF to preview while the real conversion service is offline.
     private func makeWebPlaceholderPDF(for url: URL) throws -> URL {
         let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
@@ -642,6 +691,7 @@ struct ContentView: View {
         return destination
     }
 
+    /// Builds a simple placeholder PDF for non-PDF inputs until server-side conversion is wired up.
     private func makePlaceholderPDF(for originalURL: URL) throws -> URL {
         let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter-ish
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
@@ -694,16 +744,21 @@ struct ContentView: View {
         return tempURL
     }
 
+    // MARK: - Lifecycle & Scanning
+
+    /// Lazily loads cached PDFs once to avoid repeated disk scans.
     private func loadInitialFiles() {
         guard !hasLoadedInitialFiles else { return }
         refreshFilesFromDisk()
         hasLoadedInitialFiles = true
     }
 
+    /// Rebuilds the in-memory file list from whatever is stored on disk.
     private func refreshFilesFromDisk() {
         files = PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
     }
 
+    /// Converts successful scan/photo results into PDFs and stages them for review.
     private func handleScanResult(_ result: Result<[UIImage], ScanWorkflowError>, suggestedName: String) {
         activeScanFlow = nil
 
@@ -739,6 +794,7 @@ struct ContentView: View {
         }
     }
 
+    /// Persists the scanned document and removes any temporary files afterward.
     private func saveScannedDocument(_ document: ScannedDocument) {
         do {
             let savedFile = try PDFStorage.save(document: document)
@@ -754,6 +810,7 @@ struct ContentView: View {
         }
     }
 
+    /// Temporarily writes the scanned document somewhere shareable and presents `ShareSheet`.
     private func shareScannedDocument(_ document: ScannedDocument) {
         do {
             let shareURL = try PDFStorage.prepareShareURL(for: document)
@@ -770,21 +827,25 @@ struct ContentView: View {
         }
     }
 
+    /// Cleans up a staged scan if the user bails out of the preview sheet.
     private func discardTemporaryDocument(_ document: ScannedDocument) {
         pendingDocument = nil
         cleanupTemporaryFile(at: document.pdfURL)
     }
 
+    /// Builds a human-friendly default file name using the date and supplied prefix.
     private func defaultFileName(prefix: String) -> String {
         let timestamp = Self.fileNameFormatter.string(from: Date())
         return "\(prefix) \(timestamp)"
     }
 
+    /// Deletes the temporary PDF sitting in `/tmp` once we no longer need it.
     private func cleanupTemporaryFile(at url: URL?) {
         guard let url else { return }
         try? FileManager.default.removeItem(at: url)
     }
 
+    /// Performs the on-disk rename and keeps the SwiftUI list in sync.
     private func applyRename(for file: PDFFile, newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -842,6 +903,7 @@ struct ContentView: View {
 
 // MARK: - FilesView (replaces HomeView)
 
+/// Lists every saved PDF and surfaces contextual actions per row.
 struct FilesView: View {
     // Backed by files persisted in the app's documents directory
     @Binding var files: [PDFFile]
@@ -928,6 +990,7 @@ struct FilesView: View {
     }
 }
 
+/// Friendly onboarding state rendered before the user saves their first PDF.
 private struct EmptyFilesView: View {
     let onScanDocuments: () -> Void
     let onConvertPhotos: () -> Void
@@ -980,7 +1043,7 @@ private struct EmptyFilesView: View {
     }
 }
 
-// Simple model for demo purposes
+/// Lightweight representation of a PDF stored on disk.
 struct PDFFile: Identifiable {
     let url: URL
     var name: String
@@ -1022,6 +1085,7 @@ struct PDFFile: Identifiable {
     }()
 }
 
+/// Temporary PDF built by the scanner/photo flows before persisting.
 struct ScannedDocument: Identifiable {
     let id = UUID()
     let pdfURL: URL
@@ -1034,12 +1098,14 @@ struct ScannedDocument: Identifiable {
     }
 }
 
+/// Wraps a URL that should be shared along with an optional cleanup callback.
 private struct ShareItem: Identifiable {
     let id = UUID()
     let url: URL
     let cleanupHandler: (() -> Void)?
 }
 
+/// Encapsulates alert metadata posted throughout the scanning pipeline.
 private struct ScanAlert: Identifiable {
     let id = UUID()
     let title: String
@@ -1047,6 +1113,7 @@ private struct ScanAlert: Identifiable {
     let onDismiss: (() -> Void)?
 }
 
+/// Shared error surface for scanner, photo picker, and conversion flows.
 enum ScanWorkflowError: Error {
     case cancelled
     case unavailable
@@ -1075,6 +1142,7 @@ enum ScanWorkflowError: Error {
     }
 }
 
+/// Result wrapper for `LAContext` authentication requests.
 private enum BiometricAuthResult {
     case success
     case failed
@@ -1083,6 +1151,7 @@ private enum BiometricAuthResult {
     case error(String)
 }
 
+/// Small helper that normalizes biometric/pascode prompts for previews and settings.
 private enum BiometricAuthenticator {
     @MainActor
     static func authenticate(reason: String) async -> BiometricAuthResult {
@@ -1152,6 +1221,7 @@ private enum BiometricAuthenticator {
 
 // MARK: - Center Button
 
+/// Floating circular button used to route into creation flows.
 private struct CenterActionButton: View {
     var action: () -> Void
 
@@ -1181,6 +1251,7 @@ private struct CenterActionButton: View {
 
 // MARK: - Example tab content
 
+/// Settings tab that hosts biometrics, signature management, and static info links.
 struct SettingsView: View {
     @State private var showSignatureSheet = false
     @State private var savedSignature: SignatureStore.Signature? = SignatureStore.load()
@@ -1189,6 +1260,7 @@ struct SettingsView: View {
     @State private var shareItem: ShareItem?
     @State private var settingsAlert: SettingsAlert?
 
+    /// Light-weight presentation enum used to drive the FAQ/Terms/Privacy sheets.
     private enum InfoSheet: Identifiable {
         case faq, terms, privacy
 
@@ -1350,6 +1422,9 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Settings Helpers
+
+    /// Requests Face ID/Touch ID authentication before letting the user disable preview protection.
     @MainActor
     private func promptToDisableBiometrics() async {
         let result = await BiometricAuthenticator.authenticate(reason: "Turn off Face ID protection")
@@ -1416,12 +1491,14 @@ struct SettingsView: View {
     }
 }
 
+/// Alert wrapper used by the settings screen when toggling biometrics fails.
 private struct SettingsAlert: Identifiable {
     let id = UUID()
     let title: String
     let message: String
 }
 
+/// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
     // TODO: Replace with real subscription status
     @State private var isSubscribed = false
@@ -1505,6 +1582,7 @@ struct AccountView: View {
     }
 }
 
+/// Text-entry sheet that collects the URL before building a placeholder PDF.
 struct WebConversionPrompt: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var urlString: String
@@ -1556,6 +1634,7 @@ struct WebConversionPrompt: View {
         }
     }
 
+    /// Validates the text field and hands the url back to `ContentView`.
     private func performConversion() {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -1564,16 +1643,19 @@ struct WebConversionPrompt: View {
         }
     }
 
+    /// Resets state and dismisses the sheet without touching pending documents.
     private func cancel() {
         onCancel()
         dismiss()
     }
 }
 
+/// Local-only error codes raised while writing modified PDFs back to disk.
 private enum PDFEditingError: Error {
     case writeFailed
 }
 
+/// Bridges the selected file and live `PDFDocument` into the editor sheet hierarchy.
 final class PDFEditingContext: Identifiable {
     let id = UUID()
     let file: PDFFile
@@ -1585,6 +1667,7 @@ final class PDFEditingContext: Identifiable {
     }
 }
 
+/// Sheet listing existing PDFs so the user can choose one to edit.
 struct PDFEditorSelectionView: View {
     @Binding var files: [PDFFile]
     let onSelect: (PDFFile) -> Void
@@ -1655,6 +1738,7 @@ struct PDFEditorSelectionView: View {
         }
     }
 
+    /// Dismisses the selector before calling out to the parent view, avoiding sheet conflicts.
     private func select(_ file: PDFFile) {
         dismiss()
         DispatchQueue.main.async {
@@ -1663,6 +1747,7 @@ struct PDFEditorSelectionView: View {
     }
 }
 
+/// Full-screen PDF editor that overlays annotation tools and signature placement.
 struct PDFEditorView: View {
     private struct InlineAlert: Identifiable {
         let id = UUID()
@@ -1784,6 +1869,7 @@ struct PDFEditorView: View {
 }
 
 @MainActor
+/// Mutable wrapper describing the drag/resize state for a signature being placed on a page.
 final class SignaturePlacementState {
     let signature: SignatureStore.Signature
     let uiImage: UIImage
@@ -1798,6 +1884,7 @@ final class SignaturePlacementState {
     }
 }
 
+/// UIKit-backed controller that owns the `PDFView` and mutates annotations on the document.
 @MainActor
 final class PDFEditorController: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
@@ -1918,6 +2005,7 @@ final class PDFEditorController: ObservableObject {
     }
 }
 
+/// Wraps a configured `PDFView` so it can live inside SwiftUI hierarchies.
 struct PDFViewRepresentable: UIViewRepresentable {
     let pdfView: PDFView
 
@@ -1928,6 +2016,7 @@ struct PDFViewRepresentable: UIViewRepresentable {
     func updateUIView(_ uiView: PDFView, context: Context) { }
 }
 
+/// Interactive overlay that lets the user drag/resize the pending signature before saving.
 struct SignaturePlacementOverlay: View {
     @ObservedObject var controller: PDFEditorController
     let onConfirm: () -> Void
@@ -2021,6 +2110,7 @@ struct SignaturePlacementOverlay: View {
     }
 }
 
+/// Custom PDF annotation that draws the stored signature image without borders.
 final class SignatureStampAnnotation: PDFAnnotation {
     private let signatureImage: UIImage
 
@@ -2054,6 +2144,7 @@ final class SignatureStampAnnotation: PDFAnnotation {
 
 struct CreateSomethingView: View { var body: some View { NavigationView { Text("Create flow").navigationTitle("New Item") } } }
 
+/// Sheet for drawing, naming, and persisting a user's handwritten signature.
 struct SignatureEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var signature: SignatureStore.Signature?
@@ -2124,6 +2215,7 @@ struct SignatureEditorView: View {
         }
     }
 
+    /// Persists the composed signature to `SignatureStore`, validating input first.
     private func saveSignature() {
         guard !drawing.bounds.isEmpty else {
             showEmptyAlert = true
@@ -2140,6 +2232,7 @@ struct SignatureEditorView: View {
     }
 }
 
+/// PencilKit canvas wrapper dedicated to collecting signature strokes.
 struct SignatureCanvasView: UIViewRepresentable {
     @Binding var drawing: PKDrawing
 
@@ -2183,9 +2276,11 @@ struct SignatureCanvasView: UIViewRepresentable {
     }
 }
 
+/// Simple persistence helper that stores signatures in `UserDefaults`.
 enum SignatureStore {
     private static let storageKey = "SignatureStore.savedSignature"
 
+    /// Value type storing the serialized PencilKit drawing and friendly name.
     struct Signature: Codable, Identifiable, Equatable {
         let id: UUID
         var name: String
@@ -2231,6 +2326,7 @@ enum SignatureStore {
     }
 }
 
+/// Grid of high-level conversion/editing shortcuts surfaced on the Tools tab.
 struct ToolsView: View {
     // Adaptive: fits as many columns as will cleanly fit (usually 2 on iPhone, 3 on iPad)
     private let columns = [
@@ -2264,6 +2360,7 @@ struct ToolsView: View {
 
 // MARK: - Scan UI Helpers
 
+/// Lets the user preview, rename, share, or save a freshly generated PDF.
 struct ScanReviewSheet: View {
     let document: ScannedDocument
     let onSave: (ScannedDocument) -> Void
@@ -2341,6 +2438,7 @@ struct ScanReviewSheet: View {
         }
     }
 
+    /// Returns a sanitized copy to avoid saving with trailing spaces or empty names.
     private func sanitizedDocument() -> ScannedDocument {
         let trimmed = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return document }
@@ -2348,6 +2446,7 @@ struct ScanReviewSheet: View {
     }
 }
 
+/// Minimal PDFKit wrapper for displaying PDFs inside SwiftUI previews.
 struct PDFPreviewView: UIViewRepresentable {
     let url: URL
 
@@ -2365,6 +2464,7 @@ struct PDFPreviewView: UIViewRepresentable {
     }
 }
 
+/// Async thumbnail renderer that caches results via `PDFThumbnailGenerator`.
 struct PDFThumbnailView: View {
     let file: PDFFile
     let size: CGSize
@@ -2400,6 +2500,7 @@ struct PDFThumbnailView: View {
         }
     }
 
+    /// Requests a cached thumbnail (or renders a new one) and updates the SwiftUI view.
     private func loadThumbnail() async {
         if image != nil { return }
         if let generated = await PDFThumbnailGenerator.shared.thumbnail(for: file.url, size: size) {
@@ -2423,6 +2524,7 @@ struct SavedPDFDetailView: View {
     }
 }
 
+/// Simple form for renaming PDFs with validation and autofocus.
 struct RenameFileSheet: View {
     @Binding var fileName: String
     let onCancel: () -> Void
@@ -2464,6 +2566,7 @@ struct RenameFileSheet: View {
     }
 }
 
+/// Wrapper around `UIActivityViewController` that hands completion back to SwiftUI.
 struct ShareSheet: UIViewControllerRepresentable {
     let activityItems: [Any]
     let completion: () -> Void
@@ -2481,6 +2584,7 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
+/// Bridges `VNDocumentCameraViewController` into SwiftUI while normalizing results.
 struct DocumentScannerView: UIViewControllerRepresentable {
     let completion: (Result<[UIImage], ScanWorkflowError>) -> Void
 
@@ -2534,6 +2638,7 @@ struct DocumentScannerView: UIViewControllerRepresentable {
     }
 }
 
+/// PHPicker wrapper that returns the selected images via a Swift Result type.
 struct PhotoPickerView: UIViewControllerRepresentable {
     let completion: (Result<[UIImage], ScanWorkflowError>) -> Void
 
@@ -2596,6 +2701,7 @@ struct PhotoPickerView: UIViewControllerRepresentable {
     }
 }
 
+/// Utility responsible for stitching captured images into a temporary PDF file.
 enum PDFGenerator {
     static func makePDF(from images: [UIImage]) throws -> URL {
         let document = PDFDocument()
@@ -2618,6 +2724,7 @@ enum PDFGenerator {
     }
 }
 
+/// Handles persistence, imports, and file system hygiene for saved PDFs.
 enum PDFStorage {
     static func loadSavedFiles() -> [PDFFile] {
         guard let directory = documentsDirectory(),
@@ -2813,6 +2920,7 @@ enum PDFStorage {
     }
 }
 
+/// Actor-backed thumbnail cache so thumbnail rendering never blocks SwiftUI updates.
 actor PDFThumbnailGenerator {
     static let shared = PDFThumbnailGenerator()
     private var cache: [URL: UIImage] = [:]
@@ -2835,6 +2943,7 @@ actor PDFThumbnailGenerator {
     }
 }
 
+/// Renders a single colorful tool card and routes taps back to `ToolsView`.
 struct ToolCardView: View {
     let card: ToolCard
 
@@ -2897,6 +3006,7 @@ struct ToolCardView: View {
 
 // MARK: - Card Model
 
+/// Metadata describing each tool tile, including colors and destination action.
 struct ToolCard: Identifiable {
     let id = UUID()
     let title: String
@@ -2943,6 +3053,7 @@ extension ToolCard {
 
 // MARK: - Small Color helper
 
+/// Convenience initializer for building SwiftUI colors from hex literals.
 extension Color {
     init(hex: UInt, alpha: Double = 1.0) {
         let r = Double((hex >> 16) & 0xFF) / 255.0
