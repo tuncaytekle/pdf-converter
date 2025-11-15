@@ -1765,26 +1765,16 @@ struct PDFEditorView: View {
                 .tint(controller.hasActiveSignaturePlacement() ? .orange : nil)
 
                 Button {
-                    if !controller.addNote() {
+                    if !controller.highlightSelection() {
                         inlineAlert = InlineAlert(
-                            title: "No Page Selected",
-                            message: "Navigate to the page where you want the note, then tap Add Note."
+                            title: "Select Text",
+                            message: "Select the text you want to highlight, then tap Highlight."
                         )
                     }
                 } label: {
-                    Label("Add Note", systemImage: "note.text")
+                    Label("Highlight", systemImage: "highlighter")
                 }
 
-                Button {
-                    if !controller.undoLastAction() {
-                        inlineAlert = InlineAlert(
-                            title: "Nothing to Undo",
-                            message: "You haven't made any changes that can be undone yet."
-                        )
-                    }
-                } label: {
-                    Label("Undo", systemImage: "arrow.uturn.backward")
-                }
             }
         }
         .alert(item: $inlineAlert) { info in
@@ -1903,6 +1893,28 @@ final class PDFEditorController: ObservableObject {
         guard let undoManager = pdfView.undoManager, undoManager.canUndo else { return false }
         undoManager.undo()
         return true
+    }
+
+    func highlightSelection(color: UIColor = UIColor.systemYellow.withAlphaComponent(0.35)) -> Bool {
+        guard let selection = pdfView.currentSelection else { return false }
+        let lineSelections = selection.selectionsByLine()
+        guard !lineSelections.isEmpty else { return false }
+        var didAdd = false
+
+        for line in lineSelections {
+            guard let page = line.pages.first else { continue }
+            let bounds = line.bounds(for: page)
+            guard !bounds.isEmpty else { continue }
+            let annotation = PDFAnnotation(bounds: bounds, forType: .highlight, withProperties: nil)
+            annotation.color = color
+            page.addAnnotation(annotation)
+            didAdd = true
+        }
+
+        if didAdd {
+            pdfView.setCurrentSelection(nil, animate: false)
+        }
+        return didAdd
     }
 }
 
