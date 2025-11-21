@@ -7,6 +7,7 @@ import UIKit
 import UniformTypeIdentifiers
 import LocalAuthentication
 import PencilKit
+import StoreKit
 
 /// Top-level tabs presented by the floating tab bar.
 enum Tab: Hashable {
@@ -250,9 +251,8 @@ struct ContentView: View {
                 }
                 .accessibilityLabel("Create")
                 .accessibilityAddTraits(.isButton)
-
-                Spacer()
             }
+            .padding(.trailing, 28)
             .padding(.bottom, 10)
         }
         // Taps outside the button should fall through to the tab bar underneath.
@@ -1245,7 +1245,7 @@ private struct CenterActionButton: View {
             Circle().fill(.clear).frame(width: 64, height: 64)
         )
         // Align it to sit slightly *into* the tab bar
-        .offset(y: -20)
+        .offset(y: -44)
     }
 }
 
@@ -1253,6 +1253,7 @@ private struct CenterActionButton: View {
 
 /// Settings tab that hosts biometrics, signature management, and static info links.
 struct SettingsView: View {
+    @StateObject private var subscriptionManager = SubscriptionManager()
     @State private var showSignatureSheet = false
     @State private var savedSignature: SignatureStore.Signature? = SignatureStore.load()
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
@@ -1341,7 +1342,11 @@ struct SettingsView: View {
     private var subscriptionSection: some View {
         Section("Subscription") {
             Button {
-                // TODO: Hook into real purchase flow
+                if subscriptionManager.isSubscribed {
+                    subscriptionManager.openManageSubscriptions()
+                } else {
+                    subscriptionManager.purchase()
+                }
             } label: {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .center, spacing: 12) {
@@ -1349,25 +1354,32 @@ struct SettingsView: View {
                             Circle()
                                 .fill(Color.blue.opacity(0.12))
                                 .frame(width: 44, height: 44)
-                            Image(systemName: "sparkles")
+                            Image(systemName: subscriptionManager.isSubscribed ? "checkmark.seal" : "sparkles")
                                 .font(.headline)
                                 .foregroundStyle(.blue)
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Upgrade to PDF Converter Pro")
+                            Text(subscriptionManager.isSubscribed ? "PDF Converter Pro Active" : "Upgrade to PDF Converter Pro")
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            Text("Unlock unlimited conversions and pro tools")
+                            Text(subscriptionManager.isSubscribed ? "Enjoy unlimited conversions and pro tools" : "Unlock unlimited conversions and pro tools")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    Text("Start your free trial today and supercharge your workflow")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 56)
+                    if subscriptionManager.isSubscribed {
+                        Text("Manage or cancel anytime from your App Store subscriptions.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 56)
+                    } else {
+                        Text("Start a 3-day free trial, then $9.99/week. Cancel anytime.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 56)
+                    }
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1377,6 +1389,17 @@ struct SettingsView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            if subscriptionManager.purchaseState == .purchasing {
+                ProgressView("Contacting App Store...")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if case .failed(let message) = subscriptionManager.purchaseState {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundColor(.red)
+            }
         }
     }
 
@@ -1500,8 +1523,7 @@ private struct SettingsAlert: Identifiable {
 
 /// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
-    // TODO: Replace with real subscription status
-    @State private var isSubscribed = false
+    @StateObject private var subscriptionManager = SubscriptionManager()
 
     private let featureList: [(String, String)] = [
         ("🚀", "Unlimited document conversions"),
@@ -1519,6 +1541,12 @@ struct AccountView: View {
                     statusSection
                     featuresSection
                     actionButton
+                    if case .failed(let message) = subscriptionManager.purchaseState {
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 .padding()
             }
@@ -1528,9 +1556,9 @@ struct AccountView: View {
 
     private var statusSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(isSubscribed ? "You're a Pro!" : "Go Pro to unlock more")
+            Text(subscriptionManager.isSubscribed ? "You're a Pro!" : "Go Pro to unlock more")
                 .font(.title2.weight(.semibold))
-            Text(isSubscribed ? "Thank you for supporting PDF Converter. You currently enjoy every premium feature." : "PDF Converter Pro gives you the power tools to work with any document, anywhere.")
+            Text(subscriptionManager.isSubscribed ? "Thank you for supporting PDF Converter. You currently enjoy every premium feature." : "PDF Converter Pro gives you the power tools to work with any document, anywhere.")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1538,7 +1566,7 @@ struct AccountView: View {
 
     private var featuresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(isSubscribed ? "Your Pro features" : "Unlock these features")
+            Text(subscriptionManager.isSubscribed ? "Your Pro features" : "Unlock these features")
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 10) {
@@ -1562,9 +1590,9 @@ struct AccountView: View {
 
     @ViewBuilder
     private var actionButton: some View {
-        if isSubscribed {
+        if subscriptionManager.isSubscribed {
             Button {
-                // Placeholder for manage subscription
+                subscriptionManager.openManageSubscriptions()
             } label: {
                 Label("Manage Subscription", systemImage: "gearshape")
                     .frame(maxWidth: .infinity)
@@ -1572,12 +1600,125 @@ struct AccountView: View {
             .buttonStyle(.bordered)
         } else {
             Button {
-                // Placeholder subscribe action
+                subscriptionManager.purchase()
             } label: {
-                Label("Start Free Trial", systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    if subscriptionManager.purchaseState == .purchasing {
+                        ProgressView()
+                    }
+                    Label("Start Free Trial", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
             }
             .buttonStyle(.borderedProminent)
+            .disabled(subscriptionManager.purchaseState == .purchasing)
+
+            Text("Enjoy a 3-day free trial, then $9.99/week. Cancel anytime in your App Store subscriptions.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+// MARK: - Subscriptions
+
+/// StoreKit 2 helper that manages the weekly subscription with a 3-day free trial.
+@MainActor
+final class SubscriptionManager: ObservableObject {
+    enum PurchaseState: Equatable {
+        case idle
+        case purchasing
+        case pending
+        case purchased
+        case failed(String)
+    }
+
+    @Published private(set) var product: Product?
+    @Published private(set) var isSubscribed = false
+    @Published var purchaseState: PurchaseState = .idle
+
+    private let productID = "com.roguewaveapps.pdfconverter.pro.weekly"
+
+    init() {
+        Task { await loadProduct() }
+        Task { await monitorEntitlements() }
+    }
+
+    /// Initiates the purchase flow for the weekly subscription.
+    func purchase() {
+        guard purchaseState != .purchasing else { return }
+        Task { await purchaseProduct() }
+    }
+
+    /// Sends the user to the App Store subscriptions screen to manage/cancel.
+    func openManageSubscriptions() {
+        guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    /// Fetches metadata for the subscription product (price, trial eligibility, etc).
+    private func loadProduct() async {
+        do {
+            let products = try await Product.products(for: [productID])
+            product = products.first
+        } catch {
+            purchaseState = .failed("Unable to load subscription details. \(error.localizedDescription)")
+        }
+    }
+
+    /// Listens for entitlement changes so UI instantly reflects new subscription states.
+    private func monitorEntitlements() async {
+        for await entitlement in StoreKit.Transaction.currentEntitlements {
+            await updateSubscriptionState(from: entitlement)
+        }
+    }
+
+    private func updateSubscriptionState(from result: VerificationResult<StoreKit.Transaction>) async {
+        switch result {
+        case .verified(let transaction):
+            guard transaction.productID == productID else { return }
+            let isActive = transaction.revocationDate == nil &&
+                (transaction.expirationDate ?? .distantFuture) > Date()
+            isSubscribed = isActive
+        case .unverified(_, let error):
+            purchaseState = .failed("Verification failed. \(error.localizedDescription)")
+        }
+    }
+
+    private func purchaseProduct() async {
+        guard let product else {
+            purchaseState = .failed("Subscription not available. Pull to refresh and try again.")
+            return
+        }
+
+        purchaseState = .purchasing
+
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                await handlePurchaseResult(verification)
+            case .pending:
+                purchaseState = .pending
+            case .userCancelled:
+                purchaseState = .idle
+            @unknown default:
+                purchaseState = .failed("Unknown purchase result.")
+            }
+        } catch {
+            purchaseState = .failed("Purchase failed. \(error.localizedDescription)")
+        }
+    }
+
+    private func handlePurchaseResult(_ verification: VerificationResult<StoreKit.Transaction>) async {
+        switch verification {
+        case .verified(let transaction):
+            isSubscribed = true
+            purchaseState = .purchased
+            await transaction.finish()
+        case .unverified(_, let error):
+            purchaseState = .failed("Verification failed. \(error.localizedDescription)")
         }
     }
 }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		948D369F2EC93586009DD0E1 /* pdfconverter-storekit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 948D369E2EC93586009DD0E1 /* pdfconverter-storekit.storekit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		948CA4722E9796C000196388 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		948CA45F2E9796BF00196388 /* pdf-converter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "pdf-converter.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		948CA4712E9796C000196388 /* pdf-converterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "pdf-converterTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		948CA47B2E9796C000196388 /* pdf-converterUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "pdf-converterUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		948D369E2EC93586009DD0E1 /* pdfconverter-storekit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "pdfconverter-storekit.storekit"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +80,7 @@
 		948CA4562E9796BF00196388 = {
 			isa = PBXGroup;
 			children = (
+				948D369E2EC93586009DD0E1 /* pdfconverter-storekit.storekit */,
 				948CA4612E9796BF00196388 /* pdf-converter */,
 				948CA4742E9796C000196388 /* pdf-converterTests */,
 				948CA47E2E9796C000196388 /* pdf-converterUITests */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				948D369F2EC93586009DD0E1 /* pdfconverter-storekit.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,7 +404,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Y9784ZVZ24;
+				DEVELOPMENT_TEAM = 3297YUP723;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PDF Converter";
@@ -416,7 +423,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.roguewave.pdf-converter";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.roguewaveapps.pdf-converter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -435,7 +442,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Y9784ZVZ24;
+				DEVELOPMENT_TEAM = 3297YUP723;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PDF Converter";
@@ -454,7 +461,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.roguewave.pdf-converter";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.roguewaveapps.pdf-converter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
