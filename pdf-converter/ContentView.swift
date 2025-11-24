@@ -39,6 +39,7 @@ private enum ScanFlow: Identifiable {
 
 /// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
+    private let cloudBackup = CloudBackupManager.shared
     @State private var selection: Tab = .files
     @State private var showCreateActions = false
     @State private var files: [PDFFile] = []
@@ -63,6 +64,7 @@ struct ContentView: View {
     @State private var didAnimateCreateButtonCue = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
+    @State private var hasAttemptedCloudRestore = false
 
     var body: some View {
         rootContent
@@ -251,8 +253,8 @@ struct ContentView: View {
                 }
                 .accessibilityLabel("Create")
                 .accessibilityAddTraits(.isButton)
-                .scaleEffect(createButtonPulse ? 1.08 : 1)
-                .shadow(color: Color.blue.opacity(createButtonPulse ? 0.4 : 0.25), radius: createButtonPulse ? 14 : 8, y: createButtonPulse ? 8 : 2)
+                .scaleEffect(createButtonPulse ? 1.06 : 1)
+                .shadow(color: Color.blue.opacity(createButtonPulse ? 0.35 : 0.25), radius: createButtonPulse ? 18 : 8, y: createButtonPulse ? 10 : 2)
                 .task {
                     await animateCreateButtonCueIfNeeded()
                 }
@@ -299,19 +301,15 @@ struct ContentView: View {
 
         try? await Task.sleep(nanoseconds: 650_000_000)
 
-        for _ in 0..<4 {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.55, blendDuration: 0.15)) {
-                createButtonPulse = true
-            }
-            try? await Task.sleep(nanoseconds: 280_000_000)
-
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8, blendDuration: 0.2)) {
-                createButtonPulse = false
-            }
-            try? await Task.sleep(nanoseconds: 240_000_000)
+        let animation = Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)
+        withAnimation(animation) {
+            createButtonPulse = true
         }
 
-        createButtonPulse = false
+        try? await Task.sleep(nanoseconds: 6_000_000_000)
+        withAnimation(.easeOut(duration: 0.4)) {
+            createButtonPulse = false
+        }
     }
 
     // MARK: - Import & Conversion Flows
@@ -508,6 +506,9 @@ struct ContentView: View {
             files.removeAll { $0.url == file.url }
             deleteTarget = nil
             showDeleteDialog = false
+            Task {
+                await cloudBackup.deleteBackup(for: file)
+            }
         } catch {
             alertContext = ScanAlert(
                 title: "Delete Failed",
@@ -541,6 +542,9 @@ struct ContentView: View {
                 // Merge new files and keep list sorted by date desc
                 files.append(contentsOf: imported)
                 files.sort { $0.date > $1.date }
+                Task {
+                    await cloudBackup.backup(files: imported)
+                }
                 alertContext = ScanAlert(
                     title: "Import Complete",
                     message: imported.count == 1 ? "Added 1 PDF to your library." : "Added \(imported.count) PDFs to your library.",
@@ -780,11 +784,27 @@ struct ContentView: View {
         guard !hasLoadedInitialFiles else { return }
         refreshFilesFromDisk()
         hasLoadedInitialFiles = true
+        attemptCloudRestoreIfNeeded()
     }
 
     /// Rebuilds the in-memory file list from whatever is stored on disk.
     private func refreshFilesFromDisk() {
         files = PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
+    }
+
+    /// Fetches any remote backups and merges them into the local library once.
+    private func attemptCloudRestoreIfNeeded() {
+        guard !hasAttemptedCloudRestore else { return }
+        hasAttemptedCloudRestore = true
+        Task {
+            let existingNames = Set(files.map { CloudRecordNaming.recordName(for: $0.url.lastPathComponent) })
+            let restored = await cloudBackup.restoreMissingFiles(existingRecordNames: existingNames)
+            guard !restored.isEmpty else { return }
+            await MainActor.run {
+                files.append(contentsOf: restored)
+                files.sort { $0.date > $1.date }
+            }
+        }
     }
 
     /// Converts successful scan/photo results into PDFs and stages them for review.
@@ -830,6 +850,9 @@ struct ContentView: View {
             files.insert(savedFile, at: 0)
             pendingDocument = nil
             cleanupTemporaryFile(at: document.pdfURL)
+            Task {
+                await cloudBackup.backup(file: savedFile)
+            }
         } catch {
             alertContext = ScanAlert(
                 title: "Save Failed",
@@ -886,6 +909,8 @@ struct ContentView: View {
             return
         }
 
+        let previousRecordName = CloudRecordNaming.recordName(for: file.url.lastPathComponent)
+
         do {
             let renamed = try PDFStorage.rename(file: file, to: trimmed)
             if let index = files.firstIndex(where: { $0.url == file.url }) {
@@ -893,6 +918,10 @@ struct ContentView: View {
             }
             renameText = renamed.name
             renameTarget = nil
+            Task {
+                await cloudBackup.deleteRecord(named: previousRecordName)
+                await cloudBackup.backup(file: renamed)
+            }
         } catch {
             alertContext = ScanAlert(
                 title: "Rename Failed",
@@ -1467,7 +1496,7 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .padding(.leading, 56)
                     } else {
-                        Text("Start a 3-day free trial, then $9.99/week. Cancel anytime.")
+                        Text("Start a 1-week ad-free $0.99 subscription, then $9.99/week. Cancel anytime.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.leading, 56)
@@ -1619,10 +1648,10 @@ struct AccountView: View {
 
     private let featureList: [(String, String)] = [
         ("🚀", "Unlimited document conversions"),
-        ("📸", "Batch photo to PDF conversion"),
+        ("📸", "Convert existing photos to PDF"),
+        ("📄", "Scan documents to PDF"),
         ("🗂️", "Cloud backup for all your files"),
         ("🖋️", "Advanced editing & annotations"),
-        ("🔒", "Secure passcode-protected PDFs"),
         ("🤝", "Priority support & new features")
     ]
 
@@ -1698,14 +1727,14 @@ struct AccountView: View {
                     if subscriptionManager.purchaseState == .purchasing {
                         ProgressView()
                     }
-                    Label("Start Free Trial", systemImage: "sparkles")
+                    Label("Upgrade to Pro now", systemImage: "sparkles")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .buttonStyle(.borderedProminent)
             .disabled(subscriptionManager.purchaseState == .purchasing)
 
-            Text("Enjoy a 3-day free trial, then $9.99/week. Cancel anytime in your App Store subscriptions.")
+            Text("Enjoy a 7-day ad-free $0.99 trial, then $9.99/week. Cancel anytime in your App Store subscriptions.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -3105,6 +3134,34 @@ enum PDFStorage {
         } catch {
             throw ScanWorkflowError.underlying(error)
         }
+    }
+
+    static func storeCloudAsset(from sourceURL: URL, preferredName: String) throws -> PDFFile {
+        guard let directory = documentsDirectory() else {
+            throw ScanWorkflowError.failed("Unable to access the Documents folder.")
+        }
+
+        let baseName = sanitizeFileName(preferredName)
+        let destination = uniqueURL(for: baseName, in: directory)
+
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: destination)
+        } catch {
+            throw ScanWorkflowError.underlying(error)
+        }
+
+        let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+        let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+        let size = Int64(resourceValues?.fileSize ?? 0)
+        let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+
+        return PDFFile(
+            url: destination,
+            name: destination.deletingPathExtension().lastPathComponent,
+            date: date,
+            pageCount: pageCount,
+            fileSize: size
+        )
     }
 
     static func prepareShareURL(for document: ScannedDocument) throws -> URL {
