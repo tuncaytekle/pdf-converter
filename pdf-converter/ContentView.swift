@@ -59,6 +59,8 @@ struct ContentView: View {
     @State private var webURLInput: String = ""
     @State private var showEditSelector = false
     @State private var editingContext: PDFEditingContext?
+    @State private var createButtonPulse = false
+    @State private var didAnimateCreateButtonCue = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
 
@@ -211,9 +213,6 @@ struct ContentView: View {
         TabView(selection: $selection) {
             FilesView(
                 files: $files,
-                onScanDocuments: { scanDocumentsToPDF() },
-                onConvertPhotos: { convertPhotosToPDF() },
-                onConvertFiles: { convertFilesToPDF() },
                 onPreview: { previewSavedFile($0) },
                 onShare: { shareSavedFile($0) },
                 onRename: { beginRenamingFile($0) },
@@ -247,10 +246,16 @@ struct ContentView: View {
                 CenterActionButton {
                     let generator = UIImpactFeedbackGenerator(style: .medium)
                     generator.impactOccurred()
+                    createButtonPulse = false
                     showCreateActions = true
                 }
                 .accessibilityLabel("Create")
                 .accessibilityAddTraits(.isButton)
+                .scaleEffect(createButtonPulse ? 1.08 : 1)
+                .shadow(color: Color.blue.opacity(createButtonPulse ? 0.4 : 0.25), radius: createButtonPulse ? 14 : 8, y: createButtonPulse ? 8 : 2)
+                .task {
+                    await animateCreateButtonCueIfNeeded()
+                }
             }
             .padding(.trailing, 28)
             .padding(.bottom, 10)
@@ -283,6 +288,30 @@ struct ContentView: View {
     private func convertFilesToPDF() {
         showCreateActions = false
         showConvertPicker = true
+    }
+
+    // MARK: - Attention Cues
+
+    @MainActor
+    private func animateCreateButtonCueIfNeeded() async {
+        guard !didAnimateCreateButtonCue else { return }
+        didAnimateCreateButtonCue = true
+
+        try? await Task.sleep(nanoseconds: 650_000_000)
+
+        for _ in 0..<4 {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.55, blendDuration: 0.15)) {
+                createButtonPulse = true
+            }
+            try? await Task.sleep(nanoseconds: 280_000_000)
+
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8, blendDuration: 0.2)) {
+                createButtonPulse = false
+            }
+            try? await Task.sleep(nanoseconds: 240_000_000)
+        }
+
+        createButtonPulse = false
     }
 
     // MARK: - Import & Conversion Flows
@@ -907,11 +936,9 @@ struct ContentView: View {
 struct FilesView: View {
     // Backed by files persisted in the app's documents directory
     @Binding var files: [PDFFile]
+    @State private var searchText = ""
+    @StateObject private var contentIndexer = FileContentIndexer()
 
-    // Callbacks provided by parent to trigger creation flows
-    let onScanDocuments: () -> Void
-    let onConvertPhotos: () -> Void
-    let onConvertFiles: () -> Void
     let onPreview: (PDFFile) -> Void
     let onShare: (PDFFile) -> Void
     let onRename: (PDFFile) -> Void
@@ -927,75 +954,129 @@ struct FilesView: View {
     @ViewBuilder
     private var filesContent: some View {
         if files.isEmpty {
-            EmptyFilesView(
-                onScanDocuments: onScanDocuments,
-                onConvertPhotos: onConvertPhotos,
-                onConvertFiles: onConvertFiles
-            )
+            EmptyFilesView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
                 .navigationTitle("Files")
         } else {
             List {
-                ForEach(files) { file in
-                    HStack(alignment: .top, spacing: 16) {
-                        PDFThumbnailView(file: file, size: thumbnailSize)
+                Section {
+                    searchBar
+                }
+                .textCase(nil)
+                .listRowBackground(Color.clear)
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(file.name)
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Text(file.detailsSummary)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Text(file.formattedDate)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Spacer(minLength: 0)
-
-                        Menu {
-                            Button("👀 Preview") { onPreview(file) }
-                            Button("📤 Share") { onShare(file) }
-                            Button("✏️ Rename") { onRename(file) }
-                            Divider()
-                            Button("🗑️ Delete", role: .destructive) { onDelete(file) }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 6)
-                                .contentShape(Rectangle())
-                                .accessibilityLabel("More actions")
-                        }
+                let results = filteredFiles
+                if results.isEmpty {
+                    EmptySearchResultsView(query: searchText)
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(results) { file in
+                        fileRow(for: file)
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        onPreview(file)
-                    }
-                    .padding(.vertical, 10)
                 }
             }
+            .listStyle(.insetGrouped)
             .navigationTitle("Files")
+            .onChange(of: files) { _, newValue in
+                contentIndexer.trimCache(keeping: newValue.map(\.url))
+            }
         }
+    }
+
+    private func fileRow(for file: PDFFile) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            PDFThumbnailView(file: file, size: thumbnailSize)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(file.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(file.detailsSummary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(file.formattedDate)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            Menu {
+                Button("👀 Preview") { onPreview(file) }
+                Button("📤 Share") { onShare(file) }
+                Button("✏️ Rename") { onRename(file) }
+                Divider()
+                Button("🗑️ Delete", role: .destructive) { onDelete(file) }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .accessibilityLabel("More actions")
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onPreview(file)
+        }
+        .padding(.vertical, 10)
+    }
+
+    private var filteredFiles: [PDFFile] {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return files }
+        let query = trimmed.lowercased()
+        return files.filter { file in
+            if file.name.lowercased().contains(query) { return true }
+            if let text = contentIndexer.text(for: file) {
+                return text.contains(query)
+            }
+            contentIndexer.ensureTextIndex(for: file)
+            return false
+        }
+    }
+
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search PDFs", text: $searchText)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
+        .accessibilityLabel("Search files")
     }
 }
 
 /// Friendly onboarding state rendered before the user saves their first PDF.
 private struct EmptyFilesView: View {
-    let onScanDocuments: () -> Void
-    let onConvertPhotos: () -> Void
-    let onConvertFiles: () -> Void
-
     var body: some View {
         VStack(spacing: 20) {
             // Friendly illustration
@@ -1018,33 +1099,38 @@ private struct EmptyFilesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
 
-            VStack(spacing: 12) {
-                Button(action: onScanDocuments) {
-                    Label("Scan Documents", systemImage: "camera")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button(action: onConvertPhotos) {
-                    Label("Convert Photos", systemImage: "photo.on.rectangle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
-                Button(action: onConvertFiles) {
-                    Label("Convert Files", systemImage: "doc.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(.horizontal)
         }
         .padding()
     }
 }
 
+/// Message shown when a query returns zero results.
+private struct EmptySearchResultsView: View {
+    let query: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 36, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Text("No matches for \"\(query.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+
+            Text("Try a different file name or keyword from the document.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 20)
+        .padding(.horizontal, 12)
+    }
+}
+
 /// Lightweight representation of a PDF stored on disk.
-struct PDFFile: Identifiable {
+struct PDFFile: Identifiable, Equatable {
     let url: URL
     var name: String
     let date: Date
@@ -1083,6 +1169,12 @@ struct PDFFile: Identifiable {
         formatter.allowsNonnumericFormatting = false
         return formatter
     }()
+}
+
+extension PDFFile {
+    static func == (lhs: PDFFile, rhs: PDFFile) -> Bool {
+        lhs.url == rhs.url
+    }
 }
 
 /// Temporary PDF built by the scanner/photo flows before persisting.
@@ -1245,7 +1337,7 @@ private struct CenterActionButton: View {
             Circle().fill(.clear).frame(width: 64, height: 64)
         )
         // Align it to sit slightly *into* the tab bar
-        .offset(y: -44)
+        .offset(y: -50)
     }
 }
 
@@ -3128,13 +3220,6 @@ struct ToolCardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .minimumScaleFactor(0.9)
 
-                // Subtitle
-                Text(card.subtitle)
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.92))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
-
                 Spacer()
             }
             .padding(16)
@@ -3151,7 +3236,6 @@ struct ToolCardView: View {
 struct ToolCard: Identifiable {
     let id = UUID()
     let title: String
-    let subtitle: String
     let tint: Color
     let iconName: String
     let action: ToolAction?
@@ -3160,32 +3244,26 @@ struct ToolCard: Identifiable {
 extension ToolCard {
     static let sample: [ToolCard] = [
         .init(title: "Convert\nFiles to PDF",
-              subtitle: "Convert Word, PowerPoint or\nExcel files to PDF",
               tint: Color(hex: 0x2F7F79),
               iconName: "infinity",
               action: .convertFiles),
         .init(title: "Scan\nDocuments",
-              subtitle: "Scan multiple documents with\nyour camera",
               tint: Color(hex: 0xC02267),
               iconName: "camera",
               action: .scanDocuments),
         .init(title: "Convert\nPhotos to PDF",
-              subtitle: "Choose from your photo\nlibrary to create a new PDF",
               tint: Color(hex: 0x5C3A78),
               iconName: "photo.on.rectangle",
               action: .convertPhotos),
         .init(title: "Import\nDocuments",
-              subtitle: "Import PDF files from your\ndevice or web",
               tint: Color(hex: 0x6C8FC0),
               iconName: "arrow.down.to.line",
               action: .importDocuments),
         .init(title: "Convert\nWeb Page",
-              subtitle: "Convert Web Pages to PDF\nusing a URL Link",
               tint: Color(hex: 0xBF7426),
               iconName: "link",
               action: .convertWebPage),
         .init(title: "Edit\nDocuments",
-              subtitle: "Sign, highlight, annotate\nexisting PDF files",
               tint: Color(hex: 0x7B3DD3),
               iconName: "pencil.and.outline",
               action: .editDocuments)
@@ -3201,5 +3279,49 @@ extension Color {
         let g = Double((hex >> 8) & 0xFF) / 255.0
         let b = Double(hex & 0xFF) / 255.0
         self.init(.sRGB, red: r, green: g, blue: b, opacity: alpha)
+    }
+}
+
+// MARK: - Helpers
+
+/// Lazily indexes text content for PDFs so search queries can match body text.
+@MainActor
+final class FileContentIndexer: ObservableObject {
+    @Published private var cache: [URL: String] = [:]
+    private var inFlight = Set<URL>()
+
+    func text(for file: PDFFile) -> String? {
+        cache[file.url]
+    }
+
+    func ensureTextIndex(for file: PDFFile) {
+        guard cache[file.url] == nil, !inFlight.contains(file.url) else { return }
+        inFlight.insert(file.url)
+
+        Task(priority: .utility) {
+            let extractedText: String? = {
+                guard let document = PDFDocument(url: file.url),
+                      let rawText = document.string?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !rawText.isEmpty else { return nil }
+                let snippet = String(rawText.prefix(4000))
+                return snippet.lowercased()
+            }()
+
+            await MainActor.run {
+                if let text = extractedText {
+                    self.cache[file.url] = text
+                } else {
+                    self.cache[file.url] = ""
+                }
+                self.inFlight.remove(file.url)
+            }
+        }
+    }
+
+    func trimCache(keeping urls: [URL]) {
+        let keepSet = Set(urls)
+        cache = cache.filter { keepSet.contains($0.key) }
+        inFlight = inFlight.intersection(keepSet)
     }
 }

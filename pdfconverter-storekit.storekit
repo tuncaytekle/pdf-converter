@@ -49,7 +49,13 @@
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "9AB4FE60",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "displayPrice" : "0.99",
+            "internalID" : "31C226DA",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "payAsYouGo",
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "",
@@ -58,7 +64,7 @@
             }
           ],
           "productID" : "com.roguewaveapps.pdfconverter.pro.weekly",
-          "recurringSubscriptionPeriod" : "P1M",
+          "recurringSubscriptionPeriod" : "P1W",
           "referenceName" : "com.roguewaveapps.pdfconverter.pro.weekly",
           "subscriptionGroupID" : "DC25BD2F",
           "type" : "RecurringSubscription",
