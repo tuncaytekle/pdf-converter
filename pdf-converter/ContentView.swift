@@ -51,7 +51,7 @@ struct ContentView: View {
     @State private var files: [PDFFile] = []
     @State private var activeScanFlow: ScanFlow?
     @State private var pendingDocument: ScannedDocument?
-    @State private var shareItem: ShareItem?
+    @State fileprivate var shareItem: ShareItem?
     @State private var alertContext: ScanAlert?
     @State private var hasLoadedInitialFiles = false
     @State private var previewFile: PDFFile?
@@ -68,6 +68,7 @@ struct ContentView: View {
     @State private var editingContext: PDFEditingContext?
     @State private var createButtonPulse = false
     @State private var didAnimateCreateButtonCue = false
+    @State private var isConvertingFile = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
     @State private var hasAttemptedCloudRestore = false
@@ -119,11 +120,7 @@ struct ContentView: View {
             WebConversionPrompt(
                 urlString: $webURLInput,
                 onConvert: { input in
-                    let success = handleWebConversion(urlString: input)
-                    if success {
-                        showWebURLPrompt = false
-                    }
-                    return success
+                    await handleWebConversion(urlString: input)
                 },
                 onCancel: {
                     showWebURLPrompt = false
@@ -203,6 +200,25 @@ struct ContentView: View {
             Button("🖼️ Convert Photos to PDF") { convertPhotosToPDF() }
             Button("📁 Convert Files to PDF") { convertFilesToPDF() }
             Button("Cancel", role: .cancel) { }
+        }
+        .overlay {
+            if isConvertingFile {
+                ZStack {
+                    Color.black.opacity(0.25).ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Converting…")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(.systemBackground))
+                    )
+                    .shadow(radius: 8)
+                }
+            }
         }
     }
 
@@ -599,6 +615,9 @@ struct ContentView: View {
 
     /// Converts a local document into a PDF using Gotenberg's LibreOffice route.
     private func convertFileUsingLibreOffice(url: URL) async {
+        await MainActor.run { isConvertingFile = true }
+        defer { Task { await MainActor.run { isConvertingFile = false } } }
+
         do {
             let filename = url.lastPathComponent
             let baseName = url.deletingPathExtension().lastPathComponent
@@ -629,7 +648,7 @@ struct ContentView: View {
 
     /// Validates the supplied URL, builds a placeholder PDF, and stages it inside the review sheet.
     @MainActor
-    private func handleWebConversion(urlString: String) -> Bool {
+    private func handleWebConversion(urlString: String) async -> Bool {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             alertContext = ScanAlert(
@@ -649,14 +668,11 @@ struct ContentView: View {
             return false
         }
 
-        Task {
-            await convertWebPage(url: resolvedURL)
-        }
-        return true
+        return await convertWebPage(url: resolvedURL)
     }
 
     /// Sends a URL to Gotenberg's Chromium route and stages the resulting PDF.
-    private func convertWebPage(url: URL) async {
+    private func convertWebPage(url: URL) async -> Bool {
         let host = url.host?
             .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
             ?? "Web Page"
@@ -671,6 +687,7 @@ struct ContentView: View {
                 )
                 webURLInput = url.absoluteString
             }
+            return true
         } catch {
             await MainActor.run {
                 alertContext = ScanAlert(
@@ -679,6 +696,7 @@ struct ContentView: View {
                     onDismiss: nil
                 )
             }
+            return false
         }
     }
 
@@ -812,20 +830,23 @@ struct ContentView: View {
         }
     }
 
-    /// Temporarily writes the scanned document somewhere shareable and presents `ShareSheet`.
-    private func shareScannedDocument(_ document: ScannedDocument) {
+    /// Produces a temporary share item for the scanned document.
+    private func shareScannedDocument(_ document: ScannedDocument) -> ShareItem? {
         do {
             let shareURL = try PDFStorage.prepareShareURL(for: document)
-            shareItem = nil
-            shareItem = ShareItem(url: shareURL, cleanupHandler: {
-                try? FileManager.default.removeItem(at: shareURL)
-            })
+            return ShareItem(
+                url: shareURL,
+                cleanupHandler: {
+                    try? FileManager.default.removeItem(at: shareURL)
+                }
+            )
         } catch {
             alertContext = ScanAlert(
                 title: "Share Failed",
                 message: "We couldn't prepare the PDF for sharing. Please try again.",
                 onDismiss: nil
             )
+            return nil
         }
     }
 
@@ -1172,7 +1193,7 @@ struct ScannedDocument: Identifiable {
 }
 
 /// Wraps a URL that should be shared along with an optional cleanup callback.
-private struct ShareItem: Identifiable {
+fileprivate struct ShareItem: Identifiable {
     let id = UUID()
     let url: URL
     let cleanupHandler: (() -> Void)?
@@ -1800,9 +1821,11 @@ final class SubscriptionManager: ObservableObject {
 struct WebConversionPrompt: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var urlString: String
-    let onConvert: (String) -> Bool
+    let onConvert: (String) async -> Bool
     let onCancel: () -> Void
     @FocusState private var isFieldFocused: Bool
+    @State private var isConverting = false
+    @State private var conversionError: String?
 
     var body: some View {
         NavigationView {
@@ -1814,6 +1837,7 @@ struct WebConversionPrompt: View {
                         .autocorrectionDisabled(true)
                         .textInputAutocapitalization(.never)
                         .focused($isFieldFocused)
+                        .disabled(isConverting)
                 }
 
                 Section {
@@ -1822,10 +1846,26 @@ struct WebConversionPrompt: View {
                     } label: {
                         Label("Convert", systemImage: "arrow.down.doc")
                     }
-                    .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConverting)
 
-                    Button("Cancel", role: .cancel) {
-                        cancel()
+                    Button("Cancel", role: .cancel, action: cancel)
+                        .disabled(isConverting)
+                }
+
+                if isConverting {
+                    Section {
+                        HStack {
+                            ProgressView()
+                            Text("Converting…")
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } else if let conversionError {
+                    Section {
+                        Text(conversionError)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -1833,11 +1873,12 @@ struct WebConversionPrompt: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { cancel() }
+                    Button("Cancel", action: cancel)
+                        .disabled(isConverting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Convert") { performConversion() }
-                        .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("Convert", action: performConversion)
+                        .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConverting)
                 }
             }
             .onAppear {
@@ -1851,14 +1892,26 @@ struct WebConversionPrompt: View {
     /// Validates the text field and hands the url back to `ContentView`.
     private func performConversion() {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        if onConvert(trimmed) {
-            dismiss()
+        guard !trimmed.isEmpty, !isConverting else { return }
+        conversionError = nil
+        isConverting = true
+
+        Task {
+            let success = await onConvert(trimmed)
+            await MainActor.run {
+                isConverting = false
+                if success {
+                    dismiss()
+                } else {
+                    conversionError = "We couldn't convert that page. Check the URL and try again."
+                }
+            }
         }
     }
 
     /// Resets state and dismisses the sheet without touching pending documents.
     private func cancel() {
+        guard !isConverting else { return }
         onCancel()
         dismiss()
     }
@@ -2578,16 +2631,19 @@ struct ToolsView: View {
 struct ScanReviewSheet: View {
     let document: ScannedDocument
     let onSave: (ScannedDocument) -> Void
-    let onShare: (ScannedDocument) -> Void
+    fileprivate let onShare: (ScannedDocument) -> ShareItem?
     let onCancel: (ScannedDocument) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var fileName: String
+    @State private var shareItem: ShareItem?
 
-    init(document: ScannedDocument,
-         onSave: @escaping (ScannedDocument) -> Void,
-         onShare: @escaping (ScannedDocument) -> Void,
-         onCancel: @escaping (ScannedDocument) -> Void) {
+    fileprivate init(
+        document: ScannedDocument,
+        onSave: @escaping (ScannedDocument) -> Void,
+        onShare: @escaping (ScannedDocument) -> ShareItem?,
+        onCancel: @escaping (ScannedDocument) -> Void
+    ) {
         self.document = document
         self.onSave = onSave
         self.onShare = onShare
@@ -2619,7 +2675,9 @@ struct ScanReviewSheet: View {
                 VStack(spacing: 12) {
                     Button {
                         let updated = sanitizedDocument()
-                        onShare(updated)
+                        if let item = onShare(updated) {
+                            shareItem = item
+                        }
                     } label: {
                         Label("Share", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
@@ -2648,6 +2706,12 @@ struct ScanReviewSheet: View {
                         dismiss()
                     }
                 }
+            }
+        }
+        .sheet(item: $shareItem) { item in
+            ShareSheet(activityItems: [item.url]) {
+                item.cleanupHandler?()
+                shareItem = nil
             }
         }
     }
