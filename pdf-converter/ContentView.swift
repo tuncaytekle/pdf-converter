@@ -40,6 +40,12 @@ private enum ScanFlow: Identifiable {
 /// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
     private let cloudBackup = CloudBackupManager.shared
+    private let client = GotenbergClient(
+        baseURL: URL(string: "https://gotenberg-6a3w.onrender.com")!,
+        retryPolicy: RetryPolicy(maxRetries: 2, baseDelay: 0.5, exponential: true),
+        timeout: 120
+    )
+
     @State private var selection: Tab = .files
     @State private var showCreateActions = false
     @State private var files: [PDFFile] = []
@@ -570,23 +576,14 @@ struct ContentView: View {
         }
     }
 
-    /// Handles the "convert files to PDF" importer by building placeholder PDFs.
+    /// Handles the "convert files to PDF" importer by sending the document to Gotenberg.
     private func handleConvertResult(_ result: Result<[URL], Error>) {
         showConvertPicker = false
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            do {
-                let placeholder = try makePlaceholderPDF(for: url)
-                let baseName = url.deletingPathExtension().lastPathComponent
-                let suggestedName = "\(baseName) PDF"
-                pendingDocument = ScannedDocument(pdfURL: placeholder, fileName: suggestedName)
-            } catch {
-                alertContext = ScanAlert(
-                    title: "Conversion Failed",
-                    message: "We couldn't prepare a PDF preview. Please try again.",
-                    onDismiss: nil
-                )
+            Task {
+                await convertFileUsingLibreOffice(url: url)
             }
         case .failure(let error):
             if let nsError = error as NSError?, nsError.code == NSUserCancelledError {
@@ -597,6 +594,34 @@ struct ContentView: View {
                 message: "We couldn't access the selected file. Please try again.",
                 onDismiss: nil
             )
+        }
+    }
+
+    /// Converts a local document into a PDF using Gotenberg's LibreOffice route.
+    private func convertFileUsingLibreOffice(url: URL) async {
+        do {
+            let filename = url.lastPathComponent
+            let baseName = url.deletingPathExtension().lastPathComponent
+            let data = try readDataForSecurityScopedURL(url)
+            let pdfData = try await client.convertOfficeDocToPDF(
+                fileName: filename,
+                data: data
+            )
+            let outputURL = try persistPDFData(pdfData)
+            await MainActor.run {
+                pendingDocument = ScannedDocument(
+                    pdfURL: outputURL,
+                    fileName: "\(baseName) PDF"
+                )
+            }
+        } catch {
+            await MainActor.run {
+                alertContext = ScanAlert(
+                    title: "Conversion Failed",
+                    message: error.localizedDescription,
+                    onDismiss: nil
+                )
+            }
         }
     }
 
@@ -624,22 +649,36 @@ struct ContentView: View {
             return false
         }
 
+        Task {
+            await convertWebPage(url: resolvedURL)
+        }
+        return true
+    }
+
+    /// Sends a URL to Gotenberg's Chromium route and stages the resulting PDF.
+    private func convertWebPage(url: URL) async {
+        let host = url.host?
+            .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
+            ?? "Web Page"
+
         do {
-            let placeholderURL = try makeWebPlaceholderPDF(for: resolvedURL)
-            let host = resolvedURL.host?
-                .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
-                ?? "Web Page"
-            let suggestedName = defaultFileName(prefix: host)
-            pendingDocument = ScannedDocument(pdfURL: placeholderURL, fileName: suggestedName)
-            webURLInput = resolvedURL.absoluteString
-            return true
+            let pdfData = try await client.convertURLToPDF(url: url.absoluteString)
+            let outputURL = try persistPDFData(pdfData)
+            await MainActor.run {
+                pendingDocument = ScannedDocument(
+                    pdfURL: outputURL,
+                    fileName: defaultFileName(prefix: host)
+                )
+                webURLInput = url.absoluteString
+            }
         } catch {
-            alertContext = ScanAlert(
-                title: "Conversion Failed",
-                message: "We couldn't create a placeholder PDF. Please try again.",
-                onDismiss: nil
-            )
-            return false
+            await MainActor.run {
+                alertContext = ScanAlert(
+                    title: "Conversion Failed",
+                    message: error.localizedDescription,
+                    onDismiss: nil
+                )
+            }
         }
     }
 
@@ -668,113 +707,24 @@ struct ContentView: View {
         return components.url
     }
 
-    /// Generates an on-device placeholder PDF to preview while the real conversion service is offline.
-    private func makeWebPlaceholderPDF(for url: URL) throws -> URL {
-        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
-        let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+    /// Writes raw PDF data to a temporary location we can hand to the review sheet.
+    private func persistPDFData(_ data: Data) throws -> URL {
         let destination = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("pdf")
-
-        // TODO: Replace placeholder generation with real web-to-PDF conversion once the API is ready.
-        try renderer.writePDF(to: destination) { context in
-            context.beginPage()
-
-            let currentContext = UIGraphicsGetCurrentContext()
-            currentContext?.setFillColor(UIColor.systemBackground.cgColor)
-            currentContext?.fill(pageRect)
-
-            let title = "Web Page Placeholder"
-            let titleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 28, weight: .semibold),
-                .foregroundColor: UIColor.label
-            ]
-            let titleSize = title.size(withAttributes: titleAttributes)
-            let titleOrigin = CGPoint(x: (pageRect.width - titleSize.width) / 2, y: 72)
-            title.draw(at: titleOrigin, withAttributes: titleAttributes)
-
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.lineSpacing = 6
-
-            let bodyAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 14, weight: .regular),
-                .foregroundColor: UIColor.secondaryLabel,
-                .paragraphStyle: paragraphStyle
-            ]
-
-            let message = """
-            URL: \(url.absoluteString)
-
-            This is a placeholder PDF for preview and annotation.
-            TODO: Replace with the converted content fetched from the live web page.
-            """
-            let messageRect = CGRect(x: 48, y: titleOrigin.y + titleSize.height + 32, width: pageRect.width - 96, height: pageRect.height - (titleOrigin.y + titleSize.height + 64))
-            (message as NSString).draw(in: messageRect, withAttributes: bodyAttributes)
-
-            let footerAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 10, weight: .medium),
-                .foregroundColor: UIColor.tertiaryLabel
-            ]
-            let footer = "Generated on \(Self.fileNameFormatter.string(from: Date()))"
-            let footerSize = footer.size(withAttributes: footerAttributes)
-            let footerOrigin = CGPoint(x: (pageRect.width - footerSize.width) / 2, y: pageRect.height - footerSize.height - 40)
-            footer.draw(at: footerOrigin, withAttributes: footerAttributes)
-        }
-
+        try data.write(to: destination, options: .atomic)
         return destination
     }
 
-    /// Builds a simple placeholder PDF for non-PDF inputs until server-side conversion is wired up.
-    private func makePlaceholderPDF(for originalURL: URL) throws -> URL {
-        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter-ish
-        let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
-        let data = renderer.pdfData { context in
-            context.beginPage()
-
-            let title = originalURL.deletingPathExtension().lastPathComponent
-            let subtitle = originalURL.pathExtension.isEmpty ? "Original file" : "Original file: .\(originalURL.pathExtension.lowercased())"
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .center
-
-            let titleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 28, weight: .semibold),
-                .paragraphStyle: paragraphStyle
-            ]
-
-            let subtitleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
-                .foregroundColor: UIColor.secondaryLabel,
-                .paragraphStyle: paragraphStyle
-            ]
-
-            let messageAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 14, weight: .regular),
-                .foregroundColor: UIColor.secondaryLabel,
-                .paragraphStyle: paragraphStyle
-            ]
-
-            let titleString = "PDF Converter"
-            let convertedTitle = "\(title)\n"
-            let message = "Placeholder preview\nThe actual conversion will happen once the online service is connected."
-
-            let titleRect = CGRect(x: 40, y: 150, width: pageRect.width - 80, height: 40)
-            titleString.draw(in: titleRect, withAttributes: titleAttributes)
-
-            let subtitleRect = CGRect(x: 60, y: titleRect.maxY + 16, width: pageRect.width - 120, height: 24)
-            subtitle.draw(in: subtitleRect, withAttributes: subtitleAttributes)
-
-            let fileRect = CGRect(x: 60, y: subtitleRect.maxY + 12, width: pageRect.width - 120, height: 26)
-            convertedTitle.draw(in: fileRect, withAttributes: titleAttributes)
-
-            let messageRect = CGRect(x: 60, y: fileRect.maxY + 20, width: pageRect.width - 120, height: 80)
-            message.draw(in: messageRect, withAttributes: messageAttributes)
+    /// Reads data from a potentially security-scoped URL.
+    private func readDataForSecurityScopedURL(_ url: URL) throws -> Data {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
-
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("pdf")
-        try data.write(to: tempURL, options: .atomic)
-        return tempURL
+        return try Data(contentsOf: url)
     }
 
     // MARK: - Lifecycle & Scanning
@@ -1205,6 +1155,8 @@ extension PDFFile {
         lhs.url == rhs.url
     }
 }
+
+/// File attachment used to build multipart requests for Gotenberg.
 
 /// Temporary PDF built by the scanner/photo flows before persisting.
 struct ScannedDocument: Identifiable {

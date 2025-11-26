@@ -77,6 +77,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		945EF3972ED66C9F00A09D23 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		948CA4562E9796BF00196388 = {
 			isa = PBXGroup;
 			children = (
@@ -84,6 +91,7 @@
 				948CA4612E9796BF00196388 /* pdf-converter */,
 				948CA4742E9796C000196388 /* pdf-converterTests */,
 				948CA47E2E9796C000196388 /* pdf-converterUITests */,
+				945EF3972ED66C9F00A09D23 /* Frameworks */,
 				948CA4602E9796BF00196388 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -202,7 +210,6 @@
 			mainGroup = 948CA4562E9796BF00196388;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				945EF3962ED6647300A09D23 /* XCRemoteSwiftPackageReference "gotenberg-kit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 948CA4602E9796BF00196388 /* Products */;
@@ -602,17 +609,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		945EF3962ED6647300A09D23 /* XCRemoteSwiftPackageReference "gotenberg-kit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/thoven87/gotenberg-kit.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.6.2;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = 948CA4572E9796BF00196388 /* Project object */;
 }

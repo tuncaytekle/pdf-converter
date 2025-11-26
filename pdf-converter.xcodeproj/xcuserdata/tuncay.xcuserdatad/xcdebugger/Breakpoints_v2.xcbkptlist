@@ -3,4 +3,128 @@
    uuid = "DC867AA5-E319-4036-8F3A-0D00EBB08D84"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "pdf-converter/ContentView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "636"
+            endingLineNumber = "636"
+            landmarkName = "handleWebConversion(urlString:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C3805536-06EA-4997-A2CD-24ED9B090772"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "pdf-converter/ContentView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "663"
+            endingLineNumber = "663"
+            landmarkName = "convertWebPage(url:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "7D0FBA45-F168-444D-8B24-49486F4D01E5"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "pdf-converter/ContentView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "735"
+            endingLineNumber = "735"
+            landmarkName = "loadInitialFiles()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "pdf-converter/GotenbergError.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "100"
+            endingLineNumber = "100"
+            landmarkName = "convertHTMLToPDF(html:options:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 9765b73937b39ac9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  moduleName = "pdf-converter.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "100"
+                  endingLineNumber = "100">
+               </Location>
+               <Location
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - a7b00a3e140534d8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(2) await resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  moduleName = "pdf-converter.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "100"
+                  endingLineNumber = "100">
+               </Location>
+               <Location
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 2eb04fa105cc96cb"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  moduleName = "pdf-converter.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "100"
+                  endingLineNumber = "100">
+               </Location>
+               <Location
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 8299921d623910ca"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(4) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  moduleName = "pdf-converter.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "100"
+                  endingLineNumber = "100">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>
