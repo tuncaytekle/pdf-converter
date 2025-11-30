@@ -18,120 +18,6 @@
             endingLineNumber = "636"
             landmarkName = "convertFileUsingLibreOffice(url:)"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - 2e0f075a4449788e"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(3) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - 2e0f075a4449788e"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(3) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - 2f3df226aaa0348c"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(5) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - 2f3df226aaa0348c"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(5) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - 2ce05d02f087f0b2"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(7) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - 7211fea1231d2840"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(10) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - a0725005adc34547"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(11) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-               <Location
-                  uuid = "4659F67F-3A96-4A1C-8F36-17480D71BB4B - a0725005adc34547"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(11) suspend resume partial function for pdf_converter.ContentView.convertFileUsingLibreOffice(url: Foundation.URL) async -&gt; ()"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/ContentView.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "636"
-                  endingLineNumber = "636">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -182,60 +68,60 @@
             landmarkType = "7">
             <Locations>
                <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 9765b73937b39ac9"
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 27b31a52e0ff4574"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "(1) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  symbolName = "(1) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
                   moduleName = "pdf-converter.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "100"
-                  endingLineNumber = "100">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101">
                </Location>
                <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - a7b00a3e140534d8"
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 6707a9b989c77374"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "(2) await resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  symbolName = "(2) await resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
                   moduleName = "pdf-converter.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "100"
-                  endingLineNumber = "100">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101">
                </Location>
                <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 2eb04fa105cc96cb"
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 8b3d4e314e980176"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "(3) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  symbolName = "(3) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
                   moduleName = "pdf-converter.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "100"
-                  endingLineNumber = "100">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101">
                </Location>
                <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 8299921d623910ca"
+                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 410658cf7b84a377"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "(4) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: pdf_converter.PDFOptions) async throws -&gt; Foundation.Data"
+                  symbolName = "(4) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
                   moduleName = "pdf-converter.debug.dylib"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "100"
-                  endingLineNumber = "100">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101">
                </Location>
             </Locations>
          </BreakpointContent>

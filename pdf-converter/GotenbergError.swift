@@ -94,8 +94,9 @@ public final class GotenbergClient {
     
     public func convertHTMLToPDF(
         html: String,
-        options: PDFOptions = PDFOptions()
+        options: PDFOptions? = nil
     ) async throws -> Data {
+        let resolvedOptions = options ?? PDFOptions()
         
         return try await uploadMultipart(
             endpoint: "/forms/chromium/convert/html",
@@ -107,7 +108,7 @@ public final class GotenbergClient {
                     data: Data(html.utf8)
                 )
             ],
-            fields: buildOptionFields(options)
+            fields: buildOptionFields(resolvedOptions)
         )
     }
     
@@ -115,12 +116,13 @@ public final class GotenbergClient {
     
     public func convertURLToPDF(
         url: String,
-        options: PDFOptions = PDFOptions()
+        options: PDFOptions? = nil
     ) async throws -> Data {
+        let resolvedOptions = options ?? PDFOptions()
         return try await uploadMultipart(
             endpoint: "/forms/chromium/convert/url",
             files: [],
-            fields: buildOptionFields(options)
+            fields: buildOptionFields(resolvedOptions)
                 .merging(["url": url]) { $1 }
         )
     }
