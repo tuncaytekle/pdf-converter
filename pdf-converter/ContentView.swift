@@ -935,10 +935,28 @@ struct ContentView: View {
 // MARK: - FilesView (replaces HomeView)
 
 /// Lists every saved PDF and surfaces contextual actions per row.
+/// Sorting criteria for file list
+enum FileSortType {
+    case date, name
+}
+
+/// Sort direction for file list
+enum SortDirection {
+    case ascending, descending
+}
+
 struct FilesView: View {
     // Backed by files persisted in the app's documents directory
     @Binding var files: [PDFFile]
     @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
+    @State private var sortType: FileSortType = .date
+    @State private var sortDirection: SortDirection = .descending
+    @State private var folders: [PDFFolder] = []
+    @State private var currentFolderId: String? = nil // nil means at top level
+    @State private var showCreateFolderDialog = false
+    @State private var newFolderName = ""
+    @State private var moveFileToFolder: PDFFile? = nil
     @StateObject private var contentIndexer = FileContentIndexer()
 
     let onPreview: (PDFFile) -> Void
@@ -950,6 +968,15 @@ struct FilesView: View {
     var body: some View {
         NavigationView {
             filesContent
+                .onAppear {
+                    folders = PDFStorage.loadFolders()
+                }
+                .sheet(isPresented: $showCreateFolderDialog) {
+                    createFolderDialog
+                }
+                .sheet(item: $moveFileToFolder) { file in
+                    moveToFolderDialog(for: file)
+                }
         }
     }
 
@@ -968,10 +995,27 @@ struct FilesView: View {
                 .textCase(nil)
                 .listRowBackground(Color.clear)
 
+                Section {
+                    sortingToolbar
+                }
+                .textCase(nil)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
+
+                // Show folders first (only at top level when not searching)
+                if currentFolderId == nil && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ForEach(folders) { folder in
+                        folderRow(for: folder)
+                    }
+                }
+
+                // Show files
                 let results = filteredFiles
-                if results.isEmpty {
-                    EmptySearchResultsView(query: searchText)
-                        .listRowBackground(Color.clear)
+                if results.isEmpty && (currentFolderId != nil || !folders.isEmpty) {
+                    if !searchText.isEmpty {
+                        EmptySearchResultsView(query: searchText)
+                            .listRowBackground(Color.clear)
+                    }
                 } else {
                     ForEach(results) { file in
                         fileRow(for: file)
@@ -979,11 +1023,34 @@ struct FilesView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle(NSLocalizedString("files.title", comment: "Files navigation title"))
+            .navigationTitle(currentFolderName)
+            .navigationBarTitleDisplayMode(currentFolderId == nil ? .large : .inline)
+            .toolbar {
+                if currentFolderId != nil {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button {
+                            currentFolderId = nil
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                Text(NSLocalizedString("files.title", comment: "Files navigation title"))
+                            }
+                        }
+                    }
+                }
+            }
             .onChange(of: files) { _, newValue in
                 contentIndexer.trimCache(keeping: newValue.map(\.url))
             }
         }
+    }
+
+    private var currentFolderName: String {
+        guard let folderId = currentFolderId,
+              let folder = folders.first(where: { $0.id == folderId }) else {
+            return NSLocalizedString("files.title", comment: "Files navigation title")
+        }
+        return folder.name
     }
 
     private func fileRow(for file: PDFFile) -> some View {
@@ -1016,6 +1083,17 @@ struct FilesView: View {
                 Button("📤 \(NSLocalizedString("action.share", comment: "Share action"))") { onShare(file) }
                 Button("✏️ \(NSLocalizedString("action.rename", comment: "Rename action"))") { onRename(file) }
                 Divider()
+                Menu("📁 \(NSLocalizedString("action.moveToFolder", comment: "Move to folder"))") {
+                    Button(NSLocalizedString("folder.topLevel", comment: "Top level folder")) {
+                        moveFile(file, to: nil)
+                    }
+                    ForEach(folders) { folder in
+                        Button(folder.name) {
+                            moveFile(file, to: folder.id)
+                        }
+                    }
+                }
+                Divider()
                 Button("🗑️ \(NSLocalizedString("action.delete", comment: "Delete action"))", role: .destructive) { onDelete(file) }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -1036,16 +1114,168 @@ struct FilesView: View {
 
     private var filteredFiles: [PDFFile] {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return files }
-        let query = trimmed.lowercased()
-        return files.filter { file in
-            if file.name.lowercased().contains(query) { return true }
-            if let text = contentIndexer.text(for: file) {
-                return text.contains(query)
+        let isSearching = !trimmed.isEmpty
+
+        // When searching, search across ALL folders; otherwise filter by current folder
+        let folderFiltered: [PDFFile]
+        if isSearching {
+            // Search globally across all folders
+            folderFiltered = files
+        } else {
+            // Only show files in current folder
+            folderFiltered = files.filter { file in
+                file.folderId == currentFolderId
             }
-            contentIndexer.ensureTextIndex(for: file)
-            return false
         }
+
+        // Apply search filter
+        let filtered: [PDFFile]
+        if trimmed.isEmpty {
+            filtered = folderFiltered
+        } else {
+            let query = trimmed.lowercased()
+            filtered = folderFiltered.filter { file in
+                if file.name.lowercased().contains(query) { return true }
+                if let text = contentIndexer.text(for: file) {
+                    return text.contains(query)
+                }
+                contentIndexer.ensureTextIndex(for: file)
+                return false
+            }
+        }
+
+        // Apply sorting
+        let sorted = filtered.sorted { file1, file2 in
+            switch sortType {
+            case .date:
+                return sortDirection == .ascending ? file1.date < file2.date : file1.date > file2.date
+            case .name:
+                return sortDirection == .ascending ? file1.name < file2.name : file1.name > file2.name
+            }
+        }
+
+        return sorted
+    }
+
+    private func folderRow(for folder: PDFFolder) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 42))
+                .foregroundColor(.blue)
+                .frame(width: thumbnailSize.width, height: thumbnailSize.height)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(folder.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                let fileCount = files.filter { $0.folderId == folder.id }.count
+                Text(fileCount == 1 ?
+                    NSLocalizedString("folder.fileCount.single", comment: "1 file") :
+                    String(format: NSLocalizedString("folder.fileCount.multiple", comment: "Multiple files"), fileCount))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            currentFolderId = folder.id
+        }
+        .padding(.vertical, 10)
+    }
+
+    private func moveFile(_ file: PDFFile, to folderId: String?) {
+        // Update storage
+        PDFStorage.updateFileFolderId(file: file, folderId: folderId)
+
+        // Create updated file with new folder ID
+        let updatedFile = PDFFile(
+            url: file.url,
+            name: file.name,
+            date: file.date,
+            pageCount: file.pageCount,
+            fileSize: file.fileSize,
+            folderId: folderId
+        )
+
+        // Update array by filtering out old file and adding updated one
+        // This creates a structural change SwiftUI can detect
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Remove the old file
+            files.removeAll(where: { $0.id == file.id })
+            // Add the updated file
+            files.append(updatedFile)
+        }
+    }
+
+    private var createFolderDialog: some View {
+        NavigationView {
+            Form {
+                Section {
+                    TextField(NSLocalizedString("folder.name.placeholder", comment: "Folder name placeholder"), text: $newFolderName)
+                        .textInputAutocapitalization(.words)
+                }
+            }
+            .navigationTitle(NSLocalizedString("folder.new.title", comment: "New folder title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action")) {
+                        showCreateFolderDialog = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(NSLocalizedString("action.save", comment: "Save action")) {
+                        createFolder()
+                    }
+                    .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func moveToFolderDialog(for file: PDFFile) -> some View {
+        NavigationView {
+            List {
+                Button(NSLocalizedString("folder.topLevel", comment: "Top level folder")) {
+                    moveFile(file, to: nil)
+                    moveFileToFolder = nil
+                }
+
+                ForEach(folders) { folder in
+                    Button(folder.name) {
+                        moveFile(file, to: folder.id)
+                        moveFileToFolder = nil
+                    }
+                }
+            }
+            .navigationTitle(NSLocalizedString("folder.move.title", comment: "Move to folder title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action")) {
+                        moveFileToFolder = nil
+                    }
+                }
+            }
+        }
+    }
+
+    private func createFolder() {
+        let trimmedName = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        let newFolder = PDFFolder(name: trimmedName)
+        folders.append(newFolder)
+        PDFStorage.saveFolders(folders)
+
+        showCreateFolderDialog = false
+        newFolderName = ""
     }
 
     private var searchBar: some View {
@@ -1055,10 +1285,12 @@ struct FilesView: View {
             TextField(NSLocalizedString("search.placeholder", comment: "Search placeholder"), text: $searchText)
                 .textInputAutocapitalization(.never)
                 .disableAutocorrection(true)
+                .focused($isSearchFocused)
 
-            if !searchText.isEmpty {
+            if isSearchFocused || !searchText.isEmpty {
                 Button {
                     searchText = ""
+                    isSearchFocused = false
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
@@ -1070,10 +1302,81 @@ struct FilesView: View {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color(.systemBackground))
         )
         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
         .accessibilityLabel(NSLocalizedString("accessibility.searchFiles", comment: "Search files accessibility label"))
+    }
+
+    private var sortingToolbar: some View {
+        HStack(spacing: 12) {
+            // Left side - Sorting controls
+            HStack(spacing: 8) {
+                // Sort type picker
+                Menu {
+                    Button {
+                        sortType = .date
+                    } label: {
+                        Label(NSLocalizedString("sort.date", comment: "Sort by date"), systemImage: sortType == .date ? "checkmark" : "")
+                    }
+                    Button {
+                        sortType = .name
+                    } label: {
+                        Label(NSLocalizedString("sort.name", comment: "Sort by name"), systemImage: sortType == .name ? "checkmark" : "")
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: sortType == .date ? "calendar" : "textformat.abc")
+                            .font(.system(size: 14))
+                        Text(sortType == .date ? NSLocalizedString("sort.date", comment: "Sort by date") : NSLocalizedString("sort.name", comment: "Sort by name"))
+                            .font(.subheadline)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color(.systemGray5))
+                    )
+                }
+
+                // Sort direction button
+                Button {
+                    sortDirection = sortDirection == .ascending ? .descending : .ascending
+                } label: {
+                    Image(systemName: sortDirection == .ascending ? "arrow.up" : "arrow.down")
+                        .font(.system(size: 14))
+                        .foregroundColor(.primary)
+                        .frame(width: 36, height: 36)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color(.systemGray5))
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+
+            // Right side - Create folder button
+            Button {
+                newFolderName = ""
+                showCreateFolderDialog = true
+            } label: {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 16))
+                    .foregroundColor(.blue)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.blue.opacity(0.1))
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 4)
     }
 }
 
@@ -1131,6 +1434,19 @@ private struct EmptySearchResultsView: View {
     }
 }
 
+/// Represents a folder that can contain PDF files
+struct PDFFolder: Identifiable, Codable, Equatable {
+    let id: String
+    var name: String
+    let createdDate: Date
+
+    init(id: String = UUID().uuidString, name: String, createdDate: Date = Date()) {
+        self.id = id
+        self.name = name
+        self.createdDate = createdDate
+    }
+}
+
 /// Lightweight representation of a PDF stored on disk.
 struct PDFFile: Identifiable, Equatable {
     let url: URL
@@ -1138,6 +1454,7 @@ struct PDFFile: Identifiable, Equatable {
     let date: Date
     let pageCount: Int
     let fileSize: Int64
+    var folderId: String? // ID of the folder this file belongs to, nil if at top level
 
     var id: URL { url }
 
@@ -2802,12 +3119,29 @@ struct PDFThumbnailView: View {
 
 struct SavedPDFDetailView: View {
     let file: PDFFile
+    @State private var showShareSheet = false
 
     var body: some View {
         PDFPreviewView(url: file.url)
             .background(Color(.systemBackground).ignoresSafeArea())
             .navigationTitle(file.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = try? PDFStorage.prepareShareURL(for: ScannedDocument(pdfURL: file.url, fileName: file.name)) {
+                    ShareSheet(activityItems: [url]) {
+                        showShareSheet = false
+                    }
+                }
+            }
     }
 }
 
@@ -3030,12 +3364,14 @@ enum PDFStorage {
             let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
             let size = Int64(resourceValues?.fileSize ?? 0)
             let pageCount = PDFDocument(url: url)?.pageCount ?? 0
+            let folderId = loadFileFolderId(for: url)
             return PDFFile(
                 url: url,
                 name: url.deletingPathExtension().lastPathComponent,
                 date: date,
                 pageCount: pageCount,
-                fileSize: size
+                fileSize: size,
+                folderId: folderId
             )
         }
     }
@@ -3064,7 +3400,8 @@ enum PDFStorage {
             name: destination.deletingPathExtension().lastPathComponent,
             date: date,
             pageCount: pageCount,
-            fileSize: size
+            fileSize: size,
+            folderId: nil
         )
     }
 
@@ -3105,7 +3442,8 @@ enum PDFStorage {
                     name: destination.deletingPathExtension().lastPathComponent,
                     date: date,
                     pageCount: pageCount,
-                    fileSize: size
+                    fileSize: size,
+                    folderId: nil
                 )
                 imported.append(file)
             } catch {
@@ -3127,7 +3465,8 @@ enum PDFStorage {
                 name: sanitized,
                 date: file.date,
                 pageCount: file.pageCount,
-                fileSize: file.fileSize
+                fileSize: file.fileSize,
+                folderId: file.folderId
             )
         }
 
@@ -3149,7 +3488,8 @@ enum PDFStorage {
             name: destination.deletingPathExtension().lastPathComponent,
             date: updatedDate,
             pageCount: pageCount,
-            fileSize: size
+            fileSize: size,
+            folderId: file.folderId
         )
     }
 
@@ -3232,6 +3572,79 @@ enum PDFStorage {
             return String(filtered.dropLast(4))
         }
         return filtered
+    }
+
+    // MARK: - Folder Management
+
+    private static var foldersFileURL: URL? {
+        documentsDirectory()?.appendingPathComponent(".folders.json")
+    }
+
+    private static var fileFoldersFileURL: URL? {
+        documentsDirectory()?.appendingPathComponent(".file_folders.json")
+    }
+
+    static func loadFolders() -> [PDFFolder] {
+        guard let url = foldersFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else {
+            return []
+        }
+
+        return (try? JSONDecoder().decode([PDFFolder].self, from: data)) ?? []
+    }
+
+    static func saveFolders(_ folders: [PDFFolder]) {
+        guard let url = foldersFileURL,
+              let data = try? JSONEncoder().encode(folders) else {
+            return
+        }
+
+        try? data.write(to: url, options: .atomic)
+    }
+
+    static func updateFileFolderId(file: PDFFile, folderId: String?) {
+        guard let url = fileFoldersFileURL else { return }
+
+        var mapping: [String: String] = [:]
+
+        // Load existing mapping
+        if FileManager.default.fileExists(atPath: url.path),
+           let data = try? Data(contentsOf: url),
+           let existing = try? JSONDecoder().decode([String: String].self, from: data) {
+            mapping = existing
+        }
+
+        // Update mapping
+        let key = file.url.lastPathComponent
+        if let folderId = folderId {
+            mapping[key] = folderId
+        } else {
+            mapping.removeValue(forKey: key)
+        }
+
+        // Save mapping with atomic write and data sync
+        if let data = try? JSONEncoder().encode(mapping) {
+            do {
+                try data.write(to: url, options: [.atomic, .completeFileProtection])
+                // Ensure the write is flushed to disk
+                try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
+            } catch {
+                print("Failed to write folder mapping: \(error)")
+            }
+        }
+    }
+
+    static func loadFileFolderId(for fileURL: URL) -> String? {
+        guard let url = fileFoldersFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return nil
+        }
+
+        let key = fileURL.lastPathComponent
+        return mapping[key]
     }
 }
 
