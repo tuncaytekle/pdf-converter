@@ -958,6 +958,7 @@ struct FilesView: View {
     @State private var newFolderName = ""
     @State private var moveFileToFolder: PDFFile? = nil
     @StateObject private var contentIndexer = FileContentIndexer()
+    @StateObject private var subscriptionManager = SubscriptionManager()
 
     let onPreview: (PDFFile) -> Void
     let onShare: (PDFFile) -> Void
@@ -1037,6 +1038,10 @@ struct FilesView: View {
                             }
                         }
                     }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ProButton(subscriptionManager: subscriptionManager)
                 }
             }
             .onChange(of: files) { _, newValue in
@@ -1709,6 +1714,11 @@ struct SettingsView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle(NSLocalizedString("settings.title", comment: "Settings navigation title"))
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ProButton(subscriptionManager: subscriptionManager)
+                }
+            }
             .sheet(item: $infoSheet) { sheet in
                 NavigationView {
                     ScrollView {
@@ -1964,6 +1974,11 @@ struct AccountView: View {
                 .padding()
             }
             .navigationTitle(NSLocalizedString("account.title", comment: "Account navigation title"))
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ProButton(subscriptionManager: subscriptionManager)
+                }
+            }
         }
     }
 
@@ -2926,6 +2941,7 @@ struct ToolsView: View {
         GridItem(.adaptive(minimum: 160, maximum: 220), spacing: 16)
     ]
     let onAction: (ToolAction) -> Void
+    @StateObject private var subscriptionManager = SubscriptionManager()
 
     var body: some View {
         NavigationView {
@@ -2946,6 +2962,11 @@ struct ToolsView: View {
             }
             .navigationTitle(NSLocalizedString("tools.title", comment: "Tools screen title"))
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ProButton(subscriptionManager: subscriptionManager)
+                }
+            }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
     }
@@ -3184,6 +3205,35 @@ struct RenameFileSheet: View {
                 isFieldFocused = true
             }
         }
+    }
+}
+
+/// Pro subscription button that appears in navigation bars
+struct ProButton: View {
+    @ObservedObject var subscriptionManager: SubscriptionManager
+
+    var body: some View {
+        Button {
+            if !subscriptionManager.isSubscribed {
+                subscriptionManager.purchase()
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: subscriptionManager.isSubscribed ? "checkmark.seal.fill" : "crown.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(subscriptionManager.isSubscribed ? "Pro" : "Go Pro")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.blue)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.blue.opacity(0.1))
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(subscriptionManager.isSubscribed)
     }
 }
 
