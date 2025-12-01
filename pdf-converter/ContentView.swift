@@ -174,32 +174,32 @@ struct ContentView: View {
                     onCompletion: handleConvertResult
                 )
         )
-        .confirmationDialog("Delete PDF?", isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
-            Button("🗑️ Delete", role: .destructive) {
+        .confirmationDialog(NSLocalizedString("dialog.deletePDF.title", comment: "Delete PDF confirmation"), isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
+            Button("🗑️ \(NSLocalizedString("action.delete", comment: "Delete action"))", role: .destructive) {
                 deleteFile(file)
             }
-            Button("Cancel", role: .cancel) {
+            Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
                 deleteTarget = nil
                 showDeleteDialog = false
             }
         } message: { file in
-            Text("This will remove \"\(file.name)\" from your device.")
+            Text(String(format: NSLocalizedString("dialog.deletePDF.message", comment: "Delete PDF message"), file.name))
         }
         .alert(item: $alertContext) { context in
             Alert(
                 title: Text(context.title),
                 message: Text(context.message),
-                dismissButton: .default(Text("OK")) {
+                dismissButton: .default(Text(NSLocalizedString("action.ok", comment: "OK action"))) {
                     alertContext = nil
                     context.onDismiss?()
                 }
             )
         }
         .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
-            Button("📄 Scan Documents to PDF") { scanDocumentsToPDF() }
-            Button("🖼️ Convert Photos to PDF") { convertPhotosToPDF() }
-            Button("📁 Convert Files to PDF") { convertFilesToPDF() }
-            Button("Cancel", role: .cancel) { }
+            Button("📄 \(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"))") { scanDocumentsToPDF() }
+            Button("🖼️ \(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"))") { convertPhotosToPDF() }
+            Button("📁 \(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"))") { convertFilesToPDF() }
+            Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) { }
         }
         .overlay {
             if isConvertingFile {
@@ -207,7 +207,7 @@ struct ContentView: View {
                     Color.black.opacity(0.25).ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView()
-                        Text("Converting…")
+                        Text(NSLocalizedString("status.converting", comment: "Conversion in progress"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -242,19 +242,19 @@ struct ContentView: View {
                 onRename: { beginRenamingFile($0) },
                 onDelete: { confirmDeletion(for: $0) }
             )
-            .tabItem { Label("Files", systemImage: "doc") }
+            .tabItem { Label(NSLocalizedString("tab.files", comment: "Files tab label"), systemImage: "doc") }
             .tag(Tab.files)
 
             ToolsView(onAction: handleToolAction)
-                .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
+                .tabItem { Label(NSLocalizedString("tab.tools", comment: "Tools tab label"), systemImage: "wrench.and.screwdriver") }
                 .tag(Tab.tools)
 
             SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem { Label(NSLocalizedString("tab.settings", comment: "Settings tab label"), systemImage: "gearshape") }
                 .tag(Tab.settings)
 
             AccountView()
-                .tabItem { Label("Account", systemImage: "person.crop.circle") }
+                .tabItem { Label(NSLocalizedString("tab.account", comment: "Account tab label"), systemImage: "person.crop.circle") }
                 .tag(Tab.account)
         }
     }
@@ -273,7 +273,7 @@ struct ContentView: View {
                     createButtonPulse = false
                     showCreateActions = true
                 }
-                .accessibilityLabel("Create")
+                .accessibilityLabel(NSLocalizedString("accessibility.create", comment: "Create button"))
                 .accessibilityAddTraits(.isButton)
                 .scaleEffect(createButtonPulse ? 1.06 : 1)
                 .shadow(color: Color.blue.opacity(createButtonPulse ? 0.35 : 0.25), radius: createButtonPulse ? 18 : 8, y: createButtonPulse ? 10 : 2)
@@ -294,8 +294,8 @@ struct ContentView: View {
     private func scanDocumentsToPDF() {
         guard VNDocumentCameraViewController.isSupported else {
             alertContext = ScanAlert(
-                title: "Scanner Unavailable",
-                message: "Document scanning is not supported on this device.",
+                title: NSLocalizedString("alert.scannerUnavailable.title", comment: "Scanner unavailable title"),
+                message: NSLocalizedString("alert.scannerUnavailable.message", comment: "Scanner unavailable message"),
                 onDismiss: nil
             )
             return
@@ -372,8 +372,8 @@ struct ContentView: View {
         refreshFilesFromDisk()
         guard !files.isEmpty else {
             alertContext = ScanAlert(
-                title: "No PDFs Available",
-                message: "Add or import a PDF before trying to edit it.",
+                title: NSLocalizedString("alert.noPDFs.title", comment: "No PDFs available title"),
+                message: NSLocalizedString("alert.noPDFs.message", comment: "No PDFs available message"),
                 onDismiss: nil
             )
             return
@@ -386,8 +386,8 @@ struct ContentView: View {
     private func beginEditing(_ file: PDFFile) {
         guard let document = PDFDocument(url: file.url) else {
             alertContext = ScanAlert(
-                title: "Open Failed",
-                message: "We couldn't load that PDF for editing.",
+                title: NSLocalizedString("alert.openFailed.title", comment: "Open failed title"),
+                message: NSLocalizedString("alert.openFailed.message", comment: "Open failed message"),
                 onDismiss: nil
             )
             return
@@ -419,8 +419,8 @@ struct ContentView: View {
         } catch {
             try? FileManager.default.removeItem(at: tempURL)
             alertContext = ScanAlert(
-                title: "Save Failed",
-                message: "We couldn't save your edits. Please try again.",
+                title: NSLocalizedString("alert.saveFailed.title", comment: "Save failed title"),
+                message: NSLocalizedString("alert.saveFailed.message", comment: "Save failed message"),
                 onDismiss: nil
             )
         }
@@ -463,7 +463,7 @@ struct ContentView: View {
     /// Requests biometric authentication when required and surfaces clear alerts per scenario.
     @MainActor
     private func authenticateForPreview(_ file: PDFFile) async {
-        let result = await BiometricAuthenticator.authenticate(reason: "Preview requires Face ID / Passcode")
+        let result = await BiometricAuthenticator.authenticate(reason: NSLocalizedString("biometrics.reason.preview", comment: "Reason for biometric prompt"))
 
         switch result {
         case .success:
@@ -474,13 +474,13 @@ struct ContentView: View {
             break
         case .unavailable(let message):
             alertContext = ScanAlert(
-                title: "Authentication Unavailable",
+                title: NSLocalizedString("alert.authUnavailable.title", comment: "Authentication unavailable title"),
                 message: message,
                 onDismiss: nil
             )
         case .error(let message):
             alertContext = ScanAlert(
-                title: "Authentication Error",
+                title: NSLocalizedString("alert.authError.title", comment: "Authentication error title"),
                 message: message,
                 onDismiss: nil
             )
@@ -494,8 +494,8 @@ struct ContentView: View {
             previewFile = file
         } else {
             alertContext = ScanAlert(
-                title: "Authentication Failed",
-                message: "We couldn't verify your identity.",
+                title: NSLocalizedString("alert.authFailed.title", comment: "Authentication failed title"),
+                message: NSLocalizedString("alert.authFailed.message", comment: "Authentication failed message"),
                 onDismiss: nil
             )
         }
@@ -533,8 +533,8 @@ struct ContentView: View {
             }
         } catch {
             alertContext = ScanAlert(
-                title: "Delete Failed",
-                message: "We couldn't remove the PDF. Please try again.",
+                title: NSLocalizedString("alert.deleteFailed.title", comment: "Delete failed title"),
+                message: NSLocalizedString("alert.deleteFailed.message", comment: "Delete failed message"),
                 onDismiss: {
                     deleteTarget = nil
                     showDeleteDialog = false
@@ -555,8 +555,8 @@ struct ContentView: View {
                 let imported = try PDFStorage.importDocuments(at: urls)
                 if imported.isEmpty {
                     alertContext = ScanAlert(
-                        title: "No PDFs Imported",
-                        message: "We couldn't add any of the selected files. Please choose PDFs and try again.",
+                        title: NSLocalizedString("alert.noImport.title", comment: "No PDFs imported title"),
+                        message: NSLocalizedString("alert.noImport.message", comment: "No PDFs imported message"),
                         onDismiss: nil
                     )
                     return
@@ -568,14 +568,16 @@ struct ContentView: View {
                     await cloudBackup.backup(files: imported)
                 }
                 alertContext = ScanAlert(
-                    title: "Import Complete",
-                    message: imported.count == 1 ? "Added 1 PDF to your library." : "Added \(imported.count) PDFs to your library.",
+                    title: NSLocalizedString("alert.importComplete.title", comment: "Import complete title"),
+                    message: imported.count == 1
+                        ? NSLocalizedString("alert.importComplete.single", comment: "Single PDF imported message")
+                        : String(format: NSLocalizedString("alert.importComplete.multiple", comment: "Multiple PDFs imported message"), imported.count),
                     onDismiss: nil
                 )
             } catch {
                 alertContext = ScanAlert(
-                    title: "Import Failed",
-                    message: "We couldn't import the selected files. Please try again.",
+                    title: NSLocalizedString("alert.importFailed.title", comment: "Import failed title"),
+                    message: NSLocalizedString("alert.importFailed.message", comment: "Import failed message"),
                     onDismiss: nil
                 )
             }
@@ -585,8 +587,8 @@ struct ContentView: View {
                 return
             }
             alertContext = ScanAlert(
-                title: "Import Failed",
-                message: "We couldn't access the selected files. Please try again.",
+                title: NSLocalizedString("alert.importFailed.title", comment: "Import failed title"),
+                message: NSLocalizedString("alert.importAccessFailed.message", comment: "Import file access failed message"),
                 onDismiss: nil
             )
         }
@@ -606,8 +608,8 @@ struct ContentView: View {
                 return
             }
             alertContext = ScanAlert(
-                title: "Conversion Failed",
-                message: "We couldn't access the selected file. Please try again.",
+                title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
+                message: NSLocalizedString("alert.conversionFileAccessFailed.message", comment: "Conversion access failed message"),
                 onDismiss: nil
             )
         }
@@ -630,13 +632,13 @@ struct ContentView: View {
             await MainActor.run {
                 pendingDocument = ScannedDocument(
                     pdfURL: outputURL,
-                    fileName: "\(baseName) PDF"
+                    fileName: String(format: NSLocalizedString("converted.fileNameFormat", comment: "Converted file name format"), baseName)
                 )
             }
         } catch {
             await MainActor.run {
                 alertContext = ScanAlert(
-                    title: "Conversion Failed",
+                    title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
                     message: error.localizedDescription,
                     onDismiss: nil
                 )
@@ -652,8 +654,8 @@ struct ContentView: View {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             alertContext = ScanAlert(
-                title: "Invalid URL",
-                message: "Please enter a web address to convert.",
+                title: NSLocalizedString("alert.invalidURL.title", comment: "Invalid URL title"),
+                message: NSLocalizedString("alert.invalidURL.message", comment: "Invalid URL message"),
                 onDismiss: nil
             )
             return false
@@ -661,8 +663,8 @@ struct ContentView: View {
 
         guard let resolvedURL = normalizedWebURL(from: trimmed) else {
             alertContext = ScanAlert(
-                title: "Invalid URL",
-                message: "We couldn't understand that web address. Try including the full URL (for example, https://example.com).",
+                title: NSLocalizedString("alert.invalidURL.title", comment: "Invalid URL title"),
+                message: NSLocalizedString("alert.invalidURL.unrecognized", comment: "Invalid URL unrecognized message"),
                 onDismiss: nil
             )
             return false
@@ -675,7 +677,7 @@ struct ContentView: View {
     private func convertWebPage(url: URL) async -> Bool {
         let host = url.host?
             .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
-            ?? "Web Page"
+            ?? NSLocalizedString("webPrompt.defaultName", comment: "Default web host name")
 
         do {
             let pdfData = try await client.convertURLToPDF(url: url.absoluteString)
@@ -691,7 +693,7 @@ struct ContentView: View {
         } catch {
             await MainActor.run {
                 alertContext = ScanAlert(
-                    title: "Conversion Failed",
+                    title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
                     message: error.localizedDescription,
                     onDismiss: nil
                 )
@@ -783,8 +785,8 @@ struct ContentView: View {
         case .success(let images):
             guard !images.isEmpty else {
                 alertContext = ScanAlert(
-                    title: "No Pages Captured",
-                    message: "Try scanning again and press Done when you have captured all pages.",
+                    title: NSLocalizedString("alert.noPages.title", comment: "No pages captured title"),
+                    message: NSLocalizedString("alert.noPages.message", comment: "No pages captured message"),
                     onDismiss: nil
                 )
                 return
@@ -795,15 +797,15 @@ struct ContentView: View {
                 showCreateActions = false
             } catch {
                 alertContext = ScanAlert(
-                    title: "PDF Error",
-                    message: "We couldn't create a PDF from the scanned pages. Please try again.",
+                    title: NSLocalizedString("alert.pdfError.title", comment: "PDF error title"),
+                    message: NSLocalizedString("alert.pdfError.message", comment: "PDF error message"),
                     onDismiss: nil
                 )
             }
         case .failure(let error):
             if error.shouldDisplayAlert {
                 alertContext = ScanAlert(
-                    title: "Scan Failed",
+                    title: NSLocalizedString("alert.scanFailed.title", comment: "Scan failed title"),
                     message: error.message,
                     onDismiss: nil
                 )
@@ -823,8 +825,8 @@ struct ContentView: View {
             }
         } catch {
             alertContext = ScanAlert(
-                title: "Save Failed",
-                message: "We couldn't save the PDF. Please try again.",
+                title: NSLocalizedString("alert.savePDFFailed.title", comment: "Save PDF failed title"),
+                message: NSLocalizedString("alert.savePDFFailed.message", comment: "Save PDF failed message"),
                 onDismiss: nil
             )
         }
@@ -842,8 +844,8 @@ struct ContentView: View {
             )
         } catch {
             alertContext = ScanAlert(
-                title: "Share Failed",
-                message: "We couldn't prepare the PDF for sharing. Please try again.",
+                title: NSLocalizedString("alert.shareFailed.title", comment: "Share failed title"),
+                message: NSLocalizedString("alert.shareFailed.message", comment: "Share failed message"),
                 onDismiss: nil
             )
             return nil
@@ -873,8 +875,8 @@ struct ContentView: View {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             alertContext = ScanAlert(
-                title: "Invalid Name",
-                message: "Please enter a file name before saving.",
+                title: NSLocalizedString("alert.invalidName.title", comment: "Invalid name title"),
+                message: NSLocalizedString("alert.invalidName.message", comment: "Invalid name message"),
                 onDismiss: nil
             )
             return
@@ -895,8 +897,8 @@ struct ContentView: View {
             }
         } catch {
             alertContext = ScanAlert(
-                title: "Rename Failed",
-                message: "We couldn't rename the PDF. Please try again.",
+                title: NSLocalizedString("alert.renameFailed.title", comment: "Rename failed title"),
+                message: NSLocalizedString("alert.renameFailed.message", comment: "Rename failed message"),
                 onDismiss: nil
             )
         }
@@ -957,7 +959,7 @@ struct FilesView: View {
             EmptyFilesView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemGroupedBackground))
-                .navigationTitle("Files")
+                .navigationTitle(NSLocalizedString("files.title", comment: "Files navigation title"))
         } else {
             List {
                 Section {
@@ -977,7 +979,7 @@ struct FilesView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Files")
+            .navigationTitle(NSLocalizedString("files.title", comment: "Files navigation title"))
             .onChange(of: files) { _, newValue in
                 contentIndexer.trimCache(keeping: newValue.map(\.url))
             }
@@ -1010,11 +1012,11 @@ struct FilesView: View {
             Spacer(minLength: 0)
 
             Menu {
-                Button("👀 Preview") { onPreview(file) }
-                Button("📤 Share") { onShare(file) }
-                Button("✏️ Rename") { onRename(file) }
+                Button("👀 \(NSLocalizedString("action.preview", comment: "Preview action"))") { onPreview(file) }
+                Button("📤 \(NSLocalizedString("action.share", comment: "Share action"))") { onShare(file) }
+                Button("✏️ \(NSLocalizedString("action.rename", comment: "Rename action"))") { onRename(file) }
                 Divider()
-                Button("🗑️ Delete", role: .destructive) { onDelete(file) }
+                Button("🗑️ \(NSLocalizedString("action.delete", comment: "Delete action"))", role: .destructive) { onDelete(file) }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 18, weight: .semibold))
@@ -1022,7 +1024,7 @@ struct FilesView: View {
                     .padding(.horizontal, 4)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
-                    .accessibilityLabel("More actions")
+                    .accessibilityLabel(NSLocalizedString("accessibility.moreActions", comment: "More actions menu"))
             }
         }
         .contentShape(Rectangle())
@@ -1050,7 +1052,7 @@ struct FilesView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search PDFs", text: $searchText)
+            TextField(NSLocalizedString("search.placeholder", comment: "Search placeholder"), text: $searchText)
                 .textInputAutocapitalization(.never)
                 .disableAutocorrection(true)
 
@@ -1062,7 +1064,7 @@ struct FilesView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
+                .accessibilityLabel(NSLocalizedString("accessibility.clearSearch", comment: "Clear search accessibility label"))
             }
         }
         .padding(10)
@@ -1071,7 +1073,7 @@ struct FilesView: View {
                 .fill(Color(.secondarySystemBackground))
         )
         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
-        .accessibilityLabel("Search files")
+        .accessibilityLabel(NSLocalizedString("accessibility.searchFiles", comment: "Search files accessibility label"))
     }
 }
 
@@ -1090,10 +1092,10 @@ private struct EmptyFilesView: View {
             }
             .padding(.bottom, 6)
 
-            Text("No PDFs yet")
+            Text(NSLocalizedString("emptyFiles.title", comment: "Empty files title"))
                 .font(.title3.weight(.semibold))
 
-            Text("You don't have any converted files yet. Scan documents or convert existing files to get started.")
+            Text(NSLocalizedString("emptyFiles.message", comment: "Empty files message"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -1114,11 +1116,11 @@ private struct EmptySearchResultsView: View {
                 .font(.system(size: 36, weight: .medium))
                 .foregroundStyle(.secondary)
 
-            Text("No matches for \"\(query.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+            Text(String(format: NSLocalizedString("search.empty.title", comment: "No matches title"), query.trimmingCharacters(in: .whitespacesAndNewlines)))
                 .font(.headline)
                 .multilineTextAlignment(.center)
 
-            Text("Try a different file name or keyword from the document.")
+            Text(NSLocalizedString("search.empty.message", comment: "No matches message"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -1218,11 +1220,11 @@ enum ScanWorkflowError: Error {
     var message: String {
         switch self {
         case .cancelled:
-            return "The scan was cancelled."
+            return NSLocalizedString("scanError.cancelled", comment: "Scan cancelled message")
         case .unavailable:
-            return "Scanning is not supported on this device."
+            return NSLocalizedString("scanError.unavailable", comment: "Scanning unavailable message")
         case .noImages:
-            return "No images were selected."
+            return NSLocalizedString("scanError.noImages", comment: "No images selected message")
         case .failed(let detail):
             return detail
         case .underlying(let error):
@@ -1250,7 +1252,7 @@ private enum BiometricAuthenticator {
     @MainActor
     static func authenticate(reason: String) async -> BiometricAuthResult {
         let biometricContext = LAContext()
-        biometricContext.localizedFallbackTitle = "Use Passcode"
+        biometricContext.localizedFallbackTitle = NSLocalizedString("biometrics.fallback", comment: "Fallback button title")
 
         var biometricError: NSError?
         let canUseBiometrics = biometricContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &biometricError)
@@ -1262,7 +1264,7 @@ private enum BiometricAuthenticator {
         guard canUseBiometrics || canUsePasscode else {
             let message = biometricError?.localizedDescription
                 ?? passcodeError?.localizedDescription
-                ?? "This device cannot perform Face ID or passcode authentication."
+                ?? NSLocalizedString("biometrics.unavailable.message", comment: "Biometrics unavailable message")
             return .unavailable(message)
         }
 
@@ -1369,9 +1371,9 @@ struct SettingsView: View {
 
         var title: String {
             switch self {
-            case .faq: return "FAQ"
-            case .terms: return "Terms of Use"
-            case .privacy: return "Privacy Policy"
+            case .faq: return NSLocalizedString("settings.info.faq", comment: "FAQ title")
+            case .terms: return NSLocalizedString("settings.info.terms", comment: "Terms title")
+            case .privacy: return NSLocalizedString("settings.info.privacy", comment: "Privacy title")
             }
         }
 
@@ -1389,7 +1391,7 @@ struct SettingsView: View {
                 supportSection
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Settings")
+            .navigationTitle(NSLocalizedString("settings.title", comment: "Settings navigation title"))
             .sheet(item: $infoSheet) { sheet in
                 NavigationView {
                     ScrollView {
@@ -1400,7 +1402,7 @@ struct SettingsView: View {
                     .navigationTitle(sheet.title)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") { infoSheet = nil }
+                            Button(NSLocalizedString("action.done", comment: "Done action")) { infoSheet = nil }
                         }
                     }
                 }
@@ -1418,7 +1420,7 @@ struct SettingsView: View {
                 Alert(
                     title: Text(alert.title),
                     message: Text(alert.message),
-                    dismissButton: .default(Text("OK")) {
+                    dismissButton: .default(Text(NSLocalizedString("action.ok", comment: "OK action"))) {
                         settingsAlert = nil
                     }
                 )
@@ -1434,7 +1436,7 @@ struct SettingsView: View {
     }
 
     private var subscriptionSection: some View {
-        Section("Subscription") {
+        Section(NSLocalizedString("settings.subscription.section", comment: "Subscription section title")) {
             Button {
                 if subscriptionManager.isSubscribed {
                     subscriptionManager.openManageSubscriptions()
@@ -1454,22 +1456,22 @@ struct SettingsView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(subscriptionManager.isSubscribed ? "PDF Converter Pro Active" : "Upgrade to PDF Converter Pro")
+                            Text(subscriptionManager.isSubscribed ? NSLocalizedString("settings.subscription.activeTitle", comment: "Active subscription title") : NSLocalizedString("settings.subscription.upsellTitle", comment: "Upsell subscription title"))
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            Text(subscriptionManager.isSubscribed ? "Enjoy unlimited conversions and pro tools" : "Unlock unlimited conversions and pro tools")
+                            Text(subscriptionManager.isSubscribed ? NSLocalizedString("settings.subscription.activeSubtitle", comment: "Active subscription subtitle") : NSLocalizedString("settings.subscription.upsellSubtitle", comment: "Upsell subscription subtitle"))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
                     if subscriptionManager.isSubscribed {
-                        Text("Manage or cancel anytime from your App Store subscriptions.")
+                        Text(NSLocalizedString("settings.subscription.manageCopy", comment: "Manage subscription copy"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.leading, 56)
                     } else {
-                        Text("Start a 1-week ad-free $0.99 subscription, then $9.99/week. Cancel anytime.")
+                        Text(NSLocalizedString("settings.subscription.trialCopy", comment: "Subscription trial copy"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.leading, 56)
@@ -1485,7 +1487,7 @@ struct SettingsView: View {
             .buttonStyle(.plain)
 
             if subscriptionManager.purchaseState == .purchasing {
-                ProgressView("Contacting App Store...")
+                ProgressView(NSLocalizedString("settings.subscription.progress", comment: "Contacting App Store text"))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -1498,16 +1500,16 @@ struct SettingsView: View {
     }
 
     private var settingsSection: some View {
-        Section("Settings") {
+        Section(NSLocalizedString("settings.general.section", comment: "Settings section title")) {
             Button {
                 showSignatureSheet = true
             } label: {
                 HStack {
                     Image(systemName: "signature")
                     VStack(alignment: .leading) {
-                        Text(savedSignature == nil ? "Add signature" : "Update signature")
+                        Text(savedSignature == nil ? NSLocalizedString("settings.signature.add", comment: "Add signature") : NSLocalizedString("settings.signature.update", comment: "Update signature"))
                         if let savedSignature {
-                            Text("Current: \(savedSignature.name)")
+                            Text(String(format: NSLocalizedString("settings.signature.current", comment: "Current signature template"), savedSignature.name))
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -1530,8 +1532,8 @@ struct SettingsView: View {
                 }
             )) {
                 VStack(alignment: .leading) {
-                    Text("Require Face ID / Passcode")
-                    Text("Ask for Face ID or passcode before previewing files")
+                    Text(NSLocalizedString("settings.biometrics.title", comment: "Require biometrics title"))
+                    Text(NSLocalizedString("settings.biometrics.subtitle", comment: "Require biometrics subtitle"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -1544,7 +1546,7 @@ struct SettingsView: View {
     /// Requests Face ID/Touch ID authentication before letting the user disable preview protection.
     @MainActor
     private func promptToDisableBiometrics() async {
-        let result = await BiometricAuthenticator.authenticate(reason: "Turn off Face ID protection")
+        let result = await BiometricAuthenticator.authenticate(reason: NSLocalizedString("biometrics.disable.reason", comment: "Disable biometrics reason"))
 
         switch result {
         case .success:
@@ -1552,57 +1554,57 @@ struct SettingsView: View {
         case .failed:
             requireBiometrics = true
             settingsAlert = SettingsAlert(
-                title: "Authentication Failed",
-                message: "We couldn't verify your identity."
+                title: NSLocalizedString("alert.authFailed.title", comment: "Authentication failed title"),
+                message: NSLocalizedString("alert.authFailed.message", comment: "Authentication failed message")
             )
         case .cancelled:
             requireBiometrics = true
         case .unavailable(let message):
             requireBiometrics = true
             settingsAlert = SettingsAlert(
-                title: "Authentication Unavailable",
+                title: NSLocalizedString("alert.authUnavailable.title", comment: "Authentication unavailable title"),
                 message: message
             )
         case .error(let message):
             requireBiometrics = true
             settingsAlert = SettingsAlert(
-                title: "Authentication Error",
+                title: NSLocalizedString("alert.authError.title", comment: "Authentication error title"),
                 message: message
             )
         }
     }
 
     private var infoSection: some View {
-        Section("Info") {
+        Section(NSLocalizedString("settings.info.section", comment: "Info section title")) {
             Button { infoSheet = .faq } label: {
-                Label("FAQ", systemImage: "questionmark.circle")
+                Label(NSLocalizedString("settings.info.faq", comment: "FAQ title"), systemImage: "questionmark.circle")
             }
             Button { infoSheet = .terms } label: {
-                Label("Terms of Use", systemImage: "doc.append")
+                Label(NSLocalizedString("settings.info.terms", comment: "Terms title"), systemImage: "doc.append")
             }
             Button { infoSheet = .privacy } label: {
-                Label("Privacy Policy", systemImage: "lock.shield")
+                Label(NSLocalizedString("settings.info.privacy", comment: "Privacy title"), systemImage: "lock.shield")
             }
         }
     }
 
     private var supportSection: some View {
-        Section("Support") {
+        Section(NSLocalizedString("settings.support.section", comment: "Support section title")) {
             Button {
                 if let shareURL = URL(string: "https://roguewaveapps.com/pdf-converter") {
                     shareItem = ShareItem(url: shareURL, cleanupHandler: nil)
                 }
             } label: {
-                Label("Share App", systemImage: "square.and.arrow.up")
+                Label(NSLocalizedString("settings.support.shareApp", comment: "Share app label"), systemImage: "square.and.arrow.up")
             }
 
             Button {
                 settingsAlert = SettingsAlert(
-                    title: "Contact Support",
-                    message: "Email us at pdfconverter@roguewaveapps.com and we’ll be happy to help!"
+                    title: NSLocalizedString("settings.support.contactTitle", comment: "Contact support title"),
+                    message: NSLocalizedString("settings.support.contactMessage", comment: "Contact support message")
                 )
             } label: {
-                Label("Contact Support", systemImage: "envelope")
+                Label(NSLocalizedString("settings.support.contactButton", comment: "Contact support button"), systemImage: "envelope")
             }
         }
     }
@@ -1620,12 +1622,12 @@ struct AccountView: View {
     @StateObject private var subscriptionManager = SubscriptionManager()
 
     private let featureList: [(String, String)] = [
-        ("🚀", "Unlimited document conversions"),
-        ("📸", "Convert existing photos to PDF"),
-        ("📄", "Scan documents to PDF"),
-        ("🗂️", "Cloud backup for all your files"),
-        ("🖋️", "Advanced editing & annotations"),
-        ("🤝", "Priority support & new features")
+        ("🚀", "account.feature.conversions"),
+        ("📸", "account.feature.photos"),
+        ("📄", "account.feature.scan"),
+        ("🗂️", "account.feature.backup"),
+        ("🖋️", "account.feature.editing"),
+        ("🤝", "account.feature.support")
     ]
 
     var body: some View {
@@ -1644,15 +1646,15 @@ struct AccountView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Account")
+            .navigationTitle(NSLocalizedString("account.title", comment: "Account navigation title"))
         }
     }
 
     private var statusSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(subscriptionManager.isSubscribed ? "You're a Pro!" : "Go Pro to unlock more")
+            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.status.subscribed.title", comment: "Subscribed status title") : NSLocalizedString("account.status.upsell.title", comment: "Upsell status title"))
                 .font(.title2.weight(.semibold))
-            Text(subscriptionManager.isSubscribed ? "Thank you for supporting PDF Converter. You currently enjoy every premium feature." : "PDF Converter Pro gives you the power tools to work with any document, anywhere.")
+            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.status.subscribed.message", comment: "Subscribed status message") : NSLocalizedString("account.status.upsell.message", comment: "Upsell status message"))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1660,7 +1662,7 @@ struct AccountView: View {
 
     private var featuresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(subscriptionManager.isSubscribed ? "Your Pro features" : "Unlock these features")
+            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.features.subscribed", comment: "Subscribed features title") : NSLocalizedString("account.features.upsell", comment: "Upsell features title"))
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 10) {
@@ -1668,7 +1670,7 @@ struct AccountView: View {
                     HStack(alignment: .top, spacing: 12) {
                         Text(item.0)
                             .font(.title3)
-                        Text(item.1)
+                        Text(NSLocalizedString(item.1, comment: "Feature description"))
                             .font(.body)
                     }
                 }
@@ -1688,7 +1690,7 @@ struct AccountView: View {
             Button {
                 subscriptionManager.openManageSubscriptions()
             } label: {
-                Label("Manage Subscription", systemImage: "gearshape")
+                Label(NSLocalizedString("account.action.manage", comment: "Manage subscription label"), systemImage: "gearshape")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -1700,14 +1702,14 @@ struct AccountView: View {
                     if subscriptionManager.purchaseState == .purchasing {
                         ProgressView()
                     }
-                    Label("Upgrade to Pro now", systemImage: "sparkles")
+                    Label(NSLocalizedString("account.action.upgrade", comment: "Upgrade action label"), systemImage: "sparkles")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .buttonStyle(.borderedProminent)
             .disabled(subscriptionManager.purchaseState == .purchasing)
 
-            Text("Enjoy a 7-day ad-free $0.99 trial, then $9.99/week. Cancel anytime in your App Store subscriptions.")
+            Text(NSLocalizedString("account.trial.copy", comment: "Trial copy text"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1757,7 +1759,7 @@ final class SubscriptionManager: ObservableObject {
             let products = try await Product.products(for: [productID])
             product = products.first
         } catch {
-            purchaseState = .failed("Unable to load subscription details. \(error.localizedDescription)")
+            purchaseState = .failed(String(format: NSLocalizedString("subscription.loadFailed", comment: "Load subscription failed"), error.localizedDescription))
         }
     }
 
@@ -1776,13 +1778,13 @@ final class SubscriptionManager: ObservableObject {
                 (transaction.expirationDate ?? .distantFuture) > Date()
             isSubscribed = isActive
         case .unverified(_, let error):
-            purchaseState = .failed("Verification failed. \(error.localizedDescription)")
+            purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
         }
     }
 
     private func purchaseProduct() async {
         guard let product else {
-            purchaseState = .failed("Subscription not available. Pull to refresh and try again.")
+            purchaseState = .failed(NSLocalizedString("subscription.notAvailable", comment: "Subscription not available message"))
             return
         }
 
@@ -1798,10 +1800,10 @@ final class SubscriptionManager: ObservableObject {
             case .userCancelled:
                 purchaseState = .idle
             @unknown default:
-                purchaseState = .failed("Unknown purchase result.")
+                purchaseState = .failed(NSLocalizedString("subscription.unknownResult", comment: "Unknown purchase result"))
             }
         } catch {
-            purchaseState = .failed("Purchase failed. \(error.localizedDescription)")
+            purchaseState = .failed(String(format: NSLocalizedString("subscription.purchaseFailed", comment: "Purchase failed message"), error.localizedDescription))
         }
     }
 
@@ -1812,7 +1814,7 @@ final class SubscriptionManager: ObservableObject {
             purchaseState = .purchased
             await transaction.finish()
         case .unverified(_, let error):
-            purchaseState = .failed("Verification failed. \(error.localizedDescription)")
+            purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
         }
     }
 }
@@ -1830,8 +1832,8 @@ struct WebConversionPrompt: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("Web Page URL") {
-                    TextField("https://example.com/article", text: $urlString)
+                Section(NSLocalizedString("webPrompt.section.title", comment: "Web prompt section title")) {
+                    TextField(NSLocalizedString("webPrompt.placeholder", comment: "Web prompt placeholder"), text: $urlString)
                         .keyboardType(.URL)
                         .textContentType(.URL)
                         .autocorrectionDisabled(true)
@@ -1844,11 +1846,11 @@ struct WebConversionPrompt: View {
                     Button {
                         performConversion()
                     } label: {
-                        Label("Convert", systemImage: "arrow.down.doc")
+                        Label(NSLocalizedString("action.convert", comment: "Convert action"), systemImage: "arrow.down.doc")
                     }
                     .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConverting)
 
-                    Button("Cancel", role: .cancel, action: cancel)
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel, action: cancel)
                         .disabled(isConverting)
                 }
 
@@ -1856,7 +1858,7 @@ struct WebConversionPrompt: View {
                     Section {
                         HStack {
                             ProgressView()
-                            Text("Converting…")
+                            Text(NSLocalizedString("status.converting", comment: "Conversion in progress"))
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 4)
@@ -1869,15 +1871,15 @@ struct WebConversionPrompt: View {
                     }
                 }
             }
-            .navigationTitle("Convert Web Page")
+        .navigationTitle(NSLocalizedString("webPrompt.title", comment: "Convert web page title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: cancel)
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action"), action: cancel)
                         .disabled(isConverting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Convert", action: performConversion)
+                    Button(NSLocalizedString("action.convert", comment: "Convert action"), action: performConversion)
                         .disabled(urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isConverting)
                 }
             }
@@ -1903,7 +1905,7 @@ struct WebConversionPrompt: View {
                 if success {
                     dismiss()
                 } else {
-                    conversionError = "We couldn't convert that page. Check the URL and try again."
+                    conversionError = NSLocalizedString("webPrompt.error.message", comment: "Web conversion error message")
                 }
             }
         }
@@ -1951,9 +1953,9 @@ struct PDFEditorSelectionView: View {
                     Image(systemName: "doc")
                         .font(.system(size: 42, weight: .medium))
                         .foregroundStyle(.secondary)
-                    Text("No PDFs found")
+                    Text(NSLocalizedString("editor.choosePDF.emptyTitle", comment: "No PDFs found title"))
                         .font(.headline)
-                    Text("Add or import a PDF to start editing.")
+                    Text(NSLocalizedString("editor.choosePDF.emptyMessage", comment: "No PDFs found message"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -1993,11 +1995,11 @@ struct PDFEditorSelectionView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Choose PDF")
+        .navigationTitle(NSLocalizedString("editor.choosePDF.title", comment: "Choose PDF title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button(NSLocalizedString("action.cancel", comment: "Cancel action")) {
                     onCancel()
                     dismiss()
                 }
@@ -2048,8 +2050,8 @@ struct PDFEditorView: View {
                     onConfirm: {
                         if !controller.confirmSignaturePlacement() {
                             inlineAlert = InlineAlert(
-                                title: "Placement Failed",
-                                message: "We couldn't add the signature to this page. Please try again."
+                                title: NSLocalizedString("signature.placeFailed.title", comment: "Signature placement failed title"),
+                                message: NSLocalizedString("signature.placeFailed.message", comment: "Signature placement failed message")
                             )
                         }
                     },
@@ -2067,7 +2069,7 @@ struct PDFEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button(NSLocalizedString("action.cancel", comment: "Cancel action")) {
                     if controller.hasActiveSignaturePlacement() {
                         controller.cancelSignaturePlacement()
                     }
@@ -2075,14 +2077,14 @@ struct PDFEditorView: View {
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button(NSLocalizedString("action.save", comment: "Save action")) {
                     if controller.hasActiveSignaturePlacement() {
                         if controller.confirmSignaturePlacement() {
                             onSave()
                         } else {
                             inlineAlert = InlineAlert(
-                                title: "Placement Failed",
-                                message: "We couldn't add the signature to this page. Please try again."
+                                title: NSLocalizedString("signature.placeFailed.title", comment: "Signature placement failed title"),
+                                message: NSLocalizedString("signature.placeFailed.message", comment: "Signature placement failed message")
                             )
                         }
                     } else {
@@ -2099,38 +2101,38 @@ struct PDFEditorView: View {
                     cachedSignature = SignatureStore.load()
                     guard let signature = cachedSignature else {
                         inlineAlert = InlineAlert(
-                            title: "No Signature Found",
-                            message: "Add a signature in Settings before inserting it here."
+                            title: NSLocalizedString("signature.none.title", comment: "No signature found title"),
+                            message: NSLocalizedString("signature.none.message", comment: "No signature found message")
                         )
                         return
                     }
 
                     if !controller.beginSignaturePlacement(signature) {
                         inlineAlert = InlineAlert(
-                            title: "Can't Insert Signature",
-                            message: "Navigate to the page where you want to place the signature, then tap Insert Signature."
+                            title: NSLocalizedString("signature.cannotInsert.title", comment: "Cannot insert signature title"),
+                            message: NSLocalizedString("signature.cannotInsert.message", comment: "Cannot insert signature message")
                         )
                     }
                 } label: {
-                    Label("Insert Signature", systemImage: "signature")
+                    Label(NSLocalizedString("signature.insert.action", comment: "Insert signature action"), systemImage: "signature")
                 }
                 .tint(controller.hasActiveSignaturePlacement() ? .orange : nil)
 
                 Button {
                     if !controller.highlightSelection() {
                         inlineAlert = InlineAlert(
-                            title: "Select Text",
-                            message: "Select the text you want to highlight, then tap Highlight."
+                            title: NSLocalizedString("signature.highlight.title", comment: "Highlight missing selection title"),
+                            message: NSLocalizedString("signature.highlight.message", comment: "Highlight missing selection message")
                         )
                     }
                 } label: {
-                    Label("Highlight", systemImage: "highlighter")
+                    Label(NSLocalizedString("signature.highlight.action", comment: "Highlight action"), systemImage: "highlighter")
                 }
 
             }
         }
         .alert(item: $inlineAlert) { info in
-            Alert(title: Text(info.title), message: Text(info.message), dismissButton: .default(Text("OK")))
+            Alert(title: Text(info.title), message: Text(info.message), dismissButton: .default(Text(NSLocalizedString("action.ok", comment: "OK action"))))
         }
     }
 }
@@ -2237,7 +2239,7 @@ final class PDFEditorController: ObservableObject {
             y: pageBounds.midY - size.height / 2
         )
         let annotation = PDFAnnotation(bounds: CGRect(origin: origin, size: size), forType: .text, withProperties: nil)
-        annotation.contents = "New Note"
+        annotation.contents = NSLocalizedString("editor.annotation.newNote", comment: "New note default text")
         annotation.color = .systemYellow
         page.addAnnotation(annotation)
         return true
@@ -2355,14 +2357,14 @@ struct SignaturePlacementOverlay: View {
                         Button(role: .cancel) {
                             onCancel()
                         } label: {
-                            Label("Cancel", systemImage: "xmark.circle")
+                            Label(NSLocalizedString("action.cancel", comment: "Cancel Button Label"), systemImage: "xmark.circle")
                         }
                         .buttonStyle(.bordered)
 
                         Button {
                             onConfirm()
                         } label: {
-                            Label("Place", systemImage: "checkmark.circle")
+                            Label(NSLocalizedString("signature.place", comment: "Place Signature Button Label"), systemImage: "checkmark.circle")
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -2409,7 +2411,14 @@ final class SignatureStampAnnotation: PDFAnnotation {
     }
 }
 
-struct CreateSomethingView: View { var body: some View { NavigationView { Text("Create flow").navigationTitle("New Item") } } }
+struct CreateSomethingView: View {
+    var body: some View {
+        NavigationView {
+            Text(NSLocalizedString("placeholder.createFlow.body", comment: "Create flow placeholder"))
+                .navigationTitle(NSLocalizedString("placeholder.createFlow.title", comment: "Create flow title"))
+        }
+    }
+}
 
 /// Sheet for drawing, naming, and persisting a user's handwritten signature.
 struct SignatureEditorView: View {
@@ -2423,7 +2432,7 @@ struct SignatureEditorView: View {
         _signature = signature
         let existingSignature = signature.wrappedValue
         _drawing = State(initialValue: existingSignature?.drawing ?? PKDrawing())
-        _signatureName = State(initialValue: existingSignature?.name ?? "My Signature")
+        _signatureName = State(initialValue: existingSignature?.name ?? NSLocalizedString("signature.defaultName", comment: "Default signature name"))
     }
 
     var body: some View {
@@ -2442,11 +2451,11 @@ struct SignatureEditorView: View {
                     .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Signature Name")
+                    Text(NSLocalizedString("signature.name.label", comment: "Signature name label"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
-                    TextField("My Signature", text: $signatureName)
+                    TextField(NSLocalizedString("signature.name.placeholder", comment: "Signature name placeholder"), text: $signatureName)
                         .textFieldStyle(.roundedBorder)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
@@ -2454,30 +2463,30 @@ struct SignatureEditorView: View {
 
                 Spacer()
 
-                Text("Use Apple Pencil or your finger to draw your signature. Tap Clear to start over.")
+                Text(NSLocalizedString("signature.instructions", comment: "Signature instructions"))
                     .font(.footnote)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .navigationTitle(signature == nil ? "Add Signature" : "Update Signature")
+            .navigationTitle(signature == nil ? NSLocalizedString("signature.add.title", comment: "Add signature title") : NSLocalizedString("signature.update.title", comment: "Update signature title"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveSignature() }
+                    Button(NSLocalizedString("action.save", comment: "Save action")) { saveSignature() }
                         .disabled(drawing.bounds.isEmpty)
                 }
                 ToolbarItem(placement: .bottomBar) {
-                    Button("Clear", role: .destructive) { drawing = PKDrawing() }
+                    Button(NSLocalizedString("action.clear", comment: "Clear action"), role: .destructive) { drawing = PKDrawing() }
                         .disabled(drawing.bounds.isEmpty)
                 }
             }
-            .alert("Empty Signature", isPresented: $showEmptyAlert) {
-                Button("OK", role: .cancel) { }
+            .alert(NSLocalizedString("signature.empty.title", comment: "Empty signature title"), isPresented: $showEmptyAlert) {
+                Button(NSLocalizedString("action.ok", comment: "OK action"), role: .cancel) { }
             } message: {
-                Text("Please draw your signature before saving.")
+                Text(NSLocalizedString("signature.empty.message", comment: "Empty signature message"))
             }
         }
     }
@@ -2490,7 +2499,7 @@ struct SignatureEditorView: View {
         }
 
         let trimmedName = signatureName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedName = trimmedName.isEmpty ? "My Signature" : trimmedName
+        let resolvedName = trimmedName.isEmpty ? NSLocalizedString("signature.defaultName", comment: "Default signature name") : trimmedName
         let existingID = signature?.id ?? UUID()
 
         let updatedSignature = SignatureStore.Signature(id: existingID, name: resolvedName, drawing: drawing)
@@ -2618,7 +2627,7 @@ struct ToolsView: View {
                 }
                 .padding(16)
             }
-            .navigationTitle("Tools")
+            .navigationTitle(NSLocalizedString("tools.title", comment: "Tools screen title"))
             .navigationBarTitleDisplayMode(.large)
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
@@ -2660,10 +2669,10 @@ struct ScanReviewSheet: View {
                     .padding(.top)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("File name")
+                    Text(NSLocalizedString("review.fileName.label", comment: "File name label"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                    TextField("File name", text: $fileName)
+                    TextField(NSLocalizedString("review.fileName.placeholder", comment: "File name placeholder"), text: $fileName)
                         .textFieldStyle(.roundedBorder)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
@@ -2679,7 +2688,7 @@ struct ScanReviewSheet: View {
                             shareItem = item
                         }
                     } label: {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label(NSLocalizedString("action.share", comment: "Share action"), systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -2689,7 +2698,7 @@ struct ScanReviewSheet: View {
                         onSave(updated)
                         dismiss()
                     } label: {
-                        Label("Save", systemImage: "tray.and.arrow.down")
+                        Label(NSLocalizedString("action.save", comment: "Save action"), systemImage: "tray.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -2697,16 +2706,16 @@ struct ScanReviewSheet: View {
                 .padding(.horizontal)
                 .padding(.bottom)
             }
-            .navigationTitle("Preview")
+            .navigationTitle(NSLocalizedString("review.title", comment: "Preview screen title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onCancel(document)
-                        dismiss()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(NSLocalizedString("action.cancel", comment: "Cancel action")) {
+                            onCancel(document)
+                            dismiss()
+                        }
                     }
                 }
-            }
         }
         .sheet(item: $shareItem) { item in
             ShareSheet(activityItems: [item.url]) {
@@ -2817,21 +2826,21 @@ struct RenameFileSheet: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("File Name")) {
-                    TextField("File name", text: $fileName)
-                        .focused($isFieldFocused)
-                        .textInputAutocapitalization(.words)
-                        .disableAutocorrection(true)
-                }
+        Section(header: Text(NSLocalizedString("rename.section.title", comment: "Rename section title"))) {
+            TextField(NSLocalizedString("rename.field.placeholder", comment: "Rename field placeholder"), text: $fileName)
+                .focused($isFieldFocused)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+        }
             }
-            .navigationTitle("Rename")
+            .navigationTitle(NSLocalizedString("rename.title", comment: "Rename title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action"), action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", action: onSave)
+                    Button(NSLocalizedString("action.save", comment: "Save action"), action: onSave)
                         .disabled(isSaveDisabled)
                 }
             }
@@ -3316,27 +3325,27 @@ struct ToolCard: Identifiable {
 
 extension ToolCard {
     static let sample: [ToolCard] = [
-        .init(title: "Convert\nFiles to PDF",
+        .init(title: NSLocalizedString("tools.card.convertFiles.title", comment: "Convert files title"),
               tint: Color(hex: 0x2F7F79),
               iconName: "infinity",
               action: .convertFiles),
-        .init(title: "Scan\nDocuments",
+        .init(title: NSLocalizedString("tools.card.scan.title", comment: "Scan documents title"),
               tint: Color(hex: 0xC02267),
               iconName: "camera",
               action: .scanDocuments),
-        .init(title: "Convert\nPhotos to PDF",
+        .init(title: NSLocalizedString("tools.card.convertPhotos.title", comment: "Convert photos title"),
               tint: Color(hex: 0x5C3A78),
               iconName: "photo.on.rectangle",
               action: .convertPhotos),
-        .init(title: "Import\nDocuments",
+        .init(title: NSLocalizedString("tools.card.import.title", comment: "Import documents title"),
               tint: Color(hex: 0x6C8FC0),
               iconName: "arrow.down.to.line",
               action: .importDocuments),
-        .init(title: "Convert\nWeb Page",
+        .init(title: NSLocalizedString("tools.card.web.title", comment: "Convert web page title"),
               tint: Color(hex: 0xBF7426),
               iconName: "link",
               action: .convertWebPage),
-        .init(title: "Edit\nDocuments",
+        .init(title: NSLocalizedString("tools.card.edit.title", comment: "Edit documents title"),
               tint: Color(hex: 0x7B3DD3),
               iconName: "pencil.and.outline",
               action: .editDocuments)
