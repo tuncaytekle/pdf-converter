@@ -175,8 +175,10 @@ struct ContentView: View {
                 )
         )
         .confirmationDialog(NSLocalizedString("dialog.deletePDF.title", comment: "Delete PDF confirmation"), isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
-            Button("🗑️ \(NSLocalizedString("action.delete", comment: "Delete action"))", role: .destructive) {
+            Button(role: .destructive) {
                 deleteFile(file)
+            } label: {
+                Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
             }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
                 deleteTarget = nil
@@ -196,9 +198,15 @@ struct ContentView: View {
             )
         }
         .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
-            Button("📄 \(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"))") { scanDocumentsToPDF() }
-            Button("🖼️ \(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"))") { convertPhotosToPDF() }
-            Button("📁 \(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"))") { convertFilesToPDF() }
+            Button { scanDocumentsToPDF() } label: {
+                Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
+            }
+            Button { convertPhotosToPDF() } label: {
+                Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
+            }
+            Button { convertFilesToPDF() } label: {
+                Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
+            }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) { }
         }
         .overlay {
@@ -240,7 +248,8 @@ struct ContentView: View {
                 onPreview: { previewSavedFile($0) },
                 onShare: { shareSavedFile($0) },
                 onRename: { beginRenamingFile($0) },
-                onDelete: { confirmDeletion(for: $0) }
+                onDelete: { confirmDeletion(for: $0) },
+                cloudBackup: cloudBackup
             )
             .tabItem { Label(NSLocalizedString("tab.files", comment: "Files tab label"), systemImage: "doc") }
             .tag(Tab.files)
@@ -767,11 +776,49 @@ struct ContentView: View {
         guard !hasAttemptedCloudRestore else { return }
         hasAttemptedCloudRestore = true
         Task {
+            // DIAGNOSTIC: Check if records actually exist in CloudKit
+            let counts = await cloudBackup.fetchAllRecordsWithoutQuery()
+
+            // Restore folders
+            let existingFolderIds = Set(PDFStorage.loadFolders().map { $0.id })
+            let restoredFolders = await cloudBackup.restoreMissingFolders(existingFolderIds: existingFolderIds)
+            if !restoredFolders.isEmpty {
+                var folders = PDFStorage.loadFolders()
+                folders.append(contentsOf: restoredFolders)
+                PDFStorage.saveFolders(folders)
+            }
+
+            // Restore files
             let existingNames = Set(files.map { CloudRecordNaming.recordName(for: $0.url.lastPathComponent) })
             let restored = await cloudBackup.restoreMissingFiles(existingRecordNames: existingNames)
             guard !restored.isEmpty else { return }
+
+            // Get file-folder mappings from CloudKit
+            let mappings = await cloudBackup.getFileFolderMappings()
+
+            // Apply folder mappings to restored files
+            let restoredWithFolders = restored.map { file -> PDFFile in
+                let fileName = file.url.lastPathComponent
+                let folderId = mappings[fileName]
+                return PDFFile(
+                    url: file.url,
+                    name: file.name,
+                    date: file.date,
+                    pageCount: file.pageCount,
+                    fileSize: file.fileSize,
+                    folderId: folderId
+                )
+            }
+
+            // Save folder mappings for restored files
+            for file in restoredWithFolders {
+                if let folderId = file.folderId {
+                    PDFStorage.updateFileFolderId(file: file, folderId: folderId)
+                }
+            }
+
             await MainActor.run {
-                files.append(contentsOf: restored)
+                files.append(contentsOf: restoredWithFolders)
                 files.sort { $0.date > $1.date }
             }
         }
@@ -957,6 +1004,8 @@ struct FilesView: View {
     @State private var showCreateFolderDialog = false
     @State private var newFolderName = ""
     @State private var moveFileToFolder: PDFFile? = nil
+    @State private var showDeleteFolderDialog = false
+    @State private var deleteFolderTarget: PDFFolder? = nil
     @StateObject private var contentIndexer = FileContentIndexer()
     @StateObject private var subscriptionManager = SubscriptionManager()
 
@@ -964,6 +1013,7 @@ struct FilesView: View {
     let onShare: (PDFFile) -> Void
     let onRename: (PDFFile) -> Void
     let onDelete: (PDFFile) -> Void
+    let cloudBackup: CloudBackupManager
     private let thumbnailSize = CGSize(width: 58, height: 78)
 
     var body: some View {
@@ -977,6 +1027,24 @@ struct FilesView: View {
                 }
                 .sheet(item: $moveFileToFolder) { file in
                     moveToFolderDialog(for: file)
+                }
+                .confirmationDialog(
+                    NSLocalizedString("dialog.deleteFolder.title", comment: "Delete folder confirmation title"),
+                    isPresented: $showDeleteFolderDialog,
+                    presenting: deleteFolderTarget
+                ) { folder in
+                    Button(role: .destructive) {
+                        deleteFolder(folder)
+                    } label: {
+                        Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
+                    }
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
+                        deleteFolderTarget = nil
+                        showDeleteFolderDialog = false
+                    }
+                } message: { folder in
+                    let fileCount = files.filter { $0.folderId == folder.id }.count
+                    Text(String(format: NSLocalizedString("dialog.deleteFolder.message", comment: "Delete folder message"), fileCount))
                 }
         }
     }
@@ -1084,11 +1152,27 @@ struct FilesView: View {
             Spacer(minLength: 0)
 
             Menu {
-                Button("👀 \(NSLocalizedString("action.preview", comment: "Preview action"))") { onPreview(file) }
-                Button("📤 \(NSLocalizedString("action.share", comment: "Share action"))") { onShare(file) }
-                Button("✏️ \(NSLocalizedString("action.rename", comment: "Rename action"))") { onRename(file) }
+                Button {
+                    onPreview(file)
+                } label: {
+                    Label(NSLocalizedString("action.preview", comment: "Preview action"), systemImage: "eye.fill")
+                }
+
+                Button {
+                    onShare(file)
+                } label: {
+                    Label(NSLocalizedString("action.share", comment: "Share action"), systemImage: "square.and.arrow.up")
+                }
+
+                Button {
+                    onRename(file)
+                } label: {
+                    Label(NSLocalizedString("action.rename", comment: "Rename action"), systemImage: "pencil")
+                }
+
                 Divider()
-                Menu("📁 \(NSLocalizedString("action.moveToFolder", comment: "Move to folder"))") {
+
+                Menu {
                     Button(NSLocalizedString("folder.topLevel", comment: "Top level folder")) {
                         moveFile(file, to: nil)
                     }
@@ -1097,9 +1181,17 @@ struct FilesView: View {
                             moveFile(file, to: folder.id)
                         }
                     }
+                } label: {
+                    Label(NSLocalizedString("action.moveToFolder", comment: "Move to folder"), systemImage: "folder")
                 }
+
                 Divider()
-                Button("🗑️ \(NSLocalizedString("action.delete", comment: "Delete action"))", role: .destructive) { onDelete(file) }
+
+                Button(role: .destructive) {
+                    onDelete(file)
+                } label: {
+                    Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 18, weight: .semibold))
@@ -1191,6 +1283,14 @@ struct FilesView: View {
         .onTapGesture {
             currentFolderId = folder.id
         }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                deleteFolderTarget = folder
+                showDeleteFolderDialog = true
+            } label: {
+                Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
+            }
+        }
         .padding(.vertical, 10)
     }
 
@@ -1216,6 +1316,50 @@ struct FilesView: View {
             // Add the updated file
             files.append(updatedFile)
         }
+
+        // Update CloudKit backup with new folder ID
+        Task {
+            await cloudBackup.backup(file: updatedFile)
+        }
+    }
+
+    private func deleteFolder(_ folder: PDFFolder) {
+        // Get all files in the folder before deletion
+        let filesInFolder = files.filter { $0.folderId == folder.id }
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Delete each file
+            for file in filesInFolder {
+                try? FileManager.default.removeItem(at: file.url)
+            }
+
+            // Remove files from the array
+            files.removeAll { $0.folderId == folder.id }
+
+            // Remove the folder
+            folders.removeAll { $0.id == folder.id }
+
+            // Save updated folders list
+            PDFStorage.saveFolders(folders)
+
+            // If we're currently inside the folder being deleted, navigate back to top level
+            if currentFolderId == folder.id {
+                currentFolderId = nil
+            }
+        }
+
+        // Delete from CloudKit
+        Task {
+            await cloudBackup.deleteFolder(folder)
+            // Also delete all files in the folder from CloudKit
+            for file in filesInFolder {
+                await cloudBackup.deleteBackup(for: file)
+            }
+        }
+
+        // Clean up dialog state
+        deleteFolderTarget = nil
+        showDeleteFolderDialog = false
     }
 
     private var createFolderDialog: some View {
@@ -1278,6 +1422,11 @@ struct FilesView: View {
         let newFolder = PDFFolder(name: trimmedName)
         folders.append(newFolder)
         PDFStorage.saveFolders(folders)
+
+        // Backup folder to CloudKit
+        Task {
+            await cloudBackup.backupFolder(newFolder)
+        }
 
         showCreateFolderDialog = false
         newFolderName = ""
