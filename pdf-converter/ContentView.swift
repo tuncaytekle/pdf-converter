@@ -46,6 +46,7 @@ struct ContentView: View {
         timeout: 120
     )
 
+    @StateObject private var subscriptionManager = SubscriptionManager()
     @State private var selection: Tab = .files
     @State private var showCreateActions = false
     @State private var files: [PDFFile] = []
@@ -69,13 +70,21 @@ struct ContentView: View {
     @State private var createButtonPulse = false
     @State private var didAnimateCreateButtonCue = false
     @State private var isConvertingFile = false
+    @State private var showPaywall = false
+    @State private var hasCheckedPaywall = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
     @State private var hasAttemptedCloudRestore = false
 
     var body: some View {
-        rootContent
-        .onAppear(perform: loadInitialFiles)
+        Group {
+            if hasCheckedPaywall && !showPaywall {
+                rootContent
+            } else {
+                Color.white.ignoresSafeArea()
+            }
+        }
+        .onAppear(perform: checkPaywallAndLoadFiles)
         // Present whatever flow you need
         .sheet(item: $activeScanFlow) { flow in
             switch flow {
@@ -196,6 +205,10 @@ struct ContentView: View {
                     context.onDismiss?()
                 }
             )
+        }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionManager)
         }
         .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
             Button { scanDocumentsToPDF() } label: {
@@ -758,8 +771,17 @@ struct ContentView: View {
 
     // MARK: - Lifecycle & Scanning
 
-    /// Lazily loads cached PDFs once to avoid repeated disk scans.
-    private func loadInitialFiles() {
+    /// Checks if paywall should be shown, then loads cached PDFs
+    private func checkPaywallAndLoadFiles() {
+        // First check if we should show the paywall
+        if subscriptionManager.shouldShowPaywall {
+            showPaywall = true
+        }
+
+        // Mark that we've checked, allowing main content to render
+        hasCheckedPaywall = true
+
+        // Then load files if not already loaded
         guard !hasLoadedInitialFiles else { return }
         refreshFilesFromDisk()
         hasLoadedInitialFiles = true
@@ -2217,10 +2239,21 @@ final class SubscriptionManager: ObservableObject {
     @Published var purchaseState: PurchaseState = .idle
 
     private let productID = "com.roguewaveapps.pdfconverter.pro.weekly"
+    private let hasEverPurchasedKey = "hasEverPurchasedSubscription"
 
     init() {
         Task { await loadProduct() }
         Task { await monitorEntitlements() }
+    }
+
+    /// Returns true if the user has never purchased a subscription
+    var shouldShowPaywall: Bool {
+        return !UserDefaults.standard.bool(forKey: hasEverPurchasedKey) && !isSubscribed
+    }
+
+    /// Marks that the user has completed a purchase (called after successful transaction)
+    private func markPurchaseCompleted() {
+        UserDefaults.standard.set(true, forKey: hasEverPurchasedKey)
     }
 
     /// Initiates the purchase flow for the weekly subscription.
@@ -2294,6 +2327,7 @@ final class SubscriptionManager: ObservableObject {
         case .verified(let transaction):
             isSubscribed = true
             purchaseState = .purchased
+            markPurchaseCompleted()
             await transaction.finish()
         case .unverified(_, let error):
             purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
