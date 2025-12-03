@@ -42,11 +42,21 @@ actor CloudBackupManager {
         }
 #if DEBUG
         print("☁️ Starting cloud backup for \(files.count) file(s)")
+        print("☁️ Container: \(container?.containerIdentifier ?? "none")")
+        print("☁️ Database: \(database.databaseScope.rawValue)")
 #endif
         for file in files {
-            guard FileManager.default.fileExists(atPath: file.url.path) else { continue }
+            guard FileManager.default.fileExists(atPath: file.url.path) else {
+#if DEBUG
+                print("☁️ File does not exist at path: \(file.url.path)")
+#endif
+                continue
+            }
             do {
                 let recordID = await CKRecord.ID(recordName: CloudRecordNaming.recordName(for: file.url.lastPathComponent))
+#if DEBUG
+                print("☁️ Backing up record: \(recordID.recordName)")
+#endif
                 let record = try await existingRecord(with: recordID) ?? CKRecord(recordType: recordType, recordID: recordID)
                 await record[CloudRecordKey.fileName] = file.url.lastPathComponent as NSString
                 await record[CloudRecordKey.displayName] = file.name as NSString
@@ -59,18 +69,26 @@ actor CloudBackupManager {
                 } else {
                     await record[CloudRecordKey.folderId] = nil
                 }
-                _ = try await database.modifyRecords(
+#if DEBUG
+                print("☁️ Saving record to CloudKit...")
+#endif
+                let result = try await database.modifyRecords(
                     saving: [record],
                     deleting: [],
                     savePolicy: .allKeys,
                     atomically: true
                 )
 #if DEBUG
-                print("☁️ Successfully backed up: \(file.name)")
+                print("☁️ ✅ Successfully backed up: \(file.name)")
+                print("☁️ Saved record ID: \(result.saveResults.first?.key.recordName ?? "unknown")")
 #endif
             } catch {
 #if DEBUG
-                print("☁️ Cloud backup failed for \(file.name): \(error)")
+                print("☁️ ❌ Cloud backup failed for \(file.name): \(error)")
+                if let ckError = error as? CKError {
+                    print("☁️ CKError code: \(ckError.code.rawValue)")
+                    print("☁️ CKError description: \(ckError.localizedDescription)")
+                }
 #endif
             }
         }
@@ -215,7 +233,7 @@ actor CloudBackupManager {
 
     /// Downloads any folders that do not yet exist locally.
     func restoreMissingFolders(existingFolderIds: Set<String>) async -> [PDFFolder] {
-        guard await isCloudAvailable(), let database else {
+        guard await isCloudAvailable(), database != nil else {
 #if DEBUG
             print("☁️ Folder restore skipped: iCloud not available")
 #endif
@@ -244,7 +262,9 @@ actor CloudBackupManager {
 
                 if let name = await record[CloudRecordKey.folderName] as? String,
                    let createdDate = await record[CloudRecordKey.folderCreatedDate] as? Date {
-                    let folder = PDFFolder(id: folderId, name: name, createdDate: createdDate)
+                    let folder = await MainActor.run {
+                        PDFFolder(id: folderId, name: name, createdDate: createdDate)
+                    }
                     restored.append(folder)
 #if DEBUG
                     print("☁️ Successfully restored folder: \(name)")
@@ -294,87 +314,104 @@ actor CloudBackupManager {
 
     // MARK: - Diagnostic Methods
 
-    /// Fetches all records without using queries (doesn't require indexes)
+    /// Comprehensive CloudKit environment diagnostic
+    func printEnvironmentDiagnostics() async {
+#if DEBUG
+        print("=== CloudKit Environment Diagnostics ===")
+
+        // Container info
+        if let container = container {
+            print("✅ Container ID: \(container.containerIdentifier ?? "unknown")")
+        } else {
+            print("❌ No container configured")
+            return
+        }
+
+        // Database info
+        if let database = database {
+            let scope = database.databaseScope
+            let scopeName = scope == .private ? "Private" : scope == .public ? "Public" : "Shared"
+            print("✅ Database Scope: \(scopeName)")
+        } else {
+            print("❌ No database available")
+            return
+        }
+
+        // Account status
+        let isAvailable = await isCloudAvailable()
+        print("iCloud Available: \(isAvailable ? "✅ Yes" : "❌ No")")
+
+        if !isAvailable {
+            print("⚠️  Make sure you're signed into iCloud in Settings app")
+            print("========================================")
+            return
+        }
+
+        // Try to fetch records
+        print("Attempting to fetch records...")
+        do {
+            let fileRecords = try await fetchAllRecords()
+            let folderRecords = try await fetchAllFolderRecords()
+            print("✅ Found \(fileRecords.count) file record(s)")
+            print("✅ Found \(folderRecords.count) folder record(s)")
+
+            if fileRecords.isEmpty && folderRecords.isEmpty {
+                print("⚠️  No records found - either nothing has been backed up yet,")
+                print("   or records were saved to a different environment/container")
+            } else {
+                print("📄 File records:")
+                for record in fileRecords.prefix(5) {
+                    let fileName = await record[CloudRecordKey.fileName] as? String ?? "unknown"
+                    print("   - \(fileName) (ID: \(record.recordID.recordName))")
+                }
+                if fileRecords.count > 5 {
+                    print("   ... and \(fileRecords.count - 5) more")
+                }
+            }
+        } catch let error as CKError {
+            print("❌ Fetch failed with CKError:")
+            print("   Code: \(error.code.rawValue)")
+            print("   Description: \(error.localizedDescription)")
+            if error.code == .invalidArguments {
+                print("   ⚠️  This might mean the schema hasn't been created yet")
+                print("   ⚠️  Try backing up a file first to create the schema")
+            }
+        } catch {
+            print("❌ Fetch failed: \(error)")
+        }
+
+        print("========================================")
+#endif
+    }
+
+    /// Fetches count of all records using standard queries
     /// This is for diagnostic purposes to verify records exist
     func fetchAllRecordsWithoutQuery() async -> (files: Int, folders: Int) {
-        guard let database else {
+        guard await isCloudAvailable() else {
 #if DEBUG
-            print("🔍 Diagnostic: No database")
+            print("🔍 Diagnostic: iCloud not available")
 #endif
             return (0, 0)
         }
 
 #if DEBUG
-        print("🔍 DIAGNOSTIC: Fetching records without query (no indexes needed)...")
+        print("🔍 DIAGNOSTIC: Fetching record counts...")
 #endif
 
-        return await withCheckedContinuation { continuation in
-            var fileCount = 0
-            var folderCount = 0
-            var isFinished = false
+        do {
+            let fileRecords = try await fetchAllRecords()
+            let folderRecords = try await fetchAllFolderRecords()
 
-            let zoneID = CKRecordZone.default().zoneID
-            let operation = CKFetchRecordZoneChangesOperation(
-                recordZoneIDs: [zoneID],
-                configurationsByRecordZoneID: [zoneID: CKFetchRecordZoneChangesOperation.ZoneConfiguration()]
-            )
+#if DEBUG
+            print("🔍 DIAGNOSTIC COMPLETE: Found \(fileRecords.count) file(s) and \(folderRecords.count) folder(s)")
+#endif
 
-            operation.recordWasChangedBlock = { recordID, result in
-                switch result {
-                case .success(let record):
-                    if record.recordType == self.recordType {
-                        fileCount += 1
+            return (fileRecords.count, folderRecords.count)
+        } catch {
 #if DEBUG
-                        print("🔍 Found file record: \(recordID.recordName)")
+            print("🔍 Diagnostic fetch failed: \(error)")
 #endif
-                    } else if record.recordType == self.folderRecordType {
-                        folderCount += 1
-#if DEBUG
-                        print("🔍 Found folder record: \(recordID.recordName)")
-#endif
-                    }
-                case .failure(let error):
-#if DEBUG
-                    print("🔍 Error reading record: \(error)")
-#endif
-                    break
-                }
-            }
-
-            operation.recordZoneFetchResultBlock = { zoneID, result in
-                if isFinished { return }
-                switch result {
-                case .success:
-#if DEBUG
-                    print("🔍 Zone fetch completed successfully")
-#endif
-                    break
-                case .failure(let error):
-#if DEBUG
-                    print("🔍 Zone fetch failed: \(error)")
-#endif
-                    break
-                }
-            }
-
-            operation.fetchRecordZoneChangesResultBlock = { result in
-                if isFinished { return }
-                isFinished = true
-                switch result {
-                case .success:
-#if DEBUG
-                    print("🔍 DIAGNOSTIC COMPLETE: Found \(fileCount) file(s) and \(folderCount) folder(s)")
-#endif
-                    continuation.resume(returning: (fileCount, folderCount))
-                case .failure(let error):
-#if DEBUG
-                    print("🔍 Fetch failed: \(error)")
-#endif
-                    continuation.resume(returning: (0, 0))
-                }
-            }
-
-            database.add(operation)
+            return (0, 0)
         }
     }
 

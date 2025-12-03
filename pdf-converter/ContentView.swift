@@ -776,8 +776,9 @@ struct ContentView: View {
         guard !hasAttemptedCloudRestore else { return }
         hasAttemptedCloudRestore = true
         Task {
-            // DIAGNOSTIC: Check if records actually exist in CloudKit
-            let counts = await cloudBackup.fetchAllRecordsWithoutQuery()
+            // DIAGNOSTIC: Check CloudKit environment and records
+            await cloudBackup.printEnvironmentDiagnostics()
+            _ = await cloudBackup.fetchAllRecordsWithoutQuery()
 
             // Restore folders
             let existingFolderIds = Set(PDFStorage.loadFolders().map { $0.id })
@@ -3632,8 +3633,9 @@ enum PDFStorage {
                     try FileManager.default.removeItem(at: destination)
                 }
                 try FileManager.default.copyItem(at: sourceURL, to: destination)
-                let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
-                let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+                let resourceValues = try? destination.resourceValues(forKeys: [.fileSizeKey])
+                // Use import date (now) instead of file's original creation/modification date
+                let date = Date()
                 let size = Int64(resourceValues?.fileSize ?? 0)
                 let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
                 let file = PDFFile(
