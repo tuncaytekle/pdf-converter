@@ -140,6 +140,49 @@ struct PaywallView: View {
     }
 
     private var badgeSection: some View {
+        HStack(spacing: 0) {
+            // Left laurel (simplified)
+            Image(systemName: "laurel.leading")
+                .font(.system(size: 80))
+                .foregroundColor(Color(hex: "#FFCE44"))
+                .rotationEffect(.degrees(0))
+            VStack(spacing: 6) {
+                // Stars
+                HStack(spacing: 4) {
+                    ForEach(0..<5) { _ in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(hex: "#FFCE44"))
+                    }
+                }
+                // "#1 Converter App" with laurel wreaths
+                Text(NSLocalizedString("#1 Converter App", comment: "App ranking badge"))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(Color(hex: "#363636"))
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 180, height: 0.5)
+                HStack(spacing:0) {
+                    Text("100+ ")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(Color(hex: "#979494"))
+                    
+                    Text(NSLocalizedString("formats supported", comment: "Formats supported description"))
+                        .font(.system(size: 15))
+                        .foregroundColor(Color(hex: "#979494"))
+                }
+            }
+
+            
+            // Right laurel (simplified)
+            Image(systemName: "laurel.trailing")
+                .font(.system(size: 80))
+                .foregroundColor(Color(hex: "#FFCE44"))
+                .rotationEffect(.degrees(0))
+        }
+    }
+
+    private var DELETEbadgeSection: some View {
         VStack(spacing: 12) {
             // Stars
             HStack(spacing: 4) {
@@ -176,6 +219,7 @@ struct PaywallView: View {
         }
     }
 
+
     private var featureTags: some View {
         HStack(spacing: 4) {
             FeatureTag(text: NSLocalizedString("Convert", comment: "Paywall feature tag"), color: Color(hex: "#3A7377"))
@@ -189,15 +233,15 @@ struct PaywallView: View {
     private var featuresList: some View {
         VStack(spacing: 8) {
             FeatureRow(text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40)
+            Divider().padding(.trailing, 40).padding(.leading, 18)
             FeatureRow(text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40)
+            Divider().padding(.trailing, 40).padding(.leading, 18)
             FeatureRow(text: NSLocalizedString("Sign documents", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40)
+            Divider().padding(.trailing, 40).padding(.leading, 18)
             FeatureRow(text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40)
+            Divider().padding(.trailing, 40).padding(.leading, 18)
             FeatureRow(text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40)
+            Divider().padding(.trailing, 40).padding(.leading, 18)
             FeatureRow(text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
         }
         .padding(.horizontal, 20)
@@ -311,6 +355,7 @@ struct FeatureRow: View {
 
             Spacer()
         }
+        .padding(.leading, 18)
     }
 }
 
