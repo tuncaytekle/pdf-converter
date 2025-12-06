@@ -46,14 +46,14 @@ struct PaywallView: View {
         VStack(spacing: 16) {
             Spacer()
 
-            if showTrialText {
-                Text("7 day trial enabled")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundColor(Color(hex: "#363636"))
-                    .transition(.opacity.combined(with: .scale))
-            }
+            // Text appears above toggle without shifting toggle position
+            Text(NSLocalizedString("7 day trial enabled", comment: "Trial enabled message"))
+                .font(.system(size: 20, weight: .regular))
+                .foregroundColor(Color(hex: "#363636"))
+                .opacity(showTrialText ? 1 : 0)
+                .scaleEffect(showTrialText ? 1 : 0.8)
 
-            // Toggle switch
+            // Toggle switch - stays in same position
             Toggle("", isOn: $toggleEnabled)
                 .labelsHidden()
                 .toggleStyle(CustomToggleStyle())
@@ -81,7 +81,7 @@ struct PaywallView: View {
                 Button(action: {
                     subscriptionManager.openManageSubscriptions()
                 }) {
-                    Text("Restore")
+                    Text(NSLocalizedString("Restore", comment: "Restore purchases button"))
                         .font(.system(size: 17))
                         .foregroundColor(Color(hex: "#979494"))
                 }
@@ -90,51 +90,51 @@ struct PaywallView: View {
             .padding(.top, 16)
             .padding(.bottom, 24)
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Title
-                    Text("Unlimited ")
-                        .font(.system(size: 34, weight: .regular)) +
-                    Text("Access")
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundColor(Color(hex: "#363636"))
+            VStack(spacing: 24) {
+                // Title
+                Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
+                    .font(.system(size: 34, weight: .regular)) +
+                Text(NSLocalizedString("Access", comment: "Unlimited access title"))
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundColor(Color(hex: "#363636"))
 
-                    // Badge Section
-                    badgeSection
+                // Badge Section
+                badgeSection
 
-                    // Feature Tags
-                    featureTags
+                // Feature Tags
+                featureTags
 
-                    // Features List
-                    featuresList
+                // Features List
+                featuresList
 
-                    // Pricing Card
-                    pricingCard
+                // Pricing Card
+                pricingCard
 
-                    // Continue Button
-                    continueButton
+                // Continue Button
+                continueButton
 
-                    // Fine Print
-                    Text("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!")
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(hex: "#979494"))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-
-                    // Footer Links
-                    HStack(spacing: 32) {
-                        Button("Terms of Use") {
-                            // TODO: Open Terms of Use
-                        }
-
-                        Button("Privacy Policy") {
-                            // TODO: Open Privacy Policy
-                        }
-                    }
+                // Fine Print
+                Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
                     .font(.system(size: 13))
                     .foregroundColor(Color(hex: "#979494"))
-                    .padding(.bottom, 32)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 32)
+
+                // Footer Links
+                HStack(spacing: 32) {
+                    Button(NSLocalizedString("Terms of Use", comment: "Terms of use link")) {
+                        // TODO: Open Terms of Use
+                    }
+
+                    Button(NSLocalizedString("Privacy Policy", comment: "Privacy policy link")) {
+                        // TODO: Open Privacy Policy
+                    }
                 }
+                .font(.system(size: 13))
+                .foregroundColor(Color(hex: "#979494"))
+                .padding(.bottom, 32)
             }
         }
     }
@@ -153,12 +153,12 @@ struct PaywallView: View {
             // "#1 Converter App" with laurel wreaths
             HStack(spacing: 12) {
                 // Left laurel (simplified)
-                Image(systemName: "leaf.fill")
+                Image(systemName: "laurel.leading")
                     .font(.system(size: 24))
                     .foregroundColor(Color(hex: "#FFCE44"))
                     .rotationEffect(.degrees(-45))
 
-                Text("#1 Converter App")
+                Text(NSLocalizedString("#1 Converter App", comment: "App ranking badge"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(Color(hex: "#363636"))
 
@@ -170,30 +170,35 @@ struct PaywallView: View {
                     .scaleEffect(x: -1, y: 1)
             }
 
-            Text("100+ formats supported")
+            Text(NSLocalizedString("100+ formats supported", comment: "Formats supported description"))
                 .font(.system(size: 15))
                 .foregroundColor(Color(hex: "#979494"))
         }
     }
 
     private var featureTags: some View {
-        HStack(spacing: 8) {
-            FeatureTag(text: "Convert", color: Color(hex: "#3A7377"))
-            FeatureTag(text: "Scan", color: Color(hex: "#CE2B6F"))
-            FeatureTag(text: "Share", color: Color(hex: "#9633E7"))
-            FeatureTag(text: "Organize", color: Color(hex: "#D07826"))
+        HStack(spacing: 4) {
+            FeatureTag(text: NSLocalizedString("Convert", comment: "Paywall feature tag"), color: Color(hex: "#3A7377"))
+            FeatureTag(text: NSLocalizedString("Scan", comment: "Paywall feature tag"), color: Color(hex: "#CE2B6F"))
+            FeatureTag(text: NSLocalizedString("Share", comment: "Paywall feature tag"), color: Color(hex: "#9633E7"))
+            FeatureTag(text: NSLocalizedString("Organize", comment: "Paywall feature tag"), color: Color(hex: "#D07826"))
         }
         .padding(.horizontal, 20)
     }
 
     private var featuresList: some View {
-        VStack(spacing: 16) {
-            FeatureRow(text: "Unlimited scans & conversions")
-            FeatureRow(text: "Create PDFs from photo album")
-            FeatureRow(text: "Sign documents")
-            FeatureRow(text: "Easy & instant share")
-            FeatureRow(text: "Organize all your files")
-            FeatureRow(text: "Keep your original designs")
+        VStack(spacing: 8) {
+            FeatureRow(text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
+            Divider().padding(.trailing, 40)
+            FeatureRow(text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"))
+            Divider().padding(.trailing, 40)
+            FeatureRow(text: NSLocalizedString("Sign documents", comment: "Paywall feature description"))
+            Divider().padding(.trailing, 40)
+            FeatureRow(text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
+            Divider().padding(.trailing, 40)
+            FeatureRow(text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
+            Divider().padding(.trailing, 40)
+            FeatureRow(text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
         }
         .padding(.horizontal, 20)
     }
@@ -204,17 +209,17 @@ struct PaywallView: View {
                 .font(.system(size: 24))
                 .foregroundColor(Color(hex: "#007AFF"))
 
-            Text("7-Day Full Access")
+            Text(NSLocalizedString("7-Day Full Access", comment: "Paywall pricing option title"))
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(Color(hex: "#363636"))
 
             Spacer()
 
-            Text("$0.49")
+            Text(NSLocalizedString("$0.49", comment: "Trial price"))
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(Color(hex: "#363636"))
         }
-        .padding(20)
+        .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color(hex: "#007AFF"), lineWidth: 2)
@@ -227,7 +232,7 @@ struct PaywallView: View {
             subscriptionManager.purchase()
         }) {
             HStack {
-                Text("Continue")
+                Text(NSLocalizedString("Continue", comment: "Continue button"))
                     .font(.system(size: 17, weight: .semibold))
 
                 Image(systemName: "arrow.right")
@@ -282,10 +287,10 @@ struct FeatureTag: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 13, weight: .semibold))
+            .font(.system(size: 16.76, weight: .semibold))
             .foregroundColor(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
             .background(color)
             .cornerRadius(6)
     }

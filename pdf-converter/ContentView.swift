@@ -1641,7 +1641,7 @@ struct PDFFile: Identifiable, Equatable {
 
     var pageSummary: String {
         let count = max(pageCount, 0)
-        return count == 1 ? "1 Page" : "\(count) Pages"
+        return count == 1 ? NSLocalizedString("1 Page", comment: "Page count for single page") : String(format: NSLocalizedString("%d Pages", comment: "Page count for multiple pages"), count)
     }
 
     var formattedSize: String {
@@ -2244,6 +2244,7 @@ final class SubscriptionManager: ObservableObject {
     init() {
         Task { await loadProduct() }
         Task { await monitorEntitlements() }
+        Task { await listenForTransactions() }
     }
 
     /// Returns true if the user has never purchased a subscription
@@ -2282,6 +2283,36 @@ final class SubscriptionManager: ObservableObject {
     private func monitorEntitlements() async {
         for await entitlement in StoreKit.Transaction.currentEntitlements {
             await updateSubscriptionState(from: entitlement)
+        }
+    }
+
+    /// Listens for transaction updates to catch purchases made outside the app or in the background
+    private func listenForTransactions() async {
+        for await result in StoreKit.Transaction.updates {
+            await handleTransactionUpdate(result)
+        }
+    }
+
+    private func handleTransactionUpdate(_ result: VerificationResult<StoreKit.Transaction>) async {
+        switch result {
+        case .verified(let transaction):
+            guard transaction.productID == productID else { return }
+
+            // Update subscription state
+            let isActive = transaction.revocationDate == nil &&
+                (transaction.expirationDate ?? .distantFuture) > Date()
+            isSubscribed = isActive
+
+            if isActive {
+                purchaseState = .purchased
+                markPurchaseCompleted()
+            }
+
+            // Always finish the transaction
+            await transaction.finish()
+
+        case .unverified(_, let error):
+            purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
         }
     }
 
@@ -3405,7 +3436,7 @@ struct ProButton: View {
             HStack(spacing: 4) {
                 Image(systemName: subscriptionManager.isSubscribed ? "checkmark.seal.fill" : "crown.fill")
                     .font(.system(size: 12, weight: .semibold))
-                Text(subscriptionManager.isSubscribed ? "Pro" : "Go Pro")
+                Text(subscriptionManager.isSubscribed ? NSLocalizedString("Pro", comment: "The text for the \"Pro\" button in the navigation bar.") : NSLocalizedString("Go Pro", comment: "A button label that indicates that the user can upgrade to a premium subscription."))
                     .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.blue)
@@ -3568,7 +3599,7 @@ enum PDFGenerator {
         }
 
         guard document.pageCount > 0, let data = document.dataRepresentation() else {
-            throw ScanWorkflowError.failed("We couldn't create PDF data from the scanned pages.")
+            throw ScanWorkflowError.failed(NSLocalizedString("We couldn't create PDF data from the scanned pages.", comment: "Scanned PDF creation error message"))
         }
 
         let tempURL = FileManager.default.temporaryDirectory
@@ -3612,7 +3643,7 @@ enum PDFStorage {
 
     static func save(document: ScannedDocument) throws -> PDFFile {
         guard let directory = documentsDirectory() else {
-            throw ScanWorkflowError.failed("Unable to access the Documents folder.")
+            throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
         }
 
         let baseName = sanitizeFileName(document.fileName)
@@ -3641,7 +3672,7 @@ enum PDFStorage {
 
     static func importDocuments(at urls: [URL]) throws -> [PDFFile] {
         guard let directory = documentsDirectory() else {
-            throw ScanWorkflowError.failed("Unable to access the Documents folder.")
+            throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
         }
 
         var imported: [PDFFile] = []
@@ -3738,7 +3769,7 @@ enum PDFStorage {
 
     static func storeCloudAsset(from sourceURL: URL, preferredName: String) throws -> PDFFile {
         guard let directory = documentsDirectory() else {
-            throw ScanWorkflowError.failed("Unable to access the Documents folder.")
+            throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
         }
 
         let baseName = sanitizeFileName(preferredName)
@@ -3799,7 +3830,7 @@ enum PDFStorage {
 
     private static func sanitizeFileName(_ name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sanitized = trimmed.isEmpty ? "Scan" : trimmed
+        let sanitized = trimmed.isEmpty ? NSLocalizedString("Scan", comment: "Paywall feature tag") : trimmed
         let invalidCharacters = CharacterSet(charactersIn: "/\\?%*|\"<>:")
         let components = sanitized.components(separatedBy: invalidCharacters)
         let filtered = components.joined(separator: "-")
