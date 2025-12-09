@@ -67,74 +67,79 @@ struct PaywallView: View {
     // MARK: - Full Paywall Content
 
     private var fullPaywallContent: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color(hex: "#979494"))
+        GeometryReader { proxy in
+            let height = proxy.size.height
+            let isCompact = height < 800
+
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color(hex: "#979494"))
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        subscriptionManager.openManageSubscriptions()
+                    }) {
+                        Text(NSLocalizedString("Restore", comment: "Restore purchases button"))
+                            .font(.system(size: 17))
+                            .foregroundColor(Color(hex: "#979494"))
+                    }
                 }
-
-                Spacer()
-
-                Button(action: {
-                    subscriptionManager.openManageSubscriptions()
-                }) {
-                    Text(NSLocalizedString("Restore", comment: "Restore purchases button"))
-                        .font(.system(size: 17))
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
+                
+                VStack(spacing: 24) {
+                    // Title
+                    Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
+                        .font(.system(size: 34, weight: .regular)) +
+                    Text(NSLocalizedString("Access", comment: "Unlimited access title"))
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(Color(hex: "#363636"))
+                    
+                    // Badge Section
+                    badgeSection
+                    
+                    // Feature Tags
+                    featureTags
+                    
+                    // Features List
+                    featuresList(isCompact: isCompact)
+                    
+                    // Pricing Card
+                    pricingCard
+                    
+                    // Continue Button
+                    continueButton
+                    
+                    // Fine Print
+                    Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
+                        .font(.system(size: 13))
                         .foregroundColor(Color(hex: "#979494"))
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 24)
-
-            VStack(spacing: 24) {
-                // Title
-                Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
-                    .font(.system(size: 34, weight: .regular)) +
-                Text(NSLocalizedString("Access", comment: "Unlimited access title"))
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(Color(hex: "#363636"))
-
-                // Badge Section
-                badgeSection
-
-                // Feature Tags
-                featureTags
-
-                // Features List
-                featuresList
-
-                // Pricing Card
-                pricingCard
-
-                // Continue Button
-                continueButton
-
-                // Fine Print
-                Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 32)
+                    
+                    // Footer Links
+                    HStack(spacing: 32) {
+                        Button(NSLocalizedString("Terms of Use", comment: "Terms of use link")) {
+                            // TODO: Open Terms of Use
+                        }
+                        
+                        Button(NSLocalizedString("Privacy Policy", comment: "Privacy policy link")) {
+                            // TODO: Open Privacy Policy
+                        }
+                    }
                     .font(.system(size: 13))
                     .foregroundColor(Color(hex: "#979494"))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 32)
-
-                // Footer Links
-                HStack(spacing: 32) {
-                    Button(NSLocalizedString("Terms of Use", comment: "Terms of use link")) {
-                        // TODO: Open Terms of Use
-                    }
-
-                    Button(NSLocalizedString("Privacy Policy", comment: "Privacy policy link")) {
-                        // TODO: Open Privacy Policy
-                    }
+                    .padding(.bottom, 32)
                 }
-                .font(.system(size: 13))
-                .foregroundColor(Color(hex: "#979494"))
-                .padding(.bottom, 32)
             }
         }
     }
@@ -182,44 +187,6 @@ struct PaywallView: View {
         }
     }
 
-    private var DELETEbadgeSection: some View {
-        VStack(spacing: 12) {
-            // Stars
-            HStack(spacing: 4) {
-                ForEach(0..<5) { _ in
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "#FFCE44"))
-                }
-            }
-
-            // "#1 Converter App" with laurel wreaths
-            HStack(spacing: 12) {
-                // Left laurel (simplified)
-                Image(systemName: "laurel.leading")
-                    .font(.system(size: 24))
-                    .foregroundColor(Color(hex: "#FFCE44"))
-                    .rotationEffect(.degrees(-45))
-
-                Text(NSLocalizedString("#1 Converter App", comment: "App ranking badge"))
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(Color(hex: "#363636"))
-
-                // Right laurel (simplified)
-                Image(systemName: "leaf.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(Color(hex: "#FFCE44"))
-                    .rotationEffect(.degrees(45))
-                    .scaleEffect(x: -1, y: 1)
-            }
-
-            Text(NSLocalizedString("100+ formats supported", comment: "Formats supported description"))
-                .font(.system(size: 15))
-                .foregroundColor(Color(hex: "#979494"))
-        }
-    }
-
-
     private var featureTags: some View {
         HStack(spacing: 4) {
             FeatureTag(text: NSLocalizedString("Convert", comment: "Paywall feature tag"), color: Color(hex: "#3A7377"))
@@ -230,7 +197,7 @@ struct PaywallView: View {
         .padding(.horizontal, 20)
     }
 
-    private var featuresList: some View {
+    private func featuresList(isCompact: Bool) -> some View {
         VStack(spacing: 8) {
             FeatureRow(text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
             Divider().padding(.trailing, 40).padding(.leading, 18)
@@ -241,8 +208,11 @@ struct PaywallView: View {
             FeatureRow(text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
             Divider().padding(.trailing, 40).padding(.leading, 18)
             FeatureRow(text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40).padding(.leading, 18)
-            FeatureRow(text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
+            if !isCompact {
+                Divider().padding(.trailing, 40).padding(.leading, 18)
+                FeatureRow(text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
+
+            }
         }
         .padding(.horizontal, 20)
     }

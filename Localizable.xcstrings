@@ -112,6 +112,7 @@
     },
     "100+ formats supported" : {
       "comment" : "Formats supported description",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
