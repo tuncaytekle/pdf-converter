@@ -1,6 +1,44 @@
 import SwiftUI
 import StoreKit
 
+struct PaywallMetrics {
+    private let scale: CGFloat
+
+    init(size: CGSize) {
+        let baseWidth: CGFloat = 440
+        scale = size.width / baseWidth
+    }
+
+    // Fonts
+    var laurelFont: Font  { .system(size: 90 * scale) }
+    var f1LightFont: Font  { .system(size: 48 * scale, weight: .light) }
+    var f1BoldFont: Font { .system(size: 48 * scale, weight: .bold) }
+    var f2Font: Font { .system(size: 32 * scale) }
+    var f2BoldFont: Font { .system(size: 32 * scale, weight: .bold) }
+    var f3Font: Font { .system(size: 20 * scale) }
+    var f3SemiboldFont: Font { .system(size: 20 * scale, weight: .semibold)  }
+    var f3BoldFont: Font { .system(size: 20 * scale, weight: .bold)  }
+    var f3LightFont: Font { .system(size: 20 * scale, weight: .light)  }
+    var f4Font: Font  { .system(size: 14 * scale) }
+
+    // Spacing / paddings
+    var horizontalPadding: CGFloat { 20 * scale }
+    var cardCornerRadius: CGFloat { 16 }
+    var featureCornerRadius: CGFloat { 4 }
+    var buttonHeight: CGFloat { 60 * scale }
+    
+    var checkmarkLeadingPadding: CGFloat { 18 * scale }
+    var checkmarkTrailingPadding: CGFloat { 12 * scale }
+    var dividerTrailingPadding: CGFloat { 40 * scale }
+
+    var verticalSpacingLarge: CGFloat { 64 * scale }
+    var verticalSpacingIntraSection: CGFloat { 16 * scale }
+    
+    var separatorWidth: CGFloat { 174.60318 * scale }
+    var separatorHeight: CGFloat { 2 * scale }
+}
+
+
 /// Animated paywall presented to users who have never purchased a subscription
 struct PaywallView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
@@ -18,37 +56,41 @@ struct PaywallView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.white
-                .ignoresSafeArea()
-
-            if animationStage == .fullPaywall && showFullPaywall {
-                fullPaywallContent
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            } else {
-                toggleAnimationContent
+        GeometryReader { proxy in
+            let metrics = PaywallMetrics(size: proxy.size)
+            
+            ZStack {
+                Color.white
+                    .ignoresSafeArea()
+                
+                if animationStage == .fullPaywall && showFullPaywall {
+                    fullPaywallContent(metrics: metrics)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    toggleAnimationContent(metrics: metrics)
+                }
             }
-        }
-        .onAppear {
-            startAnimation()
-        }
-        .onChange(of: subscriptionManager.purchaseState) { _, newState in
-            if newState == .purchased {
-                // Dismiss paywall after successful purchase
-                dismiss()
+            .onAppear {
+                startAnimation()
+            }
+            .onChange(of: subscriptionManager.purchaseState) { _, newState in
+                if newState == .purchased {
+                    // Dismiss paywall after successful purchase
+                    dismiss()
+                }
             }
         }
     }
 
     // MARK: - Toggle Animation Content
 
-    private var toggleAnimationContent: some View {
-        VStack(spacing: 16) {
+    private func toggleAnimationContent(metrics: PaywallMetrics) -> some View {
+        VStack(spacing: metrics.verticalSpacingIntraSection) {
             Spacer()
 
             // Text appears above toggle without shifting toggle position
             Text(NSLocalizedString("7 day trial enabled", comment: "Trial enabled message"))
-                .font(.system(size: 20, weight: .regular))
+                .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#363636"))
                 .opacity(showTrialText ? 1 : 0)
                 .scaleEffect(showTrialText ? 1 : 0.8)
@@ -66,199 +108,229 @@ struct PaywallView: View {
 
     // MARK: - Full Paywall Content
 
-    private var fullPaywallContent: some View {
-        GeometryReader { proxy in
-            let height = proxy.size.height
-            let isCompact = height < 800
-
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(Color(hex: "#979494"))
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        subscriptionManager.openManageSubscriptions()
-                    }) {
-                        Text(NSLocalizedString("Restore", comment: "Restore purchases button"))
-                            .font(.system(size: 17))
-                            .foregroundColor(Color(hex: "#979494"))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
-                
-                VStack(spacing: 24) {
-                    // Title
-                    Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
-                        .font(.system(size: 34, weight: .regular)) +
-                    Text(NSLocalizedString("Access", comment: "Unlimited access title"))
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundColor(Color(hex: "#363636"))
-                    
-                    // Badge Section
-                    badgeSection
-                    
-                    // Feature Tags
-                    featureTags
-                    
-                    // Features List
-                    featuresList(isCompact: isCompact)
-                    
-                    // Pricing Card
-                    pricingCard
-                    
-                    // Continue Button
-                    continueButton
-                    
-                    // Fine Print
-                    Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(hex: "#979494"))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 32)
-                    
-                    // Footer Links
-                    HStack(spacing: 32) {
-                        Button(NSLocalizedString("Terms of Use", comment: "Terms of use link")) {
-                            // TODO: Open Terms of Use
-                        }
-                        
-                        Button(NSLocalizedString("Privacy Policy", comment: "Privacy policy link")) {
-                            // TODO: Open Privacy Policy
-                        }
-                    }
-                    .font(.system(size: 13))
-                    .foregroundColor(Color(hex: "#979494"))
-                    .padding(.bottom, 32)
-                }
-            }
-        }
-    }
-
-    private var badgeSection: some View {
-        HStack(spacing: 0) {
-            // Left laurel (simplified)
-            Image(systemName: "laurel.leading")
-                .font(.system(size: 80))
-                .foregroundColor(Color(hex: "#FFCE44"))
-                .rotationEffect(.degrees(0))
-            VStack(spacing: 6) {
-                // Stars
-                HStack(spacing: 4) {
-                    ForEach(0..<5) { _ in
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "#FFCE44"))
-                    }
-                }
-                // "#1 Converter App" with laurel wreaths
-                Text(NSLocalizedString("#1 Converter App", comment: "App ranking badge"))
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(Color(hex: "#363636"))
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 180, height: 0.5)
-                HStack(spacing:0) {
-                    Text("100+ ")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(Color(hex: "#979494"))
-                    
-                    Text(NSLocalizedString("formats supported", comment: "Formats supported description"))
-                        .font(.system(size: 15))
-                        .foregroundColor(Color(hex: "#979494"))
-                }
-            }
-
+    private func fullPaywallContent(metrics: PaywallMetrics) -> some View {
+        VStack(spacing: metrics.verticalSpacingLarge) {
+            topSection(metrics: metrics)
             
-            // Right laurel (simplified)
-            Image(systemName: "laurel.trailing")
-                .font(.system(size: 80))
-                .foregroundColor(Color(hex: "#FFCE44"))
-                .rotationEffect(.degrees(0))
+            featuresList(metrics: metrics)
+            
+            bottomSection(metrics: metrics)
         }
     }
-
-    private var featureTags: some View {
-        HStack(spacing: 4) {
-            FeatureTag(text: NSLocalizedString("Convert", comment: "Paywall feature tag"), color: Color(hex: "#3A7377"))
-            FeatureTag(text: NSLocalizedString("Scan", comment: "Paywall feature tag"), color: Color(hex: "#CE2B6F"))
-            FeatureTag(text: NSLocalizedString("Share", comment: "Paywall feature tag"), color: Color(hex: "#9633E7"))
-            FeatureTag(text: NSLocalizedString("Organize", comment: "Paywall feature tag"), color: Color(hex: "#D07826"))
+    
+    private func bottomSection(metrics: PaywallMetrics) -> some View {
+        VStack(spacing: metrics.verticalSpacingIntraSection) {
+            trialButtonLike(metrics: metrics)
+            
+            continueButton(metrics: metrics)
+            
+            finePrint(metrics: metrics)
+            
+            footerLinks(metrics: metrics)
         }
-        .padding(.horizontal, 20)
+
     }
-
-    private func featuresList(isCompact: Bool) -> some View {
-        VStack(spacing: 8) {
-            FeatureRow(text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40).padding(.leading, 18)
-            FeatureRow(text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40).padding(.leading, 18)
-            FeatureRow(text: NSLocalizedString("Sign documents", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40).padding(.leading, 18)
-            FeatureRow(text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
-            Divider().padding(.trailing, 40).padding(.leading, 18)
-            FeatureRow(text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
-            if !isCompact {
-                Divider().padding(.trailing, 40).padding(.leading, 18)
-                FeatureRow(text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
-
+    
+    private func footerLinks(metrics: PaywallMetrics) -> some View {
+        HStack(spacing: 0) {
+            Button(NSLocalizedString("Terms of Use", comment: "Terms of use link")) {
+                // TODO: Open Terms of Use
+            }
+            
+            Spacer()
+            
+            Button(NSLocalizedString("Privacy Policy", comment: "Privacy policy link")) {
+                // TODO: Open Privacy Policy
             }
         }
-        .padding(.horizontal, 20)
+        .font(metrics.f4Font)
+        .foregroundColor(Color(hex: "#979494"))
+        .padding(.horizontal, metrics.horizontalPadding)
     }
-
-    private var pricingCard: some View {
-        HStack {
+    
+    private func trialButtonLike(metrics: PaywallMetrics) -> some View {
+        HStack(alignment: .center, spacing: 0) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 24))
+                .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#007AFF"))
-
+                .padding(.trailing, metrics.checkmarkTrailingPadding)
+            
             Text(NSLocalizedString("7-Day Full Access", comment: "Paywall pricing option title"))
-                .font(.system(size: 17, weight: .medium))
+                .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#363636"))
 
             Spacer()
 
             Text(NSLocalizedString("$0.49", comment: "Trial price"))
-                .font(.system(size: 17, weight: .semibold))
+                .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#363636"))
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color(hex: "#007AFF"), lineWidth: 2)
+         }
+        .padding(metrics.verticalSpacingIntraSection)
+        .frame(maxWidth: .infinity, minHeight: metrics.buttonHeight, maxHeight: metrics.buttonHeight, alignment: .center)
+        .background(Color(red: 0, green: 0.48, blue: 1).opacity(0.2))
+        .cornerRadius(metrics.cardCornerRadius)
+        .overlay(
+          RoundedRectangle(cornerRadius: metrics.cardCornerRadius)
+            .inset(by: 1)
+            .stroke(Color(red: 0, green: 0.48, blue: 1), lineWidth: 2)
         )
-        .padding(.horizontal, 20)
+        .padding(.horizontal, metrics.horizontalPadding)
+    }
+    
+    private func finePrint(metrics: PaywallMetrics) -> some View {
+        Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
+            .font(metrics.f4Font)
+            .foregroundColor(Color(hex: "#363636"))
+            .multilineTextAlignment(.center)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+    
+    
+    
+    private func topSection(metrics: PaywallMetrics) -> some View {
+        VStack(spacing: metrics.verticalSpacingIntraSection) {
+            HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(metrics.f3Font)
+                        .foregroundColor(Color(hex: "#979494"))
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    subscriptionManager.openManageSubscriptions()
+                }) {
+                    Text(NSLocalizedString("Restore", comment: "Restore purchases button"))
+                        .font(metrics.f3Font)
+                        .foregroundColor(Color(hex: "#979494"))
+                }
+            }
+            .padding(.horizontal, metrics.horizontalPadding)
+            
+            Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
+                .font(metrics.f1LightFont) +
+            Text(NSLocalizedString("Access", comment: "Unlimited access title"))
+                .font(metrics.f1BoldFont)
+                .foregroundColor(Color(hex: "#363636"))
+            
+            badgeSection(metrics: metrics)
+            
+            featureTags(metrics: metrics)
+        }
+        .padding(.top, metrics.verticalSpacingIntraSection)
     }
 
-    private var continueButton: some View {
+    private func badgeSection(metrics: PaywallMetrics) -> some View {
+        HStack(spacing: 0) {
+            // Left laurel (simplified)
+            Image(systemName: "laurel.leading")
+                .font(metrics.laurelFont)
+                .foregroundColor(Color(hex: "#FFCE44"))
+                .rotationEffect(.degrees(0))
+            VStack(spacing: metrics.separatorHeight * 3) {
+                // Stars
+                HStack(spacing: metrics.separatorHeight * 2) {
+                    ForEach(0..<5) { _ in
+                        Image(systemName: "star.fill")
+                            .font(metrics.f3Font)
+                            .foregroundColor(Color(hex: "#FFCE44"))
+                    }
+                }
+                // "#1 Converter App" with laurel wreaths
+                Text(NSLocalizedString("#1 Converter App", comment: "App ranking badge"))
+                    .font(metrics.f2BoldFont)
+                    .foregroundColor(Color(hex: "#363636"))
+                Rectangle()
+                    .foregroundColor(.clear)
+                    .frame(width: metrics.separatorWidth, height: metrics.separatorHeight)
+                    .background(
+                        LinearGradient(
+                            stops: [
+                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: 0.00),
+                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21), location: metrics.separatorHeight / 4),
+                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: metrics.separatorHeight / 2),
+                            ],
+                            startPoint: UnitPoint(x: 0, y: metrics.separatorHeight / 4),
+                            endPoint: UnitPoint(x: metrics.separatorHeight / 2, y: metrics.separatorHeight / 4)
+                        )
+                    )
+                HStack(spacing: 0) {
+                    Text("100+ ")
+                        .font(metrics.f3BoldFont)
+                        .foregroundColor(Color(hex: "#363636"))
+                    
+                    Text(NSLocalizedString("formats supported", comment: "Formats supported description"))
+                        .font(metrics.f3LightFont)
+                        .foregroundColor(Color(hex: "#363636"))
+                }
+                
+                
+            }
+
+            
+            // Right laurel (simplified)
+            Image(systemName: "laurel.trailing")
+                .font(metrics.laurelFont)
+                .foregroundColor(Color(hex: "#FFCE44"))
+                .rotationEffect(.degrees(0))
+        }
+    }
+
+    private func featureTags(metrics: PaywallMetrics) -> some View {
+        HStack(spacing: metrics.separatorHeight * 3) {
+            FeatureTag(metrics: metrics, text: NSLocalizedString("Convert", comment: "Paywall feature tag"), color: Color(hex: "#3A7377"))
+            FeatureTag(metrics: metrics, text: NSLocalizedString("Scan", comment: "Paywall feature tag"), color: Color(hex: "#CE2B6F"))
+            FeatureTag(metrics: metrics, text: NSLocalizedString("Share", comment: "Paywall feature tag"), color: Color(hex: "#9633E7"))
+            FeatureTag(metrics: metrics, text: NSLocalizedString("Organize", comment: "Paywall feature tag"), color: Color(hex: "#D07826"))
+        }
+        .padding(.horizontal, metrics.horizontalPadding)
+    }
+    
+    private func divider(metrics: PaywallMetrics) -> some View {
+        Divider().overlay(Color(hex: "#979494"))
+            .padding(.trailing, metrics.dividerTrailingPadding)
+            .padding(.leading, metrics.checkmarkLeadingPadding)
+    }
+
+    private func featuresList(metrics: PaywallMetrics) -> some View {
+        VStack(spacing: metrics.separatorHeight * 4) {
+            FeatureRow(metrics: metrics, text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
+            divider(metrics: metrics)
+            FeatureRow(metrics: metrics, text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"))
+            divider(metrics: metrics)
+            FeatureRow(metrics: metrics, text: NSLocalizedString("Sign documents", comment: "Paywall feature description"))
+            divider(metrics: metrics)
+            FeatureRow(metrics: metrics, text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
+            divider(metrics: metrics)
+            FeatureRow(metrics: metrics, text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
+            divider(metrics: metrics)
+            FeatureRow(metrics: metrics, text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
+        }
+        .padding(.horizontal, metrics.horizontalPadding)
+    }
+
+    private func continueButton(metrics: PaywallMetrics) -> some View {
         Button(action: {
             subscriptionManager.purchase()
         }) {
-            HStack {
+            HStack(alignment: .center) {
+                Spacer()
                 Text(NSLocalizedString("Continue", comment: "Continue button"))
-                    .font(.system(size: 17, weight: .semibold))
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(metrics.f3Font)
+                    .foregroundColor(.white)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(metrics.f3Font)
+                    .foregroundColor(.white)
             }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(Color(hex: "#007AFF"))
-            .cornerRadius(16)
+            .padding(metrics.verticalSpacingIntraSection)
+            .frame(maxWidth: .infinity, minHeight: metrics.buttonHeight, maxHeight: metrics.buttonHeight, alignment: .center)
+            .background(Color(red: 0, green: 0.48, blue: 1))
+            .cornerRadius(metrics.cardCornerRadius)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, metrics.horizontalPadding)
         .disabled(subscriptionManager.purchaseState == .purchasing)
     }
 
@@ -296,36 +368,38 @@ struct PaywallView: View {
 // MARK: - Supporting Views
 
 struct FeatureTag: View {
+    let metrics: PaywallMetrics
     let text: String
     let color: Color
 
     var body: some View {
         Text(text)
-            .font(.system(size: 16.76, weight: .semibold))
+            .font(metrics.f3SemiboldFont)
             .foregroundColor(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, metrics.separatorHeight * 3)
+            .padding(.vertical, metrics.separatorHeight)
             .background(color)
-            .cornerRadius(6)
+            .cornerRadius(metrics.featureCornerRadius)
     }
 }
 
 struct FeatureRow: View {
+    let metrics: PaywallMetrics
     let text: String
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: metrics.checkmarkTrailingPadding) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 24))
+                .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#007AFF"))
 
             Text(text)
-                .font(.system(size: 17))
+                .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#363636"))
 
             Spacer()
         }
-        .padding(.leading, 18)
+        .padding(.leading, metrics.checkmarkLeadingPadding)
     }
 }
 
@@ -342,35 +416,6 @@ struct CustomToggleStyle: ToggleStyle {
                         .offset(x: configuration.isOn ? 10 : -10)
                 )
         }
-    }
-}
-
-// MARK: - Color Extension
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
-
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
-        )
     }
 }
 
