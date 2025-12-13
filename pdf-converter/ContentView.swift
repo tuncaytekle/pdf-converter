@@ -1042,6 +1042,24 @@ struct FilesView: View {
     var body: some View {
         NavigationView {
             filesContent
+                .toolbar {
+                    if currentFolderId != nil {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button {
+                                currentFolderId = nil
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "chevron.left")
+                                    Text(NSLocalizedString("files.title", comment: "Files navigation title"))
+                                }
+                            }
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        ProButton(subscriptionManager: subscriptionManager)
+                    }
+                    .hideSharedBackground
+                }
                 .onAppear {
                     folders = PDFStorage.loadFolders()
                 }
@@ -1117,24 +1135,6 @@ struct FilesView: View {
             .listStyle(.insetGrouped)
             .navigationTitle(currentFolderName)
             .navigationBarTitleDisplayMode(currentFolderId == nil ? .large : .inline)
-            .toolbar {
-                if currentFolderId != nil {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button {
-                            currentFolderId = nil
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                Text(NSLocalizedString("files.title", comment: "Files navigation title"))
-                            }
-                        }
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    ProButton(subscriptionManager: subscriptionManager)
-                }
-            }
             .onChange(of: files) { _, newValue in
                 contentIndexer.trimCache(keeping: newValue.map(\.url))
             }
@@ -1890,6 +1890,7 @@ struct SettingsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     ProButton(subscriptionManager: subscriptionManager)
                 }
+                .hideSharedBackground
             }
             .sheet(item: $infoSheet) { sheet in
                 NavigationView {
@@ -2150,6 +2151,7 @@ struct AccountView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     ProButton(subscriptionManager: subscriptionManager)
                 }
+                .hideSharedBackground
             }
         }
     }
@@ -3181,6 +3183,7 @@ struct ToolsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     ProButton(subscriptionManager: subscriptionManager)
                 }
+                .hideSharedBackground
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
@@ -3429,26 +3432,29 @@ struct ProButton: View {
 
     var body: some View {
         Button {
-            if !subscriptionManager.isSubscribed {
-                subscriptionManager.purchase()
-            }
+            guard !subscriptionManager.isSubscribed else { return }
+            subscriptionManager.purchase()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: subscriptionManager.isSubscribed ? "checkmark.seal.fill" : "crown.fill")
                     .font(.system(size: 12, weight: .semibold))
-                Text(subscriptionManager.isSubscribed ? NSLocalizedString("Pro", comment: "The text for the \"Pro\" button in the navigation bar.") : NSLocalizedString("Go Pro", comment: "A button label that indicates that the user can upgrade to a premium subscription."))
-                    .font(.system(size: 14, weight: .semibold))
+
+                Text(
+                    subscriptionManager.isSubscribed
+                    ? NSLocalizedString("Pro", comment: "The text for the \"Pro\" button in the navigation bar.")
+                    : NSLocalizedString("Go Pro", comment: "A button label that indicates that the user can upgrade to a premium subscription.")
+                )
+                .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.blue)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.blue.opacity(0.1))
-            )
+            .background(Color.blue.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .opacity(subscriptionManager.isSubscribed ? 0.5 : 1)           // visual disabled state
         }
-        .buttonStyle(.plain)
-        .disabled(subscriptionManager.isSubscribed)
+        .buttonStyle(.plain)                                                // no extra chrome
+        .contentShape(Rectangle())                                          // full pill is tappable
     }
 }
 

@@ -36,3 +36,19 @@ extension Color {
     }
 }
 
+extension ToolbarContent {
+    @ToolbarContentBuilder
+    var hideSharedBackground: some ToolbarContent {
+        #if compiler(>=6.2)
+        if #available(iOS 26, *) {
+            sharedBackgroundVisibility(.hidden)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+}
+
+
