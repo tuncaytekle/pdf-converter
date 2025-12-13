@@ -74,6 +74,7 @@ struct ContentView: View {
     @State private var didAnimateCreateButtonCue = false
     @State private var isConvertingFile = false
     @State private var showPaywall = false
+    @State private var showOnboarding = false
     @State private var hasCheckedPaywall = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
@@ -230,6 +231,21 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showPaywall) {
             PaywallView()
                 .environmentObject(subscriptionManager)
+        }
+        .onChange(of: showPaywall) { _, isShowing in
+            // When paywall is dismissed after onboarding flow, mark onboarding as completed
+            if !isShowing && !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            }
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingFlowView(isPresented: $showOnboarding)
+        }
+        .onChange(of: showOnboarding) { _, isShowing in
+            // When onboarding flow is dismissed on first launch, show paywall
+            if !isShowing && !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+                showPaywall = true
+            }
         }
         .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
             Button { scanDocumentsToPDF() } label: {
@@ -839,8 +855,13 @@ struct ContentView: View {
 
     /// Checks if paywall should be shown, then loads cached PDFs
     private func checkPaywallAndLoadFiles() {
-        // First check if we should show the paywall
-        if subscriptionManager.shouldShowPaywall {
+        // First check if onboarding has been completed
+        let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+        if !hasCompletedOnboarding {
+            showOnboarding = true
+        }
+        // Then check if we should show the paywall
+        else if subscriptionManager.shouldShowPaywall {
             showPaywall = true
         }
 
