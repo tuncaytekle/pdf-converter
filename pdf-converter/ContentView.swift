@@ -50,6 +50,7 @@ struct ContentView: View {
     @State private var selection: Tab = .files
     @State private var showCreateActions = false
     @State private var files: [PDFFile] = []
+    @State private var folders: [PDFFolder] = []
     @State private var activeScanFlow: ScanFlow?
     @State private var pendingDocument: ScannedDocument?
     @State fileprivate var shareItem: ShareItem?
@@ -60,6 +61,8 @@ struct ContentView: View {
     @State private var renameText: String = ""
     @State private var deleteTarget: PDFFile?
     @State private var showDeleteDialog = false
+    @State private var deleteFolderTarget: PDFFolder?
+    @State private var showDeleteFolderDialog = false
     @State private var showImporter = false
     @State private var importerTrigger = UUID()
     @State private var showConvertPicker = false
@@ -196,6 +199,24 @@ struct ContentView: View {
         } message: { file in
             Text(String(format: NSLocalizedString("dialog.deletePDF.message", comment: "Delete PDF message"), file.name))
         }
+        .confirmationDialog(
+            NSLocalizedString("dialog.deleteFolder.title", comment: "Delete folder confirmation title"),
+            isPresented: $showDeleteFolderDialog,
+            presenting: deleteFolderTarget
+        ) { folder in
+            Button(role: .destructive) {
+                deleteFolderAction(folder)
+            } label: {
+                Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
+            }
+            Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
+                deleteFolderTarget = nil
+                showDeleteFolderDialog = false
+            }
+        } message: { folder in
+            let fileCount = files.filter { $0.folderId == folder.id }.count
+            Text(String(format: NSLocalizedString("dialog.deleteFolder.message", comment: "Delete folder message"), fileCount))
+        }
         .alert(item: $alertContext) { context in
             Alert(
                 title: Text(context.title),
@@ -258,10 +279,12 @@ struct ContentView: View {
         TabView(selection: $selection) {
             FilesView(
                 files: $files,
+                folders: $folders,
                 onPreview: { previewSavedFile($0) },
                 onShare: { shareSavedFile($0) },
                 onRename: { beginRenamingFile($0) },
                 onDelete: { confirmDeletion(for: $0) },
+                onDeleteFolder: { confirmFolderDeletion(for: $0) },
                 cloudBackup: cloudBackup
             )
             .tabItem { Label(NSLocalizedString("tab.files", comment: "Files tab label"), systemImage: "doc") }
@@ -278,6 +301,9 @@ struct ContentView: View {
             AccountView()
                 .tabItem { Label(NSLocalizedString("tab.account", comment: "Account tab label"), systemImage: "person.crop.circle") }
                 .tag(Tab.account)
+        }
+        .onChange(of: selection) { _, _ in
+            UISelectionFeedbackGenerator().selectionChanged()
         }
     }
 
@@ -565,6 +591,46 @@ struct ContentView: View {
         }
     }
 
+    /// Stores the pending folder deletion target and presents the destructive dialog.
+    private func confirmFolderDeletion(for folder: PDFFolder) {
+        deleteFolderTarget = folder
+        showDeleteFolderDialog = true
+    }
+
+    /// Deletes a folder and all its files from storage.
+    private func deleteFolderAction(_ folder: PDFFolder) {
+        // Get all files in the folder before deletion
+        let filesInFolder = files.filter { $0.folderId == folder.id }
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            // Delete each file
+            for file in filesInFolder {
+                try? FileManager.default.removeItem(at: file.url)
+            }
+
+            // Remove files from the array
+            files.removeAll { $0.folderId == folder.id }
+
+            // Remove the folder
+            folders.removeAll { $0.id == folder.id }
+
+            // Save updated folders list
+            PDFStorage.saveFolders(folders)
+        }
+
+        // Delete from CloudKit
+        Task {
+            await cloudBackup.deleteFolder(folder)
+            // Also delete all files in the folder from CloudKit
+            for file in filesInFolder {
+                await cloudBackup.deleteBackup(for: file)
+            }
+        }
+
+        deleteFolderTarget = nil
+        showDeleteFolderDialog = false
+    }
+
     // MARK: - Import Helpers
 
     /// Finishes the document importer by persisting selected URLs into the app sandbox.
@@ -791,6 +857,7 @@ struct ContentView: View {
     /// Rebuilds the in-memory file list from whatever is stored on disk.
     private func refreshFilesFromDisk() {
         files = PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
+        folders = PDFStorage.loadFolders()
     }
 
     /// Fetches any remote backups and merges them into the local library once.
@@ -1018,17 +1085,18 @@ enum SortDirection {
 struct FilesView: View {
     // Backed by files persisted in the app's documents directory
     @Binding var files: [PDFFile]
+    @Binding var folders: [PDFFolder]
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @State private var sortType: FileSortType = .date
     @State private var sortDirection: SortDirection = .descending
-    @State private var folders: [PDFFolder] = []
     @State private var currentFolderId: String? = nil // nil means at top level
     @State private var showCreateFolderDialog = false
     @State private var newFolderName = ""
     @State private var moveFileToFolder: PDFFile? = nil
-    @State private var showDeleteFolderDialog = false
-    @State private var deleteFolderTarget: PDFFolder? = nil
+    @State private var showRenameFolderDialog = false
+    @State private var renameFolderTarget: PDFFolder? = nil
+    @State private var renameFolderName = ""
     @StateObject private var contentIndexer = FileContentIndexer()
     @StateObject private var subscriptionManager = SubscriptionManager()
 
@@ -1036,6 +1104,7 @@ struct FilesView: View {
     let onShare: (PDFFile) -> Void
     let onRename: (PDFFile) -> Void
     let onDelete: (PDFFile) -> Void
+    let onDeleteFolder: (PDFFolder) -> Void
     let cloudBackup: CloudBackupManager
     private let thumbnailSize = CGSize(width: 58, height: 78)
 
@@ -1060,32 +1129,14 @@ struct FilesView: View {
                     }
                     .hideSharedBackground
                 }
-                .onAppear {
-                    folders = PDFStorage.loadFolders()
-                }
                 .sheet(isPresented: $showCreateFolderDialog) {
                     createFolderDialog
                 }
                 .sheet(item: $moveFileToFolder) { file in
                     moveToFolderDialog(for: file)
                 }
-                .confirmationDialog(
-                    NSLocalizedString("dialog.deleteFolder.title", comment: "Delete folder confirmation title"),
-                    isPresented: $showDeleteFolderDialog,
-                    presenting: deleteFolderTarget
-                ) { folder in
-                    Button(role: .destructive) {
-                        deleteFolder(folder)
-                    } label: {
-                        Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
-                    }
-                    Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
-                        deleteFolderTarget = nil
-                        showDeleteFolderDialog = false
-                    }
-                } message: { folder in
-                    let fileCount = files.filter { $0.folderId == folder.id }.count
-                    Text(String(format: NSLocalizedString("dialog.deleteFolder.message", comment: "Delete folder message"), fileCount))
+                .sheet(isPresented: $showRenameFolderDialog) {
+                    renameFolderDialog
                 }
         }
     }
@@ -1291,16 +1342,50 @@ struct FilesView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                let fileCount = files.filter { $0.folderId == folder.id }.count
+                let filesInFolder = files.filter { $0.folderId == folder.id }
+                let fileCount = filesInFolder.count
                 Text(fileCount == 1 ?
                     NSLocalizedString("folder.fileCount.single", comment: "1 file") :
                     String(format: NSLocalizedString("folder.fileCount.multiple", comment: "Multiple files"), fileCount))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                let totalSize = filesInFolder.reduce(0) { $0 + $1.fileSize }
+                Text(PDFFile.sizeFormatter.string(fromByteCount: totalSize))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer(minLength: 0)
+
+            Menu {
+                Button {
+                    beginRenamingFolder(folder)
+                } label: {
+                    Label(NSLocalizedString("action.rename", comment: "Rename action"), systemImage: "pencil")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    onDeleteFolder(folder)
+                } label: {
+                    Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .accessibilityLabel(NSLocalizedString("accessibility.moreActions", comment: "More actions menu"))
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -1308,8 +1393,7 @@ struct FilesView: View {
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
-                deleteFolderTarget = folder
-                showDeleteFolderDialog = true
+                onDeleteFolder(folder)
             } label: {
                 Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
             }
@@ -1346,44 +1430,6 @@ struct FilesView: View {
         }
     }
 
-    private func deleteFolder(_ folder: PDFFolder) {
-        // Get all files in the folder before deletion
-        let filesInFolder = files.filter { $0.folderId == folder.id }
-
-        withAnimation(.easeInOut(duration: 0.3)) {
-            // Delete each file
-            for file in filesInFolder {
-                try? FileManager.default.removeItem(at: file.url)
-            }
-
-            // Remove files from the array
-            files.removeAll { $0.folderId == folder.id }
-
-            // Remove the folder
-            folders.removeAll { $0.id == folder.id }
-
-            // Save updated folders list
-            PDFStorage.saveFolders(folders)
-
-            // If we're currently inside the folder being deleted, navigate back to top level
-            if currentFolderId == folder.id {
-                currentFolderId = nil
-            }
-        }
-
-        // Delete from CloudKit
-        Task {
-            await cloudBackup.deleteFolder(folder)
-            // Also delete all files in the folder from CloudKit
-            for file in filesInFolder {
-                await cloudBackup.deleteBackup(for: file)
-            }
-        }
-
-        // Clean up dialog state
-        deleteFolderTarget = nil
-        showDeleteFolderDialog = false
-    }
 
     private var createFolderDialog: some View {
         NavigationView {
@@ -1406,6 +1452,33 @@ struct FilesView: View {
                         createFolder()
                     }
                     .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private var renameFolderDialog: some View {
+        NavigationView {
+            Form {
+                Section {
+                    TextField(NSLocalizedString("folder.name.placeholder", comment: "Folder name placeholder"), text: $renameFolderName)
+                        .textInputAutocapitalization(.words)
+                }
+            }
+            .navigationTitle(NSLocalizedString("folder.rename.title", comment: "Rename folder title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(NSLocalizedString("action.cancel", comment: "Cancel action")) {
+                        showRenameFolderDialog = false
+                        renameFolderTarget = nil
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(NSLocalizedString("action.save", comment: "Save action")) {
+                        renameFolder()
+                    }
+                    .disabled(renameFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -1453,6 +1526,34 @@ struct FilesView: View {
 
         showCreateFolderDialog = false
         newFolderName = ""
+    }
+
+    private func beginRenamingFolder(_ folder: PDFFolder) {
+        renameFolderTarget = folder
+        renameFolderName = folder.name
+        showRenameFolderDialog = true
+    }
+
+    private func renameFolder() {
+        guard let folder = renameFolderTarget else { return }
+        let trimmedName = renameFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        // Find and update the folder in the array
+        if let index = folders.firstIndex(where: { $0.id == folder.id }) {
+            let updatedFolder = PDFFolder(id: folder.id, name: trimmedName)
+            folders[index] = updatedFolder
+            PDFStorage.saveFolders(folders)
+
+            // Update folder in CloudKit
+            Task {
+                await cloudBackup.backupFolder(updatedFolder)
+            }
+        }
+
+        showRenameFolderDialog = false
+        renameFolderTarget = nil
+        renameFolderName = ""
     }
 
     private var searchBar: some View {
@@ -1659,7 +1760,7 @@ struct PDFFile: Identifiable, Equatable {
         return f
     }()
 
-    private static let sizeFormatter: ByteCountFormatter = {
+    fileprivate static let sizeFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.allowsNonnumericFormatting = false
