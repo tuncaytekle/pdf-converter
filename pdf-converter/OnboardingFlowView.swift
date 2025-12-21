@@ -56,12 +56,12 @@ struct OnboardingFlowView: View {
             .ignoresSafeArea()
 
             // Content
-            VStack(spacing: 0) {
-                Spacer()
-
+             VStack(spacing: 0) {
                 welcomeContent(metrics: metrics)
-                    .padding(.bottom, metrics.contentBottomPadding)
+                .padding(.top, metrics.contentTopPadding)
             }
+            .ignoresSafeArea()
+
         }
     }
 

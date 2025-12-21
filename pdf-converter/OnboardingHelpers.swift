@@ -35,6 +35,7 @@ struct OnboardingMetrics {
     var separatorHeight: CGFloat { 2 * scale }
     var gradientHeight: CGFloat { 457 * scale }
     var contentBottomPadding: CGFloat { 37 * scale }
+    var contentTopPadding: CGFloat { 557 * scale }
     var badgeInnerSpacing: CGFloat { 4 * scale }
     var starContainerHeight: CGFloat { 24 * scale }
     var chevronSize: CGFloat { 14 * scale }
