@@ -2475,8 +2475,28 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    /// Sends the user to the App Store subscriptions screen to manage/cancel.
+    /// Sends the user to the native App Store subscription management screen.
     func openManageSubscriptions() {
+        if #available(iOS 15.0, *) {
+            Task { @MainActor in
+                guard let scene = UIApplication.shared.connectedScenes
+                    .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else {
+                        openSubscriptionsFallback()
+                        return
+                    }
+
+                do {
+                    try await AppStore.showManageSubscriptions(in: scene)
+                } catch {
+                    openSubscriptionsFallback()
+                }
+            }
+        } else {
+            openSubscriptionsFallback()
+        }
+    }
+
+    private func openSubscriptionsFallback() {
         guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
         UIApplication.shared.open(url)
     }
