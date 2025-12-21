@@ -36,9 +36,22 @@
 		948D369E2EC93586009DD0E1 /* pdfconverter-storekit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "pdfconverter-storekit.storekit"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		944FC8FF2EF8A0A600421621 /* Exceptions for "pdf-converter" folder in "pdf-converter" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 948CA45E2E9796BF00196388 /* pdf-converter */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		948CA4612E9796BF00196388 /* pdf-converter */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				944FC8FF2EF8A0A600421621 /* Exceptions for "pdf-converter" folder in "pdf-converter" target */,
+			);
 			path = "pdf-converter";
 			sourceTree = "<group>";
 		};
@@ -420,20 +433,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "pdf-converter/pdf-converter.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = 3297YUP723;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "pdf-converter/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PDF Converter";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "We use the camera to scan documents and photos into PDFs.";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID lets us confirm it's you before showing secure PDFs.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library so you can import photos to convert into PDFs.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -459,20 +465,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "pdf-converter/pdf-converter.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = 3297YUP723;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "pdf-converter/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PDF Converter";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "We use the camera to scan documents and photos into PDFs.";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID lets us confirm it's you before showing secure PDFs.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "We need access to your photo library so you can import photos to convert into PDFs.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

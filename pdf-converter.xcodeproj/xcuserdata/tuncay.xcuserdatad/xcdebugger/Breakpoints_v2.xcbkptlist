@@ -66,64 +66,6 @@
             endingLineNumber = "100"
             landmarkName = "convertHTMLToPDF(html:options:)"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 27b31a52e0ff4574"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(1) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "101"
-                  endingLineNumber = "101">
-               </Location>
-               <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 6707a9b989c77374"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(2) await resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "101"
-                  endingLineNumber = "101">
-               </Location>
-               <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 8b3d4e314e980176"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(3) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "101"
-                  endingLineNumber = "101">
-               </Location>
-               <Location
-                  uuid = "B72875DF-D865-4FC1-B6B6-E0DEADC7E2E9 - 410658cf7b84a377"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(4) suspend resume partial function for pdf_converter.GotenbergClient.convertHTMLToPDF(html: Swift.String, options: Swift.Optional&lt;pdf_converter.PDFOptions&gt;) async throws -&gt; Foundation.Data"
-                  moduleName = "pdf-converter.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/tuncay/Documents/venture/roguewaveapps/uitest/uitest-bottombar/pdf-converter/GotenbergError.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "101"
-                  endingLineNumber = "101">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

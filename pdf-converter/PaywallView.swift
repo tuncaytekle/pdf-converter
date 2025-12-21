@@ -162,9 +162,16 @@ struct PaywallView: View {
 
             Spacer()
 
-            Text(NSLocalizedString("$0.49", comment: "Trial price"))
-                .font(metrics.f3Font)
-                .foregroundColor(Color(hex: "#363636"))
+            if let product = subscriptionManager.product,
+               let introOffer = product.subscription?.introductoryOffer {
+                Text(introOffer.displayPrice)
+                    .font(metrics.f3Font)
+                    .foregroundColor(Color(hex: "#363636"))
+            } else {
+                Text(NSLocalizedString("$0.49", comment: "Trial price"))
+                    .font(metrics.f3Font)
+                    .foregroundColor(Color(hex: "#363636"))
+            }
          }
         .padding(metrics.verticalSpacingIntraSection)
         .frame(maxWidth: .infinity, minHeight: metrics.buttonHeight, maxHeight: metrics.buttonHeight, alignment: .center)
@@ -179,12 +186,26 @@ struct PaywallView: View {
     }
     
     private func finePrint(metrics: PaywallMetrics) -> some View {
-        Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
-            .font(metrics.f4Font)
-            .foregroundColor(Color(hex: "#363636"))
-            .multilineTextAlignment(.center)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
+        Group {
+            if let product = subscriptionManager.product,
+               let subscription = product.subscription {
+                let trialPrice = subscription.introductoryOffer?.displayPrice ?? "$0.49"
+                let regularPrice = product.displayPrice
+                Text("First 7 days at \(trialPrice). Auto-renews at \(regularPrice).\nNo commitment, cancel anytime!")
+                    .font(metrics.f4Font)
+                    .foregroundColor(Color(hex: "#363636"))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
+                    .font(metrics.f4Font)
+                    .foregroundColor(Color(hex: "#363636"))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
     
     
@@ -201,7 +222,9 @@ struct PaywallView: View {
                 Spacer()
                 
                 Button(action: {
-                    subscriptionManager.openManageSubscriptions()
+                    Task {
+                        await subscriptionManager.restorePurchases()
+                    }
                 }) {
                     Text(NSLocalizedString("Restore", comment: "Restore purchases button"))
                         .font(metrics.f3Font)
@@ -210,10 +233,10 @@ struct PaywallView: View {
             }
             .padding(.horizontal, metrics.horizontalPadding)
             
-            Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
+            (Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
                 .font(metrics.f1LightFont) +
             Text(NSLocalizedString("Access", comment: "Unlimited access title"))
-                .font(metrics.f1BoldFont)
+                .font(metrics.f1BoldFont))
                 .foregroundColor(Color(hex: "#363636"))
             
             badgeSection(metrics: metrics)

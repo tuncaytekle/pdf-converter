@@ -2,8 +2,10 @@ import SwiftUI
 
 struct OnboardingMetrics {
     private let scale: CGFloat
+    private let containerSize: CGSize
 
     init(size: CGSize) {
+        containerSize = size
         let baseWidth: CGFloat = 440
         scale = size.width / baseWidth
     }
@@ -42,6 +44,25 @@ struct OnboardingMetrics {
     var buttonPadding: CGFloat { 16 * scale }
     var tagHorizontalPadding: CGFloat { 6 * scale }
     var tagVerticalPadding: CGFloat { 2 * scale }
+
+    // Hero layout
+    var heroHeight: CGFloat { formatsBoxHeight }
+    var heroMaxWidth: CGFloat {
+        min(formatsBoxWidth, containerSize.width - (horizontalPadding * 2))
+    }
+
+    // Formats box
+    var formatsBoxWidth: CGFloat { 384 * scale }
+    var formatsBoxHeight: CGFloat { 569 * scale }
+    var formatsBoxCornerRadius: CGFloat { 24 * scale }
+    var formatsBoxHorizontalPadding: CGFloat { 32 * scale }
+    var formatsBoxVerticalPadding: CGFloat { 34 * scale }
+    var formatBadgeFont: Font { .system(size: 40 * scale, weight: .semibold) }
+    var formatBadgeCornerRadius: CGFloat { 12.516 * scale }
+    var formatBadgeHorizontalPadding: CGFloat { 16 * scale }
+    var formatBadgeVerticalPadding: CGFloat { 8 * scale }
+    var formatBadgeHeight: CGFloat { 64 * scale }
+    var formatBadgeSpacing: CGFloat { 8.778 * scale }
 }
 
 

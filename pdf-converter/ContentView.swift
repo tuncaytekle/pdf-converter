@@ -74,7 +74,7 @@ struct ContentView: View {
     @State private var didAnimateCreateButtonCue = false
     @State private var isConvertingFile = false
     @State private var showPaywall = false
-    @State private var showOnboarding = false
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasCheckedPaywall = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
@@ -286,7 +286,10 @@ struct ContentView: View {
     private var rootContent: some View {
         ZStack {
             tabInterface
-            floatingCreateButton
+
+            if selection == .files {
+                floatingCreateButton
+            }
         }
     }
 
@@ -361,9 +364,8 @@ struct ContentView: View {
                             .foregroundStyle(.white)
                     }
                     .accessibilityLabel(NSLocalizedString("accessibility.create", comment: "Create button"))
-                    .scaleEffect(createButtonPulse ? 1.06 : 1)
-                    .shadow(color: Color.blue.opacity(createButtonPulse ? 0.35 : 0.25), radius: createButtonPulse ? 18 : 8, y: createButtonPulse ? 10 : 2)
-                    .offset(y: -50)
+                    .scaleEffect(createButtonPulse ? 1.12 : 1)
+                    .shadow(color: Color.blue.opacity(createButtonPulse ? 0.5 : 0.25), radius: createButtonPulse ? 24 : 8, y: createButtonPulse ? 12 : 2)
                     .task {
                         await animateCreateButtonCueIfNeeded()
                     }
@@ -376,7 +378,7 @@ struct ContentView: View {
                 .buttonStyle(.plain)
             }
             .padding(.trailing, 28)
-            .padding(.bottom, 10)
+            .padding(.bottom, 60)
         }
         // Taps outside the button should fall through to the tab bar underneath.
         .allowsHitTesting(true)
@@ -417,7 +419,7 @@ struct ContentView: View {
 
         try? await Task.sleep(nanoseconds: 650_000_000)
 
-        let animation = Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)
+        let animation = Animation.easeInOut(duration: 1.2).repeatForever(autoreverses: true)
         withAnimation(animation) {
             createButtonPulse = true
         }
@@ -885,13 +887,9 @@ struct ContentView: View {
 
     /// Checks if paywall should be shown, then loads cached PDFs
     private func checkPaywallAndLoadFiles() {
-        // First check if onboarding has been completed
+        // Check if we should show the paywall (onboarding is now handled at initialization)
         let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        if !hasCompletedOnboarding {
-            showOnboarding = true
-        }
-        // Then check if we should show the paywall
-        else if subscriptionManager.shouldShowPaywall {
+        if hasCompletedOnboarding && subscriptionManager.shouldShowPaywall {
             showPaywall = true
         }
 
@@ -2290,10 +2288,28 @@ struct AccountView: View {
                     featuresSection
                     actionButton
                     if case .failed(let message) = subscriptionManager.purchaseState {
-                        Text(message)
-                            .font(.footnote)
-                            .foregroundColor(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.red)
+                                Text("Error Details")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                            }
+
+                            ScrollView {
+                                Text(message)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                            }
+                            .frame(maxHeight: 200)
+                            .padding(12)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding()
@@ -2392,7 +2408,7 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var isSubscribed = false
     @Published var purchaseState: PurchaseState = .idle
 
-    private let productID = "com.roguewaveapps.pdfconverter.pro.weekly"
+    private let productID = "com.roguewaveapps.pdfconverter.test.weekly.1"
     private let hasEverPurchasedKey = "hasEverPurchasedSubscription"
 
     init() {
@@ -2417,6 +2433,48 @@ final class SubscriptionManager: ObservableObject {
         Task { await purchaseProduct() }
     }
 
+    /// Restores previous purchases by syncing with the App Store
+    func restorePurchases() async {
+        print("🔄 [SubscriptionManager] Starting restore purchases...")
+        purchaseState = .purchasing
+
+        do {
+            // Sync with App Store to get latest transaction info
+            try await AppStore.sync()
+            print("✅ [SubscriptionManager] AppStore sync completed")
+
+            // Check current entitlements
+            var foundActiveSubscription = false
+            for await result in Transaction.currentEntitlements {
+                if case .verified(let transaction) = result,
+                   transaction.productID == productID {
+                    let isActive = transaction.revocationDate == nil &&
+                        (transaction.expirationDate ?? .distantFuture) > Date()
+
+                    if isActive {
+                        foundActiveSubscription = true
+                        isSubscribed = true
+                        markPurchaseCompleted()
+                        print("✅ [SubscriptionManager] Found active subscription")
+                        await transaction.finish()
+                        break
+                    }
+                }
+            }
+
+            if foundActiveSubscription {
+                purchaseState = .purchased
+                print("✅ [SubscriptionManager] Restore successful - subscription active")
+            } else {
+                purchaseState = .failed("No active subscription found.\n\nIf you previously purchased, ensure you're signed in with the same Apple ID.")
+                print("ℹ️ [SubscriptionManager] No active subscription found")
+            }
+        } catch {
+            print("❌ [SubscriptionManager] Restore failed: \(error.localizedDescription)")
+            purchaseState = .failed("Restore failed.\n\nError: \(error.localizedDescription)")
+        }
+    }
+
     /// Sends the user to the App Store subscriptions screen to manage/cancel.
     func openManageSubscriptions() {
         guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
@@ -2426,10 +2484,35 @@ final class SubscriptionManager: ObservableObject {
     /// Fetches metadata for the subscription product (price, trial eligibility, etc).
     private func loadProduct() async {
         do {
+            print("🔍 [SubscriptionManager] Loading product with ID: \(productID)")
             let products = try await Product.products(for: [productID])
-            product = products.first
+
+            if let loadedProduct = products.first {
+                product = loadedProduct
+                print("✅ [SubscriptionManager] Product loaded successfully: \(loadedProduct.displayName) - \(loadedProduct.displayPrice)")
+            } else {
+                print("❌ [SubscriptionManager] Product array is empty - Product ID not found in App Store Connect")
+                purchaseState = .failed("Product not found in App Store.\n\nProduct ID: \(productID)\n\nThis usually means:\n1. Product not set up in App Store Connect\n2. Product not approved yet\n3. Product not added to this app version\n4. Wrong product ID")
+            }
         } catch {
-            purchaseState = .failed(String(format: NSLocalizedString("subscription.loadFailed", comment: "Load subscription failed"), error.localizedDescription))
+            print("❌ [SubscriptionManager] Failed to load product: \(error.localizedDescription)")
+            print("   Error details: \(error)")
+
+            let errorMessage = """
+            Failed to load subscription.
+
+            Product ID: \(productID)
+            Error: \(error.localizedDescription)
+
+            Debug info: \(error)
+
+            Possible causes:
+            • Network connection issue
+            • App Store services unavailable
+            • Invalid product configuration
+            """
+
+            purchaseState = .failed(errorMessage)
         }
     }
 
@@ -2484,26 +2567,57 @@ final class SubscriptionManager: ObservableObject {
 
     private func purchaseProduct() async {
         guard let product else {
-            purchaseState = .failed(NSLocalizedString("subscription.notAvailable", comment: "Subscription not available message"))
+            print("❌ [SubscriptionManager] Cannot purchase - product is nil")
+            let errorMessage = """
+            Subscription not available.
+
+            Product ID: \(productID)
+
+            The product failed to load. Check the error message above for details.
+
+            In TestFlight, ensure:
+            • Product is approved in App Store Connect
+            • Product is added to this app version
+            • You're signed in with a sandbox account
+            """
+            purchaseState = .failed(errorMessage)
             return
         }
 
+        print("🛒 [SubscriptionManager] Starting purchase for: \(product.displayName)")
         purchaseState = .purchasing
 
         do {
             let result = try await product.purchase()
+            print("📦 [SubscriptionManager] Purchase result received")
+
             switch result {
             case .success(let verification):
+                print("✅ [SubscriptionManager] Purchase successful")
                 await handlePurchaseResult(verification)
             case .pending:
+                print("⏳ [SubscriptionManager] Purchase pending (waiting for approval)")
                 purchaseState = .pending
             case .userCancelled:
+                print("🚫 [SubscriptionManager] Purchase cancelled by user")
                 purchaseState = .idle
             @unknown default:
-                purchaseState = .failed(NSLocalizedString("subscription.unknownResult", comment: "Unknown purchase result"))
+                print("⚠️ [SubscriptionManager] Unknown purchase result")
+                purchaseState = .failed("Unknown purchase result.\n\nPlease try again or contact support.")
             }
         } catch {
-            purchaseState = .failed(String(format: NSLocalizedString("subscription.purchaseFailed", comment: "Purchase failed message"), error.localizedDescription))
+            print("❌ [SubscriptionManager] Purchase failed: \(error.localizedDescription)")
+            print("   Error details: \(error)")
+
+            let errorMessage = """
+            Purchase failed.
+
+            Error: \(error.localizedDescription)
+
+            Debug info: \(error)
+            """
+
+            purchaseState = .failed(errorMessage)
         }
     }
 

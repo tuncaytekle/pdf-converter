@@ -63,9 +63,9 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.roguewaveapps.pdfconverter.pro.weekly",
+          "productID" : "com.roguewaveapps.pdfconverter.test.weekly.1",
           "recurringSubscriptionPeriod" : "P1W",
-          "referenceName" : "com.roguewaveapps.pdfconverter.pro.weekly",
+          "referenceName" : "PDF Converter Pro Weekly",
           "subscriptionGroupID" : "DC25BD2F",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

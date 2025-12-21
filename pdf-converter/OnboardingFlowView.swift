@@ -4,7 +4,7 @@ struct OnboardingFlowView: View {
     @Binding var isPresented: Bool
     @State private var currentPage = 0
 
-    private let totalPages = 5 // 1 welcome + 4 features
+    private let totalPages = 6 // 1 welcome + 4 features + 1 formats
 
     var body: some View {
         GeometryReader { proxy in
@@ -16,10 +16,14 @@ struct OnboardingFlowView: View {
                     .tag(0)
 
                 // Pages 1-4: Feature screens
-                ForEach(1..<totalPages, id: \.self) { index in
-                    featurePage(for: index - 1, metrics: metrics, size: proxy.size)
+                ForEach(1...4, id: \.self) { index in
+                    featurePage(for: index - 1, metrics: metrics)
                         .tag(index)
                 }
+
+                // Page 5: Formats page
+                formatsPage(metrics: metrics)
+                    .tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
@@ -104,8 +108,19 @@ struct OnboardingFlowView: View {
                     .foregroundColor(Color(hex: "#363636"))
 
                 Rectangle()
+                    .foregroundColor(.clear)
                     .frame(width: metrics.separatorWidth, height: metrics.separatorHeight)
-                    .foregroundColor(Color(hex: "#363636"))
+                    .background(
+                        LinearGradient(
+                            stops: [
+                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: 0.00),
+                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21), location: metrics.separatorHeight / 4),
+                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: metrics.separatorHeight / 2),
+                            ],
+                            startPoint: UnitPoint(x: 0, y: metrics.separatorHeight / 4),
+                            endPoint: UnitPoint(x: metrics.separatorHeight / 2, y: metrics.separatorHeight / 4)
+                        )
+                    )
 
                 HStack(spacing: 0) {
                     Text("100+ ")
@@ -179,73 +194,49 @@ struct OnboardingFlowView: View {
 
     // MARK: - Feature Pages
 
-    private func featurePage(for index: Int, metrics: OnboardingMetrics, size: CGSize) -> some View {
+    private func featurePage(for index: Int, metrics: OnboardingMetrics) -> some View {
         let feature = features[index]
 
-        return ZStack {
-            Color.white
-                .ignoresSafeArea()
-
-            VStack(spacing: metrics.sectionSpacing) {
-                Spacer()
-
-                // Feature illustration
-                Image(feature.imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: size.height * 0.6)
-
-                Spacer()
-
-                // Title and tags section
-                VStack(spacing: metrics.tagSpacing) {
-                    // Title with highlighted feature name
-                    HStack(spacing: 0) {
-                        Text(feature.titlePrefix)
-                            .font(metrics.titleRegularFont)
-                        Text(feature.titleHighlight)
-                            .font(metrics.titleBoldFont)
-                    }
-                    .foregroundColor(Color(hex: "#363636"))
-
-                    // Feature tags with one highlighted
-                    HStack(spacing: metrics.tagSpacing) {
-                        FlowFeatureTag(
-                            metrics: metrics,
-                            text: "Convert",
-                            isHighlighted: feature.highlightedTag == "Convert",
-                            color: Color(hex: "#3A7377")
-                        )
-                        FlowFeatureTag(
-                            metrics: metrics,
-                            text: "Scan",
-                            isHighlighted: feature.highlightedTag == "Scan",
-                            color: Color(hex: "#CE2B6F")
-                        )
-                        FlowFeatureTag(
-                            metrics: metrics,
-                            text: "Share",
-                            isHighlighted: feature.highlightedTag == "Share",
-                            color: Color(hex: "#9633E7")
-                        )
-                        FlowFeatureTag(
-                            metrics: metrics,
-                            text: "Organize",
-                            isHighlighted: feature.highlightedTag == "Organize",
-                            color: Color(hex: "#D07826")
-                        )
-                    }
+        return onboardingPage(metrics: metrics, isLastPage: index == features.count - 1) {
+            Image(feature.imageName)
+                .resizable()
+                .scaledToFit()
+        } titleSection: {
+            VStack(spacing: metrics.tagSpacing) {
+                HStack(spacing: 0) {
+                    Text(feature.titlePrefix)
+                        .font(metrics.titleRegularFont)
+                    Text(feature.titleHighlight)
+                        .font(metrics.titleBoldFont)
                 }
-                .padding(.horizontal, metrics.horizontalPadding)
+                .foregroundColor(Color(hex: "#363636"))
 
-                // Continue button
-                continueButton(metrics: metrics, isLastPage: index == features.count - 1)
-                    .padding(.top, metrics.sectionSpacing)
-
-                // Progress indicator
-                pageIndicator(metrics: metrics)
-                    .padding(.top, metrics.sectionSpacing / 2)
-                    .padding(.bottom, metrics.contentBottomPadding)
+                HStack(spacing: metrics.tagSpacing) {
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Convert",
+                        isHighlighted: feature.highlightedTag == "Convert",
+                        color: Color(hex: "#3A7377")
+                    )
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Scan",
+                        isHighlighted: feature.highlightedTag == "Scan",
+                        color: Color(hex: "#CE2B6F")
+                    )
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Share",
+                        isHighlighted: feature.highlightedTag == "Share",
+                        color: Color(hex: "#9633E7")
+                    )
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Organize",
+                        isHighlighted: feature.highlightedTag == "Organize",
+                        color: Color(hex: "#D07826")
+                    )
+                }
             }
         }
     }
@@ -254,6 +245,10 @@ struct OnboardingFlowView: View {
 
     private func continueButton(metrics: OnboardingMetrics, isLastPage: Bool) -> some View {
         Button(action: {
+            // Haptic feedback
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+
             if currentPage < totalPages - 1 {
                 withAnimation {
                     currentPage += 1
@@ -282,6 +277,128 @@ struct OnboardingFlowView: View {
             .cornerRadius(metrics.cardCornerRadius)
         }
         .padding(.horizontal, metrics.horizontalPadding)
+    }
+
+    // MARK: - Formats Page
+
+    private func formatsPage(metrics: OnboardingMetrics) -> some View {
+        onboardingPage(metrics: metrics, isLastPage: true) {
+            formatsBox(metrics: metrics)
+        } titleSection: {
+            VStack(spacing: metrics.tagSpacing) {
+                HStack(spacing: 0) {
+                    Text("100+")
+                        .font(metrics.titleBoldFont)
+                    Text(" Formats Supported")
+                        .font(metrics.titleRegularFont)
+                }
+                .foregroundColor(Color(hex: "#363636"))
+
+                HStack(spacing: metrics.tagSpacing) {
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Convert",
+                        isHighlighted: true,
+                        color: Color(hex: "#3A7377")
+                    )
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Scan",
+                        isHighlighted: true,
+                        color: Color(hex: "#CE2B6F")
+                    )
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Share",
+                        isHighlighted: true,
+                        color: Color(hex: "#9633E7")
+                    )
+                    FlowFeatureTag(
+                        metrics: metrics,
+                        text: "Organize",
+                        isHighlighted: true,
+                        color: Color(hex: "#D07826")
+                    )
+                }
+            }
+        }
+    }
+
+    private func onboardingPage<Hero: View, TitleSection: View>(
+        metrics: OnboardingMetrics,
+        isLastPage: Bool,
+        @ViewBuilder hero: () -> Hero,
+        @ViewBuilder titleSection: () -> TitleSection
+    ) -> some View {
+        ZStack {
+            Color.white
+                .ignoresSafeArea()
+
+            VStack(spacing: metrics.sectionSpacing) {
+                Spacer()
+
+                heroContainer(metrics: metrics, content: hero)
+                    .padding(.horizontal, metrics.horizontalPadding)
+
+                titleSection()
+                    .padding(.horizontal, metrics.horizontalPadding)
+
+                continueButton(metrics: metrics, isLastPage: isLastPage)
+                    .padding(.top, metrics.sectionSpacing)
+
+                pageIndicator(metrics: metrics)
+                    .padding(.top, metrics.sectionSpacing / 2)
+                    .padding(.bottom, metrics.contentBottomPadding)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func heroContainer<Content: View>(
+        metrics: OnboardingMetrics,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .frame(maxWidth: metrics.heroMaxWidth)
+            .frame(maxWidth: .infinity)
+            .frame(height: metrics.heroHeight, alignment: .center)
+    }
+
+    private func formatsBox(metrics: OnboardingMetrics) -> some View {
+        // Organize formats by rows with specific items per row
+        let formatRows: [[(String, String)]] = [
+            [("pdf", "#614d81"), ("epub", "#6c8ec9")],
+            [("docx", "#9633e7"), ("pages", "#ce2b6f")],
+            [("xlsx", "#3a7377"), ("pptx", "#614d81")],
+            [("numbers", "#d07826"), ("key", "#6c8ec9")],
+            [("jpeg", "#ce2b6f"), ("png", "#3a7377"), ("rtf", "#d07826")],
+            [("svg", "#9633e7"), ("tiff", "#ce2b6f"), ("psd", "#614d81")],
+            [("mobi", "#3a7377")]
+        ]
+
+        return VStack(alignment: .leading, spacing: metrics.formatBadgeSpacing) {
+            ForEach(Array(formatRows.enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .center, spacing: metrics.formatBadgeSpacing) {
+                    ForEach(Array(row.enumerated()), id: \.offset) { _, item in
+                        let (format, colorHex) = item
+                        Text(format)
+                            .font(metrics.formatBadgeFont)
+                            .foregroundColor(.white)
+                            .frame(height: metrics.formatBadgeHeight)
+                            .padding(.horizontal, metrics.formatBadgeHorizontalPadding)
+                            .background(Color(hex: colorHex))
+                            .cornerRadius(metrics.formatBadgeCornerRadius)
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, metrics.formatsBoxHorizontalPadding)
+        .padding(.vertical, metrics.formatsBoxVerticalPadding)
+        .frame(maxWidth: metrics.heroMaxWidth, alignment: .topLeading)
+        .frame(height: metrics.heroHeight, alignment: .topLeading)
+        .background(Color(hex: "#363636"))
+        .cornerRadius(metrics.formatsBoxCornerRadius)
     }
 
     private func pageIndicator(metrics: OnboardingMetrics) -> some View {
