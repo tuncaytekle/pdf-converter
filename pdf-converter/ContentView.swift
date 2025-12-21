@@ -331,19 +331,49 @@ struct ContentView: View {
             HStack {
                 Spacer()
 
-                CenterActionButton {
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    createButtonPulse = false
-                    showCreateActions = true
+                Menu {
+                    Button {
+                        scanDocumentsToPDF()
+                    } label: {
+                        Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
+                    }
+
+                    Button {
+                        convertPhotosToPDF()
+                    } label: {
+                        Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
+                    }
+
+                    Button {
+                        convertFilesToPDF()
+                    } label: {
+                        Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
+                    }
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.blue)
+                            .frame(width: 64, height: 64)
+                            .shadow(radius: 6, y: 2)
+
+                        Image(systemName: "plus")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .accessibilityLabel(NSLocalizedString("accessibility.create", comment: "Create button"))
+                    .scaleEffect(createButtonPulse ? 1.06 : 1)
+                    .shadow(color: Color.blue.opacity(createButtonPulse ? 0.35 : 0.25), radius: createButtonPulse ? 18 : 8, y: createButtonPulse ? 10 : 2)
+                    .offset(y: -50)
+                    .task {
+                        await animateCreateButtonCueIfNeeded()
+                    }
+                    .onTapGesture {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        createButtonPulse = false
+                    }
                 }
-                .accessibilityLabel(NSLocalizedString("accessibility.create", comment: "Create button"))
-                .accessibilityAddTraits(.isButton)
-                .scaleEffect(createButtonPulse ? 1.06 : 1)
-                .shadow(color: Color.blue.opacity(createButtonPulse ? 0.35 : 0.25), radius: createButtonPulse ? 18 : 8, y: createButtonPulse ? 10 : 2)
-                .task {
-                    await animateCreateButtonCueIfNeeded()
-                }
+                .buttonStyle(.plain)
             }
             .padding(.trailing, 28)
             .padding(.bottom, 10)

@@ -43,6 +43,7 @@ struct PaywallMetrics {
 struct PaywallView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var animationStage: AnimationStage = .toggleOff
     @State private var toggleEnabled = false
@@ -65,7 +66,7 @@ struct PaywallView: View {
                 
                 if animationStage == .fullPaywall && showFullPaywall {
                     fullPaywallContent(metrics: metrics)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 } else {
                     toggleAnimationContent(metrics: metrics)
                 }
@@ -93,7 +94,7 @@ struct PaywallView: View {
                 .font(metrics.f3Font)
                 .foregroundColor(Color(hex: "#363636"))
                 .opacity(showTrialText ? 1 : 0)
-                .scaleEffect(showTrialText ? 1 : 0.8)
+                .scaleEffect(reduceMotion ? 1 : (showTrialText ? 1 : 0.8))
 
             // Toggle switch - stays in same position
             Toggle("", isOn: $toggleEnabled)
@@ -337,6 +338,13 @@ struct PaywallView: View {
     // MARK: - Animation Logic
 
     private func startAnimation() {
+        // If reduce motion is enabled, skip animation and show paywall immediately
+        if reduceMotion {
+            animationStage = .fullPaywall
+            showFullPaywall = true
+            return
+        }
+
         // Stage 1: Show toggle in OFF state for 1 second
         animationStage = .toggleOff
 
