@@ -334,55 +334,70 @@ struct ContentView: View {
             HStack {
                 Spacer()
 
-                Menu {
-                    Button {
-                        scanDocumentsToPDF()
-                    } label: {
-                        Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
-                    }
+                ZStack {
+                    // 1) Persistent backing circle + shadow (NOT inside Menu label)
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 64, height: 64)
+                        .shadow(radius: 6, y: 2)
+                        .shadow(
+                            color: Color.blue.opacity(createButtonPulse ? 0.5 : 0.25),
+                            radius: createButtonPulse ? 24 : 8,
+                            y: createButtonPulse ? 12 : 2
+                        )
+                        .scaleEffect(createButtonPulse ? 1.12 : 1)
+                        .allowsHitTesting(false) // taps go to the Menu above
 
-                    Button {
-                        convertPhotosToPDF()
-                    } label: {
-                        Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
-                    }
+                    // 2) Menu only controls interaction + icon; no shadow here
+                    Menu {
+                        Button { scanDocumentsToPDF() } label: {
+                            Label(
+                                NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"),
+                                systemImage: "doc.text.viewfinder"
+                            )
+                        }
 
-                    Button {
-                        convertFilesToPDF()
-                    } label: {
-                        Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
-                    }
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Color.blue)
-                            .frame(width: 64, height: 64)
-                            .shadow(radius: 6, y: 2)
+                        Button { convertPhotosToPDF() } label: {
+                            Label(
+                                NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"),
+                                systemImage: "photo.on.rectangle"
+                            )
+                        }
 
+                        Button { convertFilesToPDF() } label: {
+                            Label(
+                                NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"),
+                                systemImage: "folder"
+                            )
+                        }
+                    } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(.white)
+                            .frame(width: 64, height: 64)   // ensures correct tap target
+                            .contentShape(Circle())          // circular hit-testing
+                            .contentShape(.contextMenuPreview, Circle())
+                            .accessibilityLabel(
+                                NSLocalizedString("accessibility.create", comment: "Create button")
+                            )
                     }
-                    .accessibilityLabel(NSLocalizedString("accessibility.create", comment: "Create button"))
-                    .scaleEffect(createButtonPulse ? 1.12 : 1)
-                    .shadow(color: Color.blue.opacity(createButtonPulse ? 0.5 : 0.25), radius: createButtonPulse ? 24 : 8, y: createButtonPulse ? 12 : 2)
-                    .task {
-                        await animateCreateButtonCueIfNeeded()
-                    }
-                    .onTapGesture {
+                    .buttonStyle(.plain)
+                    .simultaneousGesture(TapGesture().onEnded {
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
                         createButtonPulse = false
+                    })
+                    .task {
+                        await animateCreateButtonCueIfNeeded()
                     }
                 }
-                .buttonStyle(.plain)
             }
             .padding(.trailing, 28)
             .padding(.bottom, 60)
         }
-        // Taps outside the button should fall through to the tab bar underneath.
         .allowsHitTesting(true)
     }
+
     
     // MARK: - Quick Action Routing
 
@@ -1996,6 +2011,7 @@ struct SettingsView: View {
     @StateObject private var subscriptionManager = SubscriptionManager()
     @State private var showSignatureSheet = false
     @State private var savedSignature: SignatureStore.Signature? = SignatureStore.load()
+    @State private var showManageSubscriptionsSheet = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @State private var infoSheet: InfoSheet?
     @State private var shareItem: ShareItem?
@@ -2076,6 +2092,7 @@ struct SettingsView: View {
                 )
             }
         }
+        .manageSubscriptionsSheetIfAvailable($showManageSubscriptionsSheet)
         .onChange(of: savedSignature) { _, newValue in
             if let signature = newValue {
                 SignatureStore.save(signature)
@@ -2088,11 +2105,7 @@ struct SettingsView: View {
     private var subscriptionSection: some View {
         Section(NSLocalizedString("settings.subscription.section", comment: "Subscription section title")) {
             Button {
-                if subscriptionManager.isSubscribed {
-                    subscriptionManager.openManageSubscriptions()
-                } else {
-                    subscriptionManager.purchase()
-                }
+                handleSubscriptionTap()
             } label: {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .center, spacing: 12) {
@@ -2258,6 +2271,24 @@ struct SettingsView: View {
             }
         }
     }
+
+    @MainActor
+    private func handleSubscriptionTap() {
+        if subscriptionManager.isSubscribed {
+            presentManageSubscriptions()
+        } else {
+            subscriptionManager.purchase()
+        }
+    }
+
+    @MainActor
+    private func presentManageSubscriptions() {
+        if #available(iOS 17.0, *) {
+            showManageSubscriptionsSheet = true
+        } else {
+            subscriptionManager.openManageSubscriptionsFallback()
+        }
+    }
 }
 
 /// Alert wrapper used by the settings screen when toggling biometrics fails.
@@ -2270,6 +2301,7 @@ private struct SettingsAlert: Identifiable {
 /// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @State private var showManageSubscriptionsSheet = false
 
     private let featureList: [(String, String)] = [
         ("🚀", "account.feature.conversions"),
@@ -2322,6 +2354,7 @@ struct AccountView: View {
                 .hideSharedBackground
             }
         }
+        .manageSubscriptionsSheetIfAvailable($showManageSubscriptionsSheet)
     }
 
     private var statusSection: some View {
@@ -2362,7 +2395,7 @@ struct AccountView: View {
     private var actionButton: some View {
         if subscriptionManager.isSubscribed {
             Button {
-                subscriptionManager.openManageSubscriptions()
+                presentManageSubscriptions()
             } label: {
                 Label(NSLocalizedString("account.action.manage", comment: "Manage subscription label"), systemImage: "gearshape")
                     .frame(maxWidth: .infinity)
@@ -2387,6 +2420,26 @@ struct AccountView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @MainActor
+    private func presentManageSubscriptions() {
+        if #available(iOS 17.0, *) {
+            showManageSubscriptionsSheet = true
+        } else {
+            subscriptionManager.openManageSubscriptionsFallback()
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func manageSubscriptionsSheetIfAvailable(_ isPresented: Binding<Bool>) -> some View {
+        if #available(iOS 17.0, *) {
+            self.manageSubscriptionsSheet(isPresented: isPresented)
+        } else {
+            self
         }
     }
 }
@@ -2475,28 +2528,9 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    /// Sends the user to the native App Store subscription management screen.
-    func openManageSubscriptions() {
-        if #available(iOS 15.0, *) {
-            Task { @MainActor in
-                guard let scene = UIApplication.shared.connectedScenes
-                    .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else {
-                        openSubscriptionsFallback()
-                        return
-                    }
-
-                do {
-                    try await AppStore.showManageSubscriptions(in: scene)
-                } catch {
-                    openSubscriptionsFallback()
-                }
-            }
-        } else {
-            openSubscriptionsFallback()
-        }
-    }
-
-    private func openSubscriptionsFallback() {
+    /// Opens the App Store subscription management page (fallback for older iOS).
+    @MainActor
+    func openManageSubscriptionsFallback() {
         guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
         UIApplication.shared.open(url)
     }
