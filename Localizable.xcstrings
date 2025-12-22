@@ -1900,6 +1900,7 @@
     },
     "Go Pro" : {
       "comment" : "A button label that indicates that the user can upgrade to a premium subscription.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2023,6 +2024,7 @@
     },
     "Pro" : {
       "comment" : "The text for the \"Pro\" button in the navigation bar.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2034,6 +2036,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro"
+          }
+        }
+      }
+    },
+    "proButton.active" : {
+      "comment" : "Active Pro label",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro"
+          }
+        }
+      }
+    },
+    "proButton.upsell" : {
+      "comment" : "Upgrade to Pro label",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go Pro"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Ol"
           }
         }
       }
