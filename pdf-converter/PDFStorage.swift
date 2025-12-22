@@ -1,0 +1,293 @@
+import Foundation
+import PDFKit
+import OSLog
+
+enum PDFStorage {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
+        category: "Storage"
+    )
+
+    static func loadSavedFiles() -> [PDFFile] {
+        guard let directory = documentsDirectory(),
+              let urls = try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey],
+                options: [.skipsHiddenFiles]
+              ) else {
+            return []
+        }
+
+        let pdfs = urls.filter { $0.pathExtension.lowercased() == "pdf" }
+
+        return pdfs.compactMap { url in
+            let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+            let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+            let size = Int64(resourceValues?.fileSize ?? 0)
+            let pageCount = PDFDocument(url: url)?.pageCount ?? 0
+            let folderId = loadFileFolderId(for: url)
+            return PDFFile(
+                url: url,
+                name: url.deletingPathExtension().lastPathComponent,
+                date: date,
+                pageCount: pageCount,
+                fileSize: size,
+                folderId: folderId
+            )
+        }
+    }
+
+    static func save(document: ScannedDocument) throws -> PDFFile {
+        guard let directory = documentsDirectory() else {
+            throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
+        }
+
+        let baseName = sanitizeFileName(document.fileName)
+        let destination = uniqueURL(for: baseName, in: directory)
+
+        do {
+            try FileManager.default.moveItem(at: document.pdfURL, to: destination)
+        } catch {
+            throw ScanWorkflowError.underlying(error)
+        }
+
+        let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+        let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+        let size = Int64(resourceValues?.fileSize ?? 0)
+        let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+
+        return PDFFile(
+            url: destination,
+            name: destination.deletingPathExtension().lastPathComponent,
+            date: date,
+            pageCount: pageCount,
+            fileSize: size,
+            folderId: nil
+        )
+    }
+
+    static func importDocuments(at urls: [URL]) throws -> [PDFFile] {
+        guard let directory = documentsDirectory() else {
+            throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
+        }
+
+        var imported: [PDFFile] = []
+
+        for sourceURL in urls {
+            var didAccess = false
+            if sourceURL.startAccessingSecurityScopedResource() {
+                didAccess = true
+            }
+            defer {
+                if didAccess {
+                    sourceURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            guard sourceURL.pathExtension.lowercased() == "pdf" else { continue }
+
+            let baseName = sanitizeFileName(sourceURL.deletingPathExtension().lastPathComponent)
+            let destination = uniqueURL(for: baseName, in: directory)
+
+            do {
+                if FileManager.default.fileExists(atPath: destination.path) {
+                    try FileManager.default.removeItem(at: destination)
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: destination)
+                let resourceValues = try? destination.resourceValues(forKeys: [.fileSizeKey])
+                let date = Date()
+                let size = Int64(resourceValues?.fileSize ?? 0)
+                let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+                let file = PDFFile(
+                    url: destination,
+                    name: destination.deletingPathExtension().lastPathComponent,
+                    date: date,
+                    pageCount: pageCount,
+                    fileSize: size,
+                    folderId: nil
+                )
+                imported.append(file)
+            } catch {
+                throw ScanWorkflowError.underlying(error)
+            }
+        }
+
+        return imported
+    }
+
+    static func rename(file: PDFFile, to newName: String) throws -> PDFFile {
+        let sanitized = sanitizeFileName(newName)
+        let directory = file.url.deletingLastPathComponent()
+        let currentBase = file.url.deletingPathExtension().lastPathComponent
+
+        if currentBase == sanitized {
+            return PDFFile(
+                url: file.url,
+                name: sanitized,
+                date: file.date,
+                pageCount: file.pageCount,
+                fileSize: file.fileSize,
+                folderId: file.folderId
+            )
+        }
+
+        let destination = uniqueURL(for: sanitized, in: directory)
+
+        do {
+            try FileManager.default.moveItem(at: file.url, to: destination)
+        } catch {
+            throw ScanWorkflowError.underlying(error)
+        }
+
+        return PDFFile(
+            url: destination,
+            name: destination.deletingPathExtension().lastPathComponent,
+            date: file.date,
+            pageCount: file.pageCount,
+            fileSize: file.fileSize,
+            folderId: file.folderId
+        )
+    }
+
+    static func delete(file: PDFFile) throws {
+        try FileManager.default.removeItem(at: file.url)
+    }
+
+    static func prepareShareURL(for document: ScannedDocument) throws -> URL {
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let destination = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("pdf")
+        try FileManager.default.copyItem(at: document.pdfURL, to: destination)
+        return destination
+    }
+
+    // MARK: - Folder Management
+
+    static func loadFolders() -> [PDFFolder] {
+        guard let url = foldersFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else {
+            return []
+        }
+
+        return (try? JSONDecoder().decode([PDFFolder].self, from: data)) ?? []
+    }
+
+    static func saveFolders(_ folders: [PDFFolder]) {
+        guard let url = foldersFileURL,
+              let data = try? JSONEncoder().encode(folders) else {
+            return
+        }
+
+        try? data.write(to: url, options: .atomic)
+    }
+
+    static func updateFileFolderId(file: PDFFile, folderId: String?) {
+        guard let url = fileFoldersFileURL else { return }
+
+        var mapping: [String: String] = [:]
+
+        if FileManager.default.fileExists(atPath: url.path),
+           let data = try? Data(contentsOf: url),
+           let existing = try? JSONDecoder().decode([String: String].self, from: data) {
+            mapping = existing
+        }
+
+        let key = file.url.lastPathComponent
+        if let folderId = folderId {
+            mapping[key] = folderId
+        } else {
+            mapping.removeValue(forKey: key)
+        }
+
+        if let data = try? JSONEncoder().encode(mapping) {
+            do {
+                try data.write(to: url, options: .atomic)
+            } catch {
+                logger.error("Failed to write folder mapping: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    static func loadFileFolderId(for fileURL: URL) -> String? {
+        guard let url = fileFoldersFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return nil
+        }
+
+        let key = fileURL.lastPathComponent
+        return mapping[key]
+    }
+
+    // MARK: - Helpers
+
+    private static func documentsDirectory() -> URL? {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    }
+
+    private static func sanitizeFileName(_ input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return NSLocalizedString("Untitled", comment: "Fallback file name") }
+
+        var sanitized = trimmed
+        if sanitized.lowercased().hasSuffix(".pdf") {
+            sanitized = String(sanitized.dropLast(4))
+        }
+
+        let invalidCharacters = CharacterSet(charactersIn: "/\\?%*|\"<>:")
+        let components = sanitized.components(separatedBy: invalidCharacters)
+        let filtered = components.joined(separator: "-")
+        if filtered.lowercased().hasSuffix(".pdf") {
+            return String(filtered.dropLast(4))
+        }
+        return filtered
+    }
+
+    private static func uniqueURL(for baseName: String, in directory: URL) -> URL {
+        var fileURL = directory.appendingPathComponent(baseName).appendingPathExtension("pdf")
+        var attempt = 1
+        while FileManager.default.fileExists(atPath: fileURL.path) {
+            let suffix = String(format: " %02d", attempt)
+            fileURL = directory.appendingPathComponent(baseName + suffix).appendingPathExtension("pdf")
+            attempt += 1
+        }
+        return fileURL
+    }
+
+    private static var foldersFileURL: URL? {
+        documentsDirectory()?.appendingPathComponent(".folders.json")
+    }
+
+    private static var fileFoldersFileURL: URL? {
+        documentsDirectory()?.appendingPathComponent(".file_folders.json")
+    }
+
+    static func storeCloudAsset(from sourceURL: URL, preferredName: String) throws -> PDFFile {
+        guard let directory = documentsDirectory() else {
+            throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
+        }
+
+        let baseName = sanitizeFileName(preferredName)
+        let destination = uniqueURL(for: baseName, in: directory)
+
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: destination)
+        } catch {
+            throw ScanWorkflowError.underlying(error)
+        }
+
+        let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+        let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+        let size = Int64(resourceValues?.fileSize ?? 0)
+        let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+
+        return PDFFile(
+            url: destination,
+            name: destination.deletingPathExtension().lastPathComponent,
+            date: date,
+            pageCount: pageCount,
+            fileSize: size
+        )
+    }
+}
