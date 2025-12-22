@@ -50,5 +50,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>SubscriptionProductID</key>
+	<string>$(SUBSCRIPTION_PRODUCT_ID)</string>
+	<key>GotenbergBaseURL</key>
+	<string>$(GOTENBERG_BASE_URL)</string>
 </dict>
 </plist>

@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 import LocalAuthentication
 import PencilKit
 import StoreKit
+import OSLog
 
 /// Top-level tabs presented by the floating tab bar.
 enum Tab: Hashable {
@@ -39,12 +40,12 @@ private enum ScanFlow: Identifiable {
 
 /// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
-    private let cloudBackup = CloudBackupManager.shared
-    private let client = GotenbergClient(
-        baseURL: URL(string: "https://gotenberg-6a3w.onrender.com")!,
-        retryPolicy: RetryPolicy(maxRetries: 2, baseDelay: 0.5, exponential: true),
-        timeout: 120
+    private static let gotenbergLogger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
+        category: "Gotenberg"
     )
+    private let cloudBackup = CloudBackupManager.shared
+    private let gotenbergClient = ContentView.makeGotenbergClient()
 
     @StateObject private var subscriptionManager = SubscriptionManager()
     @State private var selection: Tab = .files
@@ -80,14 +81,27 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var scheme
     @State private var hasAttemptedCloudRestore = false
 
+    private static func makeGotenbergClient() -> GotenbergClient? {
+        guard let baseURL = Bundle.main.gotenbergBaseURL else {
+            gotenbergLogger.error("Missing or invalid Gotenberg base URL configuration.")
+            return nil
+        }
+        return GotenbergClient(
+            baseURL: baseURL,
+            retryPolicy: RetryPolicy(maxRetries: 2, baseDelay: 0.5, exponential: true),
+            timeout: 120
+        )
+    }
+
     var body: some View {
         Group {
             if hasCheckedPaywall && !showPaywall {
                 rootContent
             } else {
-                Color.white.ignoresSafeArea()
+                Color(.systemBackground).ignoresSafeArea()
             }
         }
+        .environmentObject(subscriptionManager)
         .onAppear(perform: checkPaywallAndLoadFiles)
         // Present whatever flow you need
         .sheet(item: $activeScanFlow) { flow in
@@ -768,6 +782,13 @@ struct ContentView: View {
 
     /// Converts a local document into a PDF using Gotenberg's LibreOffice route.
     private func convertFileUsingLibreOffice(url: URL) async {
+        guard let client = gotenbergClient else {
+            await MainActor.run {
+                presentConversionServiceUnavailableAlert()
+            }
+            return
+        }
+
         await MainActor.run { isConvertingFile = true }
         defer { Task { await MainActor.run { isConvertingFile = false } } }
 
@@ -826,6 +847,13 @@ struct ContentView: View {
 
     /// Sends a URL to Gotenberg's Chromium route and stages the resulting PDF.
     private func convertWebPage(url: URL) async -> Bool {
+        guard let client = gotenbergClient else {
+            await MainActor.run {
+                presentConversionServiceUnavailableAlert()
+            }
+            return false
+        }
+
         let host = url.host?
             .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
             ?? NSLocalizedString("webPrompt.defaultName", comment: "Default web host name")
@@ -851,6 +879,16 @@ struct ContentView: View {
             }
             return false
         }
+    }
+
+    /// Alerts when the remote conversion endpoint is unavailable or misconfigured.
+    @MainActor
+    private func presentConversionServiceUnavailableAlert() {
+        alertContext = ScanAlert(
+            title: NSLocalizedString("alert.conversionUnavailable.title", comment: "Conversion unavailable title"),
+            message: NSLocalizedString("alert.conversionUnavailable.message", comment: "Conversion unavailable message"),
+            onDismiss: nil
+        )
     }
 
     /// Normalizes partial URLs (missing scheme, etc.) into a canonical form we can fetch later.
@@ -1162,7 +1200,7 @@ struct FilesView: View {
     @State private var renameFolderTarget: PDFFolder? = nil
     @State private var renameFolderName = ""
     @StateObject private var contentIndexer = FileContentIndexer()
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     let onPreview: (PDFFile) -> Void
     let onShare: (PDFFile) -> Void
@@ -1345,6 +1383,9 @@ struct FilesView: View {
             onPreview(file)
         }
         .padding(.vertical, 10)
+        .task {
+            contentIndexer.ensureTextIndex(for: file)
+        }
     }
 
     private var filteredFiles: [PDFFile] {
@@ -1374,7 +1415,6 @@ struct FilesView: View {
                 if let text = contentIndexer.text(for: file) {
                     return text.contains(query)
                 }
-                contentIndexer.ensureTextIndex(for: file)
                 return false
             }
         }
@@ -2008,7 +2048,7 @@ private struct CenterActionButton: View {
 
 /// Settings tab that hosts biometrics, signature management, and static info links.
 struct SettingsView: View {
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var showSignatureSheet = false
     @State private var savedSignature: SignatureStore.Signature? = SignatureStore.load()
     @State private var showManageSubscriptionsSheet = false
@@ -2300,7 +2340,7 @@ private struct SettingsAlert: Identifiable {
 
 /// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var showManageSubscriptionsSheet = false
 
     private let featureList: [(String, String)] = [
@@ -2461,13 +2501,33 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var isSubscribed = false
     @Published var purchaseState: PurchaseState = .idle
 
-    private let productID = "com.roguewaveapps.pdfconverter.test.weekly.1"
+    private let productID: String
     private let hasEverPurchasedKey = "hasEverPurchasedSubscription"
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
+        category: "Subscription"
+    )
+    private var loadProductTask: Task<Void, Never>?
+    private var monitorEntitlementsTask: Task<Void, Never>?
+    private var transactionUpdatesTask: Task<Void, Never>?
 
     init() {
-        Task { await loadProduct() }
-        Task { await monitorEntitlements() }
-        Task { await listenForTransactions() }
+        productID = Bundle.main.subscriptionProductID
+        loadProductTask = Task { [weak self] in
+            await self?.loadProduct()
+        }
+        monitorEntitlementsTask = Task { [weak self] in
+            await self?.monitorEntitlements()
+        }
+        transactionUpdatesTask = Task { [weak self] in
+            await self?.listenForTransactions()
+        }
+    }
+
+    deinit {
+        loadProductTask?.cancel()
+        monitorEntitlementsTask?.cancel()
+        transactionUpdatesTask?.cancel()
     }
 
     /// Returns true if the user has never purchased a subscription
@@ -2488,13 +2548,13 @@ final class SubscriptionManager: ObservableObject {
 
     /// Restores previous purchases by syncing with the App Store
     func restorePurchases() async {
-        print("🔄 [SubscriptionManager] Starting restore purchases...")
+        debugLog("Starting restore purchases…")
         purchaseState = .purchasing
 
         do {
             // Sync with App Store to get latest transaction info
             try await AppStore.sync()
-            print("✅ [SubscriptionManager] AppStore sync completed")
+            debugLog("App Store sync completed")
 
             // Check current entitlements
             var foundActiveSubscription = false
@@ -2508,7 +2568,7 @@ final class SubscriptionManager: ObservableObject {
                         foundActiveSubscription = true
                         isSubscribed = true
                         markPurchaseCompleted()
-                        print("✅ [SubscriptionManager] Found active subscription")
+                        debugLog("Found active subscription during restore")
                         await transaction.finish()
                         break
                     }
@@ -2517,13 +2577,13 @@ final class SubscriptionManager: ObservableObject {
 
             if foundActiveSubscription {
                 purchaseState = .purchased
-                print("✅ [SubscriptionManager] Restore successful - subscription active")
+                debugLog("Restore successful - subscription active")
             } else {
                 purchaseState = .failed("No active subscription found.\n\nIf you previously purchased, ensure you're signed in with the same Apple ID.")
-                print("ℹ️ [SubscriptionManager] No active subscription found")
+                debugLog("No active subscription found during restore")
             }
         } catch {
-            print("❌ [SubscriptionManager] Restore failed: \(error.localizedDescription)")
+            logError("Restore failed: \(error.localizedDescription)")
             purchaseState = .failed("Restore failed.\n\nError: \(error.localizedDescription)")
         }
     }
@@ -2538,19 +2598,21 @@ final class SubscriptionManager: ObservableObject {
     /// Fetches metadata for the subscription product (price, trial eligibility, etc).
     private func loadProduct() async {
         do {
-            print("🔍 [SubscriptionManager] Loading product with ID: \(productID)")
+            debugLog("Loading product with ID: \(productID)")
             let products = try await Product.products(for: [productID])
 
             if let loadedProduct = products.first {
                 product = loadedProduct
-                print("✅ [SubscriptionManager] Product loaded successfully: \(loadedProduct.displayName) - \(loadedProduct.displayPrice)")
+                debugLog("Product loaded successfully: \(loadedProduct.displayName) - \(loadedProduct.displayPrice)")
             } else {
-                print("❌ [SubscriptionManager] Product array is empty - Product ID not found in App Store Connect")
+                logError("Product array empty – verify App Store Connect setup for \(productID)")
                 purchaseState = .failed("Product not found in App Store.\n\nProduct ID: \(productID)\n\nThis usually means:\n1. Product not set up in App Store Connect\n2. Product not approved yet\n3. Product not added to this app version\n4. Wrong product ID")
             }
         } catch {
-            print("❌ [SubscriptionManager] Failed to load product: \(error.localizedDescription)")
-            print("   Error details: \(error)")
+            logError("Failed to load product: \(error.localizedDescription)")
+#if DEBUG
+            debugLog("Error details: \(error)")
+#endif
 
             let errorMessage = """
             Failed to load subscription.
@@ -2621,7 +2683,7 @@ final class SubscriptionManager: ObservableObject {
 
     private func purchaseProduct() async {
         guard let product else {
-            print("❌ [SubscriptionManager] Cannot purchase - product is nil")
+            logError("Cannot initiate purchase - product metadata missing.")
             let errorMessage = """
             Subscription not available.
 
@@ -2638,30 +2700,32 @@ final class SubscriptionManager: ObservableObject {
             return
         }
 
-        print("🛒 [SubscriptionManager] Starting purchase for: \(product.displayName)")
+        debugLog("Starting purchase for: \(product.displayName)")
         purchaseState = .purchasing
 
         do {
             let result = try await product.purchase()
-            print("📦 [SubscriptionManager] Purchase result received")
+            debugLog("Purchase result received from StoreKit")
 
             switch result {
             case .success(let verification):
-                print("✅ [SubscriptionManager] Purchase successful")
+                debugLog("Purchase successful")
                 await handlePurchaseResult(verification)
             case .pending:
-                print("⏳ [SubscriptionManager] Purchase pending (waiting for approval)")
+                debugLog("Purchase pending (waiting for approval)")
                 purchaseState = .pending
             case .userCancelled:
-                print("🚫 [SubscriptionManager] Purchase cancelled by user")
+                debugLog("Purchase cancelled by user")
                 purchaseState = .idle
             @unknown default:
-                print("⚠️ [SubscriptionManager] Unknown purchase result")
+                logger.warning("Unknown purchase result emitted by StoreKit.")
                 purchaseState = .failed("Unknown purchase result.\n\nPlease try again or contact support.")
             }
         } catch {
-            print("❌ [SubscriptionManager] Purchase failed: \(error.localizedDescription)")
-            print("   Error details: \(error)")
+            logError("Purchase failed: \(error.localizedDescription)")
+#if DEBUG
+            debugLog("Error details: \(error)")
+#endif
 
             let errorMessage = """
             Purchase failed.
@@ -2686,6 +2750,18 @@ final class SubscriptionManager: ObservableObject {
             purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
         }
     }
+
+    private func logError(_ message: String) {
+        logger.error("\(message, privacy: .public)")
+    }
+
+#if DEBUG
+    private func debugLog(_ message: String) {
+        logger.debug("\(message, privacy: .public)")
+    }
+#else
+    private func debugLog(_ message: String) { }
+#endif
 }
 
 /// Text-entry sheet that collects the URL before building a placeholder PDF.
@@ -3478,7 +3554,7 @@ struct ToolsView: View {
         GridItem(.adaptive(minimum: 160, maximum: 220), spacing: 16)
     ]
     let onAction: (ToolAction) -> Void
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     var body: some View {
         NavigationView {
@@ -3888,6 +3964,7 @@ struct PhotoPickerView: UIViewControllerRepresentable {
             }
 
             var collectedImages: [UIImage] = []
+            let imageLock = NSLock()
             let dispatchGroup = DispatchGroup()
 
             for result in results where result.itemProvider.canLoadObject(ofClass: UIImage.self) {
@@ -3895,7 +3972,9 @@ struct PhotoPickerView: UIViewControllerRepresentable {
                 result.itemProvider.loadObject(ofClass: UIImage.self) { object, error in
                     defer { dispatchGroup.leave() }
                     if let image = object as? UIImage {
+                        imageLock.lock()
                         collectedImages.append(image)
+                        imageLock.unlock()
                     }
                 }
             }
@@ -3938,6 +4017,10 @@ enum PDFGenerator {
 
 /// Handles persistence, imports, and file system hygiene for saved PDFs.
 enum PDFStorage {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
+        category: "Storage"
+    )
     static func loadSavedFiles() -> [PDFFile] {
         guard let directory = documentsDirectory(),
               let urls = try? FileManager.default.contentsOfDirectory(
@@ -4215,14 +4298,12 @@ enum PDFStorage {
             mapping.removeValue(forKey: key)
         }
 
-        // Save mapping with atomic write and data sync
+        // Save mapping with atomic write
         if let data = try? JSONEncoder().encode(mapping) {
             do {
-                try data.write(to: url, options: [.atomic, .completeFileProtection])
-                // Ensure the write is flushed to disk
-                try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: url.path)
+                try data.write(to: url, options: .atomic)
             } catch {
-                print("Failed to write folder mapping: \(error)")
+                logger.error("Failed to write folder mapping: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -4410,5 +4491,34 @@ final class FileContentIndexer: ObservableObject {
         let keepSet = Set(urls)
         cache = cache.filter { keepSet.contains($0.key) }
         inFlight = inFlight.intersection(keepSet)
+    }
+}
+
+private extension Bundle {
+    var subscriptionProductID: String {
+        let fallback = "com.roguewaveapps.pdfconverter.test.weekly.1"
+        guard let rawValue = object(forInfoDictionaryKey: "SubscriptionProductID") as? String else {
+            assertionFailure("SubscriptionProductID missing from Info.plist; falling back to test product ID.")
+            return fallback
+        }
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != "$(SUBSCRIPTION_PRODUCT_ID)" else {
+            assertionFailure("SubscriptionProductID not configured for this build; falling back to test product ID.")
+            return fallback
+        }
+        return trimmed
+    }
+
+    var gotenbergBaseURL: URL? {
+        guard let rawValue = object(forInfoDictionaryKey: "GotenbergBaseURL") as? String else {
+            return nil
+        }
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed != "$(GOTENBERG_BASE_URL)",
+              let url = URL(string: trimmed) else {
+            return nil
+        }
+        return url
     }
 }

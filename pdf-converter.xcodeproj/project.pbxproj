@@ -437,6 +437,7 @@
 				DEVELOPMENT_TEAM = 3297YUP723;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				GOTENBERG_BASE_URL = "https://gotenberg-6a3w.onrender.com";
 				INFOPLIST_FILE = "pdf-converter/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PDF Converter";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -449,6 +450,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.roguewaveapps.pdf-converter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUBSCRIPTION_PRODUCT_ID = com.roguewaveapps.pdfconverter.test.weekly.1;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -469,6 +471,7 @@
 				DEVELOPMENT_TEAM = 3297YUP723;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				GOTENBERG_BASE_URL = "https://gotenberg-6a3w.onrender.com";
 				INFOPLIST_FILE = "pdf-converter/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "PDF Converter";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -481,6 +484,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.roguewaveapps.pdf-converter";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUBSCRIPTION_PRODUCT_ID = com.roguewaveapps.pdfconverter.test.weekly.1;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
