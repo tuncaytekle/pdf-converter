@@ -16,7 +16,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "651"
             endingLineNumber = "651"
-            landmarkName = "deleteFile(_:)"
+            landmarkName = "deleteFolderAction(_:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -48,7 +48,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "750"
             endingLineNumber = "750"
-            landmarkName = "handleImportResult(_:)"
+            landmarkName = "handleConvertResult(_:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

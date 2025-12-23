@@ -2307,39 +2307,3 @@ struct ScanReviewSheet: View {
         return document.withFileName(trimmed)
     }
 }
-
-/// Utility responsible for stitching captured images into a temporary PDF file.
-/// Handles persistence, imports, and file system hygiene for saved PDFs.
-
-/// Actor-backed thumbnail cache so thumbnail rendering never blocks SwiftUI updates.
-// MARK: - Helpers
-
-/// Lazily indexes text content for PDFs so search queries can match body text.
-extension Bundle {
-    var subscriptionProductID: String {
-        let fallback = "com.roguewaveapps.pdfconverter.test.weekly.1"
-        guard let rawValue = object(forInfoDictionaryKey: "SubscriptionProductID") as? String else {
-            assertionFailure("SubscriptionProductID missing from Info.plist; falling back to test product ID.")
-            return fallback
-        }
-        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed != "$(SUBSCRIPTION_PRODUCT_ID)" else {
-            assertionFailure("SubscriptionProductID not configured for this build; falling back to test product ID.")
-            return fallback
-        }
-        return trimmed
-    }
-
-    var gotenbergBaseURL: URL? {
-        guard let rawValue = object(forInfoDictionaryKey: "GotenbergBaseURL") as? String else {
-            return nil
-        }
-        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty,
-              trimmed != "$(GOTENBERG_BASE_URL)",
-              let url = URL(string: trimmed) else {
-            return nil
-        }
-        return url
-    }
-}
