@@ -303,7 +303,7 @@ struct ContentView: View {
                 .tabItem { Label(NSLocalizedString("tab.settings", comment: "Settings tab label"), systemImage: "gearshape") }
                 .tag(Tab.settings)
 
-            AccountView()
+            AccountView(showPaywall: $showPaywall)
                 .tabItem { Label(NSLocalizedString("tab.account", comment: "Account tab label"), systemImage: "person.crop.circle") }
                 .tag(Tab.account)
         }
@@ -1460,140 +1460,6 @@ struct SettingsView: View {
     }
 }
 
-/// Placeholder account screen showcasing subscription upsell copy.
-struct AccountView: View {
-    @EnvironmentObject private var subscriptionManager: SubscriptionManager
-    @State private var showManageSubscriptionsSheet = false
-
-    private let featureList: [(String, String)] = [
-        ("🚀", "account.feature.conversions"),
-        ("📸", "account.feature.photos"),
-        ("📄", "account.feature.scan"),
-        ("🗂️", "account.feature.backup"),
-        ("🖋️", "account.feature.editing"),
-        ("🤝", "account.feature.support")
-    ]
-
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    statusSection
-                    featuresSection
-                    actionButton
-                    if case .failed(let message) = subscriptionManager.purchaseState {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.red)
-                                Text("Error Details")
-                                    .font(.headline)
-                                    .foregroundColor(.red)
-                            }
-
-                            ScrollView {
-                                Text(message)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(.red)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .textSelection(.enabled)
-                            }
-                            .frame(maxHeight: 200)
-                            .padding(12)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(8)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle(NSLocalizedString("account.title", comment: "Account navigation title"))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    ProButton(subscriptionManager: subscriptionManager)
-                }
-                .hideSharedBackground
-            }
-        }
-        .manageSubscriptionsSheetIfAvailable($showManageSubscriptionsSheet)
-    }
-
-    private var statusSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.status.subscribed.title", comment: "Subscribed status title") : NSLocalizedString("account.status.upsell.title", comment: "Upsell status title"))
-                .font(.title2.weight(.semibold))
-            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.status.subscribed.message", comment: "Subscribed status message") : NSLocalizedString("account.status.upsell.message", comment: "Upsell status message"))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var featuresSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.features.subscribed", comment: "Subscribed features title") : NSLocalizedString("account.features.upsell", comment: "Upsell features title"))
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(featureList, id: \.0) { item in
-                    HStack(alignment: .top, spacing: 12) {
-                        Text(item.0)
-                            .font(.title3)
-                        Text(NSLocalizedString(item.1, comment: "Feature description"))
-                            .font(.body)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var actionButton: some View {
-        if subscriptionManager.isSubscribed {
-            Button {
-                presentManageSubscriptions()
-            } label: {
-                Label(NSLocalizedString("account.action.manage", comment: "Manage subscription label"), systemImage: "gearshape")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-        } else {
-            Button {
-                subscriptionManager.purchase()
-            } label: {
-                HStack(spacing: 12) {
-                    if subscriptionManager.purchaseState == .purchasing {
-                        ProgressView()
-                    }
-                    Label(NSLocalizedString("account.action.upgrade", comment: "Upgrade action label"), systemImage: "sparkles")
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(subscriptionManager.purchaseState == .purchasing)
-
-            Text(NSLocalizedString("account.trial.copy", comment: "Trial copy text"))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @MainActor
-    private func presentManageSubscriptions() {
-        if #available(iOS 17.0, *) {
-            showManageSubscriptionsSheet = true
-        } else {
-            subscriptionManager.openManageSubscriptionsFallback()
-        }
-    }
-}
 
 /// Text-entry sheet that collects the URL before building a placeholder PDF.
 struct WebConversionPrompt: View {
