@@ -10,34 +10,6 @@ import PencilKit
 import StoreKit
 import OSLog
 
-/// Top-level tabs presented by the floating tab bar.
-enum Tab: Hashable {
-    case files, tools, settings, account
-}
-
-/// High-level tool actions surfaced inside `ToolsView`.
-enum ToolAction: Hashable {
-    case convertFiles
-    case scanDocuments
-    case convertPhotos
-    case importDocuments
-    case convertWebPage
-    case editDocuments
-}
-
-/// Available scanning entry points controlled by the floating compose button.
-private enum ScanFlow: Identifiable {
-    case documentCamera
-    case photoLibrary
-
-    var id: Int {
-        switch self {
-        case .documentCamera: return 0
-        case .photoLibrary: return 1
-        }
-    }
-}
-
 /// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
     private static let gotenbergLogger = Logger(
@@ -1171,36 +1143,6 @@ struct ContentView: View {
     }()
 }
 
-/// File attachment used to build multipart requests for Gotenberg.
-
-/// Temporary PDF built by the scanner/photo flows before persisting.
-struct ScannedDocument: Identifiable {
-    let id = UUID()
-    let pdfURL: URL
-    var fileName: String
-
-    func withFileName(_ newName: String) -> ScannedDocument {
-        var copy = self
-        copy.fileName = newName
-        return copy
-    }
-}
-
-/// Wraps a URL that should be shared along with an optional cleanup callback.
-fileprivate struct ShareItem: Identifiable {
-    let id = UUID()
-    let url: URL
-    let cleanupHandler: (() -> Void)?
-}
-
-/// Encapsulates alert metadata posted throughout the scanning pipeline.
-private struct ScanAlert: Identifiable {
-    let id = UUID()
-    let title: String
-    let message: String
-    let onDismiss: (() -> Void)?
-}
-
 /// Shared error surface for scanner, photo picker, and conversion flows.
 enum ScanWorkflowError: Error {
     case cancelled
@@ -1624,13 +1566,6 @@ struct SettingsView: View {
     }
 }
 
-/// Alert wrapper used by the settings screen when toggling biometrics fails.
-private struct SettingsAlert: Identifiable {
-    let id = UUID()
-    let title: String
-    let message: String
-}
-
 /// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
@@ -1863,23 +1798,6 @@ struct WebConversionPrompt: View {
         guard !isConverting else { return }
         onCancel()
         dismiss()
-    }
-}
-
-/// Local-only error codes raised while writing modified PDFs back to disk.
-private enum PDFEditingError: Error {
-    case writeFailed
-}
-
-/// Bridges the selected file and live `PDFDocument` into the editor sheet hierarchy.
-final class PDFEditingContext: Identifiable {
-    let id = UUID()
-    let file: PDFFile
-    let document: PDFDocument
-
-    init(file: PDFFile, document: PDFDocument) {
-        self.file = file
-        self.document = document
     }
 }
 
