@@ -13,6 +13,16 @@ struct PaywallView: View {
     @State private var showTrialText = false
     @State private var showFullPaywall = false
 
+    @Environment(\.analytics) private var analytics
+    @Environment(\.scenePhase) private var scenePhase
+
+    @StateObject private var vm: PaywallViewModel
+    @StateObject private var accountVM = AccountViewModel()
+
+    init(productId: String, source: String) {
+        _vm = StateObject(wrappedValue: PaywallViewModel(productId: productId, source: source))
+    }
+
     enum AnimationStage {
         case toggleOff
         case toggleOn
@@ -35,9 +45,16 @@ struct PaywallView: View {
                 }
             }
             .onAppear {
+                // Track paywall viewed with intro offer eligibility
+                let eligibleForIntro = subscriptionManager.product?.subscription?.introductoryOffer != nil
+                vm.trackPaywallViewed(analytics: analytics, eligibleForIntroOffer: eligibleForIntro)
+
                 startAnimation()
             }
             .onChange(of: subscriptionManager.purchaseState) { _, newState in
+                // Track purchase result
+                trackPurchaseResult(newState)
+
                 if newState == .purchased {
                     // Dismiss paywall after successful purchase
                     dismiss()
@@ -176,15 +193,19 @@ struct PaywallView: View {
     private func topSection(metrics: PaywallMetrics) -> some View {
         VStack(spacing: metrics.verticalSpacingIntraSection) {
             HStack {
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    vm.trackPaywallDismissedIfNeeded(analytics: analytics, dismissMethod: "close_button")
+                    dismiss()
+                }) {
                     Image(systemName: "xmark")
                         .font(metrics.f3Font)
                         .foregroundColor(Color(hex: "#979494"))
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: {
+                    accountVM.trackRestorePurchasesTapped(analytics: analytics, from: "paywall")
                     Task {
                         await subscriptionManager.restorePurchases()
                     }
@@ -301,6 +322,7 @@ struct PaywallView: View {
 
     private func continueButton(metrics: PaywallMetrics) -> some View {
         Button(action: {
+            vm.trackPurchaseTapped(analytics: analytics)
             subscriptionManager.purchase()
         }) {
             HStack(alignment: .center) {
@@ -356,6 +378,56 @@ struct PaywallView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Tracking Helpers
+
+    private func trackPurchaseResult(_ purchaseState: SubscriptionManager.PurchaseState) {
+        let outcome: PaywallViewModel.PurchaseOutcome
+        let verified: Bool
+
+        switch purchaseState {
+        case .purchased:
+            outcome = .success
+            verified = true
+
+        case .pending:
+            outcome = .pending
+            verified = false
+
+        case .idle:
+            // User cancelled - only track if we were in purchasing state
+            outcome = .userCancelled
+            verified = false
+
+        case .failed(let errorMessage):
+            // Categorize the error
+            let category = categorizeError(errorMessage)
+            outcome = .failed(category: category)
+            verified = false
+
+        case .purchasing:
+            // Don't track intermediate state
+            return
+        }
+
+        vm.trackPurchaseResult(analytics: analytics, outcome: outcome, verified: verified)
+    }
+
+    private func categorizeError(_ errorMessage: String) -> String {
+        let lowercased = errorMessage.lowercased()
+
+        if lowercased.contains("network") || lowercased.contains("connection") {
+            return "network_error"
+        } else if lowercased.contains("verification") || lowercased.contains("verified") {
+            return "verification_failed"
+        } else if lowercased.contains("product") || lowercased.contains("not found") {
+            return "product_not_found"
+        } else if lowercased.contains("storekit") {
+            return "storekit_error"
+        } else {
+            return "unknown"
         }
     }
 }
@@ -420,11 +492,11 @@ struct CustomToggleStyle: ToggleStyle {
 struct PaywallView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            PaywallView()
+            PaywallView(productId: "com.example.product", source: "preview")
                 .environmentObject(SubscriptionManager())
                 .environment(\.locale, .init(identifier: "en"))
-            
-            PaywallView()
+
+            PaywallView(productId: "com.example.product", source: "preview")
                 .environmentObject(SubscriptionManager())
                 .environment(\.locale, .init(identifier: "tr"))
         }

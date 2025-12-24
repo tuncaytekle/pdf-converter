@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		94125CB72EFC92F90059812D /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 94125CB62EFC92F90059812D /* PostHog */; };
 		945EF39D2EDCEC6100A09D23 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 945EF39C2EDCEC6100A09D23 /* Localizable.xcstrings */; };
 		948D369F2EC93586009DD0E1 /* pdfconverter-storekit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 948D369E2EC93586009DD0E1 /* pdfconverter-storekit.storekit */; };
 /* End PBXBuildFile section */
@@ -72,6 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94125CB72EFC92F90059812D /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,6 +144,7 @@
 			);
 			name = "pdf-converter";
 			packageProductDependencies = (
+				94125CB62EFC92F90059812D /* PostHog */,
 			);
 			productName = "pdf-converter";
 			productReference = 948CA45F2E9796BF00196388 /* pdf-converter.app */;
@@ -226,6 +229,7 @@
 			mainGroup = 948CA4562E9796BF00196388;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				94125CB52EFC92F90059812D /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 948CA4602E9796BF00196388 /* Products */;
@@ -618,6 +622,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		94125CB52EFC92F90059812D /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.36.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		94125CB62EFC92F90059812D /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 94125CB52EFC92F90059812D /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 948CA4572E9796BF00196388 /* Project object */;
 }

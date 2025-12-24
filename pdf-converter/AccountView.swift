@@ -21,7 +21,10 @@ import OSLog
 struct AccountView: View {
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Binding var showPaywall: Bool
+    @Binding var paywallSource: String
     @State private var showManageSubscriptionsSheet = false
+    @StateObject private var vm = AccountViewModel()
+    @Environment(\.analytics) private var analytics
 
     var body: some View {
         NavigationView {
@@ -57,6 +60,7 @@ struct AccountView: View {
                                         Spacer()
 
                                         Button {
+                                            vm.trackReviewAppTapped(analytics: analytics, subscribed: subscriptionManager.isSubscribed)
                                             requestAppReview()
                                         } label: {
                                             Text(NSLocalizedString("account.review.button", comment: "Leave us a review button"))
@@ -115,6 +119,7 @@ struct AccountView: View {
 
                             if !subscriptionManager.isSubscribed {
                                 Button {
+                                    paywallSource = "account_tab"
                                     showPaywall = true
                                 } label: {
                                     HStack(alignment: .center) {
@@ -208,12 +213,12 @@ struct AccountView: View {
 
 #if DEBUG
 #Preview("Subscribed") {
-    AccountView(showPaywall: .constant(false))
+    AccountView(showPaywall: .constant(false), paywallSource: .constant("preview"))
         .environmentObject(SubscriptionManager(mockSubscribed: true))
 }
 
 #Preview("Not Subscribed") {
-    AccountView(showPaywall: .constant(false))
+    AccountView(showPaywall: .constant(false), paywallSource: .constant("preview"))
         .environmentObject(SubscriptionManager(mockSubscribed: false))
 }
 #endif

@@ -1833,12 +1833,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose any file and **Convert**"
+            "value" : "Choose any file & **Convert**"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Herhangi bir dosya seçin ve **Dönüştürün**"
           }
         }

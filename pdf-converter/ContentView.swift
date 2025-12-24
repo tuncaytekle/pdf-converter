@@ -20,6 +20,8 @@ struct ContentView: View {
     private let gotenbergClient = ContentView.makeGotenbergClient()
 
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @StateObject private var tabNavVM = TabNavigationViewModel()
+    @Environment(\.analytics) private var analytics
     @State private var selection: Tab = .files
     @State private var showCreateActions = false
     @State private var files: [PDFFile] = []
@@ -47,6 +49,7 @@ struct ContentView: View {
     @State private var didAnimateCreateButtonCue = false
     @State private var isConvertingFile = false
     @State private var showPaywall = false
+    @State private var paywallSource = "onboarding"
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasCheckedPaywall = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
@@ -215,7 +218,7 @@ struct ContentView: View {
             )
         }
         .fullScreenCover(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(productId: Bundle.main.subscriptionProductID, source: paywallSource)
                 .environmentObject(subscriptionManager)
         }
         .onChange(of: showPaywall) { _, isShowing in
@@ -303,12 +306,17 @@ struct ContentView: View {
                 .tabItem { Label(NSLocalizedString("tab.settings", comment: "Settings tab label"), systemImage: "gearshape") }
                 .tag(Tab.settings)
 
-            AccountView(showPaywall: $showPaywall)
+            AccountView(showPaywall: $showPaywall, paywallSource: $paywallSource)
                 .tabItem { Label(NSLocalizedString("tab.account", comment: "Account tab label"), systemImage: "person.crop.circle") }
                 .tag(Tab.account)
         }
-        .onChange(of: selection) { _, _ in
+        .onChange(of: selection) { _, newTab in
+            tabNavVM.trackTabIfNeeded(analytics: analytics, tab: newTab)
             UISelectionFeedbackGenerator().selectionChanged()
+        }
+        .onAppear {
+            // Track initial tab
+            tabNavVM.trackTabIfNeeded(analytics: analytics, tab: selection)
         }
     }
 
@@ -2054,6 +2062,8 @@ struct ToolsView: View {
     ]
     let onAction: (ToolAction) -> Void
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @StateObject private var vm = ToolsViewModel()
+    @Environment(\.analytics) private var analytics
 
     var body: some View {
         NavigationView {
@@ -2062,6 +2072,7 @@ struct ToolsView: View {
                     ForEach(ToolCard.sample) { card in
                         Button {
                             if let action = card.action {
+                                vm.trackToolCardTapped(analytics: analytics, tool: action)
                                 onAction(action)
                             }
                         } label: {

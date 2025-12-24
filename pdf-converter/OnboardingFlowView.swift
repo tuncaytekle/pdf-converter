@@ -3,6 +3,8 @@ import SwiftUI
 struct OnboardingFlowView: View {
     @Binding var isPresented: Bool
     @State private var currentPage = 0
+    @StateObject private var vm = OnboardingViewModel()
+    @Environment(\.analytics) private var analytics
 
     private let totalPages = 6 // 1 welcome + 4 features + 1 formats
 
@@ -27,6 +29,20 @@ struct OnboardingFlowView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
+            .onAppear {
+                // Track initial page
+                vm.trackPageViewed(analytics: analytics, page: 0, feature: nil)
+            }
+            .onChange(of: currentPage) { _, newPage in
+                // Track page changes
+                let feature: String? = {
+                    if newPage >= 1 && newPage <= 4 {
+                        return features[newPage - 1].highlightedTag.lowercased()
+                    }
+                    return nil
+                }()
+                vm.trackPageViewed(analytics: analytics, page: newPage, feature: feature)
+            }
         }
     }
 
@@ -157,9 +173,11 @@ struct OnboardingFlowView: View {
             linkColor: Color(hex: "#363636"),
             linkActions: [
                 "privacy": {
+                    vm.trackLinkTapped(analytics: analytics, link: "privacy")
                     // TODO: Open Privacy Policy
                 },
                 "terms": {
+                    vm.trackLinkTapped(analytics: analytics, link: "terms")
                     // TODO: Open Terms of Use
                 }
             ]
@@ -221,6 +239,9 @@ struct OnboardingFlowView: View {
 
     private func continueButton(metrics: OnboardingMetrics, isLastPage: Bool) -> some View {
         Button(action: {
+            // Track continue tap
+            vm.trackContinueTapped(analytics: analytics, fromPage: currentPage)
+
             // Haptic feedback
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
@@ -230,7 +251,8 @@ struct OnboardingFlowView: View {
                     currentPage += 1
                 }
             } else {
-                // Last page - dismiss to show paywall
+                // Last page - track completion and dismiss to show paywall
+                vm.trackCompleted(analytics: analytics)
                 isPresented = false
             }
         }) {
