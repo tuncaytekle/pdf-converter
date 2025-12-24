@@ -23,10 +23,6 @@ final class OnboardingViewModel: ObservableObject {
         }
 
         analytics.capture("onboarding_page_viewed", properties: props)
-
-        // Screen tracking
-        let screenName = feature.map { "Onboarding: \($0.capitalized)" } ?? "Onboarding: Welcome"
-        analytics.screen(screenName, properties: props)
     }
 
     func trackContinueTapped(analytics: AnalyticsTracking, fromPage: Int) {

@@ -9,6 +9,7 @@ import LocalAuthentication
 import PencilKit
 import StoreKit
 import OSLog
+import PostHog
 
 /// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
@@ -297,18 +298,27 @@ struct ContentView: View {
             )
             .tabItem { Label(NSLocalizedString("tab.files", comment: "Files tab label"), systemImage: "doc") }
             .tag(Tab.files)
+            .postHogScreenView("Files", [
+                "file_count": files.count,
+                "folder_count": folders.count
+            ])
 
             ToolsView(onAction: handleToolAction)
                 .tabItem { Label(NSLocalizedString("tab.tools", comment: "Tools tab label"), systemImage: "wrench.and.screwdriver") }
                 .tag(Tab.tools)
+                .postHogScreenView("Tools")
 
             SettingsView()
                 .tabItem { Label(NSLocalizedString("tab.settings", comment: "Settings tab label"), systemImage: "gearshape") }
                 .tag(Tab.settings)
+                .postHogScreenView("Settings")
 
             AccountView(showPaywall: $showPaywall, paywallSource: $paywallSource)
                 .tabItem { Label(NSLocalizedString("tab.account", comment: "Account tab label"), systemImage: "person.crop.circle") }
                 .tag(Tab.account)
+                .postHogScreenView("Account", [
+                    "subscribed": subscriptionManager.isSubscribed
+                ])
         }
         .onChange(of: selection) { _, newTab in
             tabNavVM.trackTabIfNeeded(analytics: analytics, tab: newTab)
@@ -1777,6 +1787,9 @@ struct PDFEditorView: View {
         .alert(item: $inlineAlert) { info in
             Alert(title: Text(info.title), message: Text(info.message), dismissButton: .default(Text(NSLocalizedString("action.ok", comment: "OK action"))))
         }
+        .postHogScreenView("PDF Editor", [
+            "file_name": context.file.name
+        ])
     }
 }
 
@@ -2185,6 +2198,7 @@ struct ScanReviewSheet: View {
                 shareItem = nil
             }
         }
+        .postHogScreenView("Scan Review")
     }
 
     /// Returns a sanitized copy to avoid saving with trailing spaces or empty names.

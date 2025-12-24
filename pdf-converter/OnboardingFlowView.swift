@@ -1,4 +1,5 @@
 import SwiftUI
+import PostHog
 
 struct OnboardingFlowView: View {
     @Binding var isPresented: Bool
@@ -16,16 +17,25 @@ struct OnboardingFlowView: View {
                 // Page 0: Welcome screen
                 welcomePage(metrics: metrics, size: proxy.size)
                     .tag(0)
+                    .postHogScreenView("Onboarding Welcome", ["page": 0])
 
                 // Pages 1-4: Feature screens
                 ForEach(1...4, id: \.self) { index in
                     featurePage(for: index - 1, metrics: metrics)
                         .tag(index)
+                        .postHogScreenView(
+                            "Onboarding \(features[index - 1].highlightedTag)",
+                            [
+                                "page": index,
+                                "feature": features[index - 1].highlightedTag.lowercased()
+                            ]
+                        )
                 }
 
                 // Page 5: Formats page
                 formatsPage(metrics: metrics)
                     .tag(5)
+                    .postHogScreenView("Onboarding Formats", ["page": 5])
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()

@@ -47,7 +47,6 @@ final class PaywallViewModel: ObservableObject {
         if let eligibleForIntroOffer { props["eligible_for_intro_offer"] = eligibleForIntroOffer }
 
         analytics.capture("paywall_viewed", properties: props)
-        analytics.screen("Paywall", properties: ["paywall_id": paywallId, "source": source])
     }
 
     func trackPurchaseTapped(analytics: AnalyticsTracking) {

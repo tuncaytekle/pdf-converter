@@ -1,5 +1,6 @@
 import SwiftUI
 import StoreKit
+import PostHog
 
 
 /// Animated paywall presented to users who have never purchased a subscription
@@ -60,6 +61,12 @@ struct PaywallView: View {
                     dismiss()
                 }
             }
+            .postHogScreenView("Paywall", [
+                "paywall_id": vm.paywallId,
+                "source": vm.source,
+                "product_id": vm.productId,
+                "eligible_for_intro_offer": subscriptionManager.product?.subscription?.introductoryOffer != nil
+            ])
         }
     }
 

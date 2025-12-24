@@ -1,6 +1,7 @@
 import SwiftUI
 import PDFKit
 import UIKit
+import PostHog
 
 /// Placeholder view for future create flows.
 struct CreateSomethingView: View {
@@ -105,6 +106,9 @@ struct SavedPDFDetailView: View {
                     }
                 }
             }
+            .postHogScreenView("PDF Preview", [
+                "file_name": file.name
+            ])
     }
 }
 

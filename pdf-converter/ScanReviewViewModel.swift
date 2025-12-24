@@ -32,7 +32,6 @@ final class ScanReviewViewModel: ObservableObject {
         ]
 
         analytics.capture("scan_review_viewed", properties: props)
-        analytics.screen("Scan Review", properties: props)
     }
 
     func trackShareTapped(analytics: AnalyticsTracking) {

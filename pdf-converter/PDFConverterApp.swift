@@ -28,7 +28,7 @@ struct PDFConverterApp: App {
         config.sessionReplayConfig.screenshotMode = true
         config.captureElementInteractions = true // Disabled by default
         config.captureApplicationLifecycleEvents = true // Disabled by default
-        config.captureScreenViews = true
+        config.captureScreenViews = false // Disabled - using manual .postHogScreenView() instead
         
         PostHogSDK.shared.setup(config)
         PostHogSDK.shared.capture("Test Event")

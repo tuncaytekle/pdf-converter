@@ -20,9 +20,6 @@ final class TabNavigationViewModel: ObservableObject {
             "from": fromName,
             "to": toName
         ])
-
-        // Also track screen view
-        analytics.screen(toName.capitalized, properties: [:])
     }
 
     func trackTabIfNeeded(analytics: AnalyticsTracking, tab: Tab) {

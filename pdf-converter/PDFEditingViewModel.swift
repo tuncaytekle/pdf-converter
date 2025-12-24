@@ -29,8 +29,6 @@ final class PDFEditingViewModel: ObservableObject {
             "file_id": fileId,
             "has_existing_signature": hasExistingSignature
         ])
-
-        analytics.screen("PDF Editor", properties: ["file_id": fileId])
     }
 
     func trackSignatureDrawStarted(analytics: AnalyticsTracking) {
