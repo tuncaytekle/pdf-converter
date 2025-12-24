@@ -1728,6 +1728,7 @@ struct PDFEditorView: View {
                     }
                     onCancel()
                 }
+                .postHogLabel("pdf_editor_cancel")
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(NSLocalizedString("action.save", comment: "Save action")) {
@@ -1744,6 +1745,7 @@ struct PDFEditorView: View {
                         onSave()
                     }
                 }
+                .postHogLabel("pdf_editor_save")
             }
             ToolbarItemGroup(placement: .bottomBar) {
                 Button {
@@ -1769,6 +1771,7 @@ struct PDFEditorView: View {
                 } label: {
                     Label(NSLocalizedString("signature.insert.action", comment: "Insert signature action"), systemImage: "signature")
                 }
+                .postHogLabel("pdf_editor_insert_signature")
                 .tint(controller.hasActiveSignaturePlacement() ? .orange : nil)
 
                 Button {
@@ -1781,6 +1784,7 @@ struct PDFEditorView: View {
                 } label: {
                     Label(NSLocalizedString("signature.highlight.action", comment: "Highlight action"), systemImage: "highlighter")
                 }
+                .postHogLabel("pdf_editor_highlight")
 
             }
         }
@@ -2091,6 +2095,7 @@ struct ToolsView: View {
                         } label: {
                             ToolCardView(card: card)
                         }
+                        .postHogLabel("tool_card_\(toolActionName(card.action))")
                         .buttonStyle(.plain)
                     }
                 }
@@ -2105,6 +2110,18 @@ struct ToolsView: View {
                 .hideSharedBackground
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        }
+    }
+
+    private func toolActionName(_ action: ToolAction?) -> String {
+        guard let action = action else { return "unknown" }
+        switch action {
+        case .convertFiles: return "convert_files"
+        case .scanDocuments: return "scan_documents"
+        case .convertPhotos: return "convert_photos"
+        case .importDocuments: return "import_documents"
+        case .convertWebPage: return "convert_web"
+        case .editDocuments: return "edit_documents"
         }
     }
 }
@@ -2166,6 +2183,7 @@ struct ScanReviewSheet: View {
                         Label(NSLocalizedString("action.share", comment: "Share action"), systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
+                    .postHogLabel("scan_review_share")
                     .buttonStyle(.bordered)
 
                     Button {
@@ -2176,6 +2194,7 @@ struct ScanReviewSheet: View {
                         Label(NSLocalizedString("action.save", comment: "Save action"), systemImage: "tray.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
+                    .postHogLabel("scan_review_save")
                     .buttonStyle(.borderedProminent)
                 }
                 .padding(.horizontal)
@@ -2189,6 +2208,7 @@ struct ScanReviewSheet: View {
                             onCancel(document)
                             dismiss()
                         }
+                        .postHogLabel("scan_review_cancel")
                     }
                 }
         }

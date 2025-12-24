@@ -97,6 +97,7 @@ struct SavedPDFDetailView: View {
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
+                    .postHogLabel("pdf_preview_share")
                 }
             }
             .sheet(isPresented: $showShareSheet) {

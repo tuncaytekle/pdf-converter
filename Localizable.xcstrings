@@ -1838,8 +1838,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Herhangi bir dosya seçin ve **Dönüştürün**"
+            "state" : "translated",
+            "value" : "Herhangi bir dosya seçin & **Dönüştürün**"
           }
         }
       }

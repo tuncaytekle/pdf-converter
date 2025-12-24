@@ -208,6 +208,7 @@ struct PaywallView: View {
                         .font(metrics.f3Font)
                         .foregroundColor(Color(hex: "#979494"))
                 }
+                .postHogLabel("paywall_close")
 
                 Spacer()
 
@@ -221,6 +222,7 @@ struct PaywallView: View {
                         .font(metrics.f3Font)
                         .foregroundColor(Color(hex: "#979494"))
                 }
+                .postHogLabel("paywall_restore_purchases")
             }
             .padding(.horizontal, metrics.horizontalPadding)
             
@@ -347,6 +349,7 @@ struct PaywallView: View {
             .background(Color(red: 0, green: 0.48, blue: 1))
             .cornerRadius(metrics.cardCornerRadius)
         }
+        .postHogLabel("paywall_purchase_continue")
         .padding(.horizontal, metrics.horizontalPadding)
         .disabled(subscriptionManager.purchaseState == .purchasing)
     }

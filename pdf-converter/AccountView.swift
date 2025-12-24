@@ -16,6 +16,7 @@ import LocalAuthentication
 import PencilKit
 import StoreKit
 import OSLog
+import PostHog
 
 /// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
@@ -67,6 +68,7 @@ struct AccountView: View {
                                                 .font(metrics.accountSubtitleFont)
                                                 .lineLimit(1)
                                         }
+                                        .postHogLabel("account_review_app")
                                         .buttonStyle(.borderedProminent)
                                         .clipShape(RoundedRectangle(cornerRadius: metrics.accountButtonCornerRadius, style: .continuous))
                                         .padding(.vertical, metrics.accountReviewButtonVerticalPadding)
@@ -134,6 +136,7 @@ struct AccountView: View {
                                     .padding(.vertical, metrics.accountButtonVerticalPadding)
                                     .padding(.horizontal, metrics.accountButtonHorizontalPadding)
                                 }
+                                .postHogLabel("account_view_plans")
                                 .buttonStyle(.borderedProminent)
                                 .clipShape(RoundedRectangle(cornerRadius: metrics.cardCornerRadius, style: .continuous))
                             }

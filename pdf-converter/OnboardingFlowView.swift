@@ -284,6 +284,7 @@ struct OnboardingFlowView: View {
             .background(Color(hex: "#007AFF"))
             .cornerRadius(metrics.cardCornerRadius)
         }
+        .postHogLabel("onboarding_continue_page_\(currentPage)")
         .padding(.horizontal, metrics.horizontalPadding)
     }
 
