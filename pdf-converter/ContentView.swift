@@ -1303,10 +1303,20 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .padding(.leading, 56)
                     } else {
-                        Text(NSLocalizedString("settings.subscription.trialCopy", comment: "Subscription trial copy"))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.leading, 56)
+                        if let product = subscriptionManager.product,
+                           let subscription = product.subscription {
+                            let trialPrice = subscription.introductoryOffer?.displayPrice ?? "$0.49"
+                            let regularPrice = product.displayPrice
+                            Text(String(format: NSLocalizedString("settings.subscription.trialCopy", comment: "Subscription trial copy"), trialPrice, regularPrice))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 56)
+                        } else {
+                            Text(NSLocalizedString("settings.subscription.trialCopyFallback", comment: "Subscription trial copy fallback"))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 56)
+                        }
                     }
                 }
                 .padding(16)

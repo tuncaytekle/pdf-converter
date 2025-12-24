@@ -206,6 +206,7 @@ struct AccountView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Subscribed") {
     AccountView(showPaywall: .constant(false))
         .environmentObject(SubscriptionManager(mockSubscribed: true))
@@ -215,3 +216,4 @@ struct AccountView: View {
     AccountView(showPaywall: .constant(false))
         .environmentObject(SubscriptionManager(mockSubscribed: false))
 }
+#endif

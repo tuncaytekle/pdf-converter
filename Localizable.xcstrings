@@ -2569,13 +2569,30 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
+            "value" : "Start a 1-week ad-free %@ subscription, then %@. Cancel anytime."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 haftalık reklamsız %@ abonelik başlatın, ardından %@. İstediğiniz zaman iptal edin."
+          }
+        }
+      }
+    },
+    "settings.subscription.trialCopyFallback" : {
+      "comment" : "Subscription trial copy fallback",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "Start a 1-week ad-free $0.49 subscription, then $9.99/week. Cancel anytime."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 haftalık reklamsız 49,99 $ abonelik başlatın, ardından haftada 9,99 $. İstediğiniz zaman iptal edin."
+            "value" : "1 haftalık reklamsız $0.49 abonelik başlatın, ardından haftada $9.99. İstediğiniz zaman iptal edin."
           }
         }
       }
