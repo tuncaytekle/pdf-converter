@@ -123,12 +123,8 @@ struct OnboardingFlowView: View {
                     )
 
                 HStack(spacing: 0) {
-                    Text("100+ ")
-                        .font(metrics.badgeSubtitleBoldFont)
-                    Text("formats supported")
-                        .font(metrics.badgeSubtitleLightFont)
+                    markdownText(key: "100formats", comment: "100 formats supported", boldFont: metrics.badgeSubtitleBoldFont, lightFont: metrics.badgeSubtitleLightFont, color: Color(hex: "#363636"))
                 }
-                .foregroundColor(Color(hex: "#363636"))
             }
 
             Image(systemName: "laurel.trailing")
@@ -140,12 +136,8 @@ struct OnboardingFlowView: View {
     private func messageSection(metrics: OnboardingMetrics) -> some View {
         VStack(spacing: metrics.tagSpacing) {
             HStack(spacing: 0) {
-                Text("Welcome to ")
-                    .font(metrics.titleRegularFont)
-                Text("PDF Converter")
-                    .font(metrics.titleBoldFont)
+                markdownText(key: "Welcome", comment: "welcome to PDF converter", boldFont: metrics.titleBoldFont, lightFont: metrics.titleRegularFont, color: Color(hex: "#363636"))
             }
-            .foregroundColor(Color(hex: "#363636"))
 
             HStack(spacing: metrics.tagSpacing) {
                 OnboardingFeatureTag(metrics: metrics, text: "Convert", color: Color(hex: "#3A7377"))
@@ -157,39 +149,23 @@ struct OnboardingFlowView: View {
     }
 
     private func disclaimer(metrics: OnboardingMetrics) -> some View {
-        VStack(spacing: 0) {
-            Text("By pressing continue you confirm that you")
-                .font(metrics.disclaimerFont)
-                .foregroundColor(Color(hex: "#898989"))
-            Text("acknowledge and accept PDF Converter")
-                .font(metrics.disclaimerFont)
-                .foregroundColor(Color(hex: "#898989"))
-
-            HStack(spacing: 0) {
-                Button(action: {
+        ClickableTextView(
+            key: "onboarding.disclaimer",
+            comment: "Onboarding disclaimer with privacy policy and terms links",
+            font: metrics.disclaimerFont,
+            textColor: Color(hex: "#898989"),
+            linkColor: Color(hex: "#363636"),
+            linkActions: [
+                "privacy": {
                     // TODO: Open Privacy Policy
-                }) {
-                    Text("Privacy Policy")
-                        .font(metrics.disclaimerFont)
-                        .foregroundColor(Color(hex: "#363636"))
-                        .underline()
-                }
-
-                Text(" and ")
-                    .font(metrics.disclaimerFont)
-                    .foregroundColor(Color(hex: "#898989"))
-
-                Button(action: {
+                },
+                "terms": {
                     // TODO: Open Terms of Use
-                }) {
-                    Text("Terms of Use")
-                        .font(metrics.disclaimerFont)
-                        .foregroundColor(Color(hex: "#363636"))
-                        .underline()
                 }
-            }
-        }
+            ]
+        )
         .multilineTextAlignment(.center)
+        .padding(.horizontal, metrics.disclaimerHorizontalPadding)
     }
 
     // MARK: - Feature Pages
@@ -203,13 +179,13 @@ struct OnboardingFlowView: View {
                 .scaledToFit()
         } titleSection: {
             VStack(spacing: metrics.tagSpacing) {
-                HStack(spacing: 0) {
-                    Text(feature.titlePrefix)
-                        .font(metrics.titleRegularFont)
-                    Text(feature.titleHighlight)
-                        .font(metrics.titleBoldFont)
-                }
-                .foregroundColor(Color(hex: "#363636"))
+                markdownText(
+                    key: feature.titleKey,
+                    comment: feature.titleComment,
+                    boldFont: metrics.titleBoldFont,
+                    lightFont: metrics.titleRegularFont,
+                    color: Color(hex: "#363636")
+                )
 
                 HStack(spacing: metrics.tagSpacing) {
                     FlowFeatureTag(
@@ -261,7 +237,7 @@ struct OnboardingFlowView: View {
             HStack(alignment: .center) {
                 Spacer()
 
-                Text("Continue")
+                Text(NSLocalizedString("action.continue", comment: "Continue"))
                     .font(metrics.buttonFont)
                     .foregroundColor(.white)
 
@@ -287,12 +263,8 @@ struct OnboardingFlowView: View {
         } titleSection: {
             VStack(spacing: metrics.tagSpacing) {
                 HStack(spacing: 0) {
-                    Text("100+")
-                        .font(metrics.titleBoldFont)
-                    Text(" Formats Supported")
-                        .font(metrics.titleRegularFont)
+                    markdownText(key: "100formats", comment: "100 formats supported", boldFont: metrics.titleBoldFont, lightFont: metrics.titleRegularFont, color: Color(hex: "#363636"))
                 }
-                .foregroundColor(Color(hex: "#363636"))
 
                 HStack(spacing: metrics.tagSpacing) {
                     FlowFeatureTag(
@@ -416,26 +388,26 @@ struct OnboardingFlowView: View {
     private let features: [FlowFeatureInfo] = [
         FlowFeatureInfo(
             imageName: "feature-convert",
-            titlePrefix: "Choose any file and ",
-            titleHighlight: "Convert",
+            titleKey: "onboarding.feature.convert",
+            titleComment: "Onboarding convert feature title",
             highlightedTag: "Convert"
         ),
         FlowFeatureInfo(
             imageName: "feature-scan",
-            titlePrefix: "Use your camera to ",
-            titleHighlight: "Scan",
+            titleKey: "onboarding.feature.scan",
+            titleComment: "Onboarding scan feature title",
             highlightedTag: "Scan"
         ),
         FlowFeatureInfo(
             imageName: "feature-share",
-            titlePrefix: "Easy & instant ",
-            titleHighlight: "Share",
+            titleKey: "onboarding.feature.share",
+            titleComment: "Onboarding share feature title",
             highlightedTag: "Share"
         ),
         FlowFeatureInfo(
             imageName: "feature-organize",
-            titlePrefix: "Keep your files ",
-            titleHighlight: "Organized",
+            titleKey: "onboarding.feature.organize",
+            titleComment: "Onboarding organize feature title",
             highlightedTag: "Organize"
         )
     ]
@@ -445,8 +417,8 @@ struct OnboardingFlowView: View {
 
 private struct FlowFeatureInfo {
     let imageName: String
-    let titlePrefix: String
-    let titleHighlight: String
+    let titleKey: String
+    let titleComment: String
     let highlightedTag: String
 }
 

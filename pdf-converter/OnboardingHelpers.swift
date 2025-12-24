@@ -44,6 +44,7 @@ struct OnboardingMetrics {
     var buttonPadding: CGFloat { 16 * scale }
     var tagHorizontalPadding: CGFloat { 6 * scale }
     var tagVerticalPadding: CGFloat { 2 * scale }
+    var disclaimerHorizontalPadding: CGFloat { 40 * scale }
 
     // Hero layout
     var heroHeight: CGFloat { formatsBoxHeight }

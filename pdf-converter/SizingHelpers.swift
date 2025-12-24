@@ -29,6 +29,7 @@ struct PaywallMetrics {
 
     // Account view fonts
     var accountTitleFont: Font { .system(size: 48 * scale, weight: .bold) }
+    var accountLightTitleFont: Font { .system(size: 48 * scale, weight: .light) }
     var accountSectionTitleFont: Font { .system(size: 32 * scale, weight: .semibold) }
     var accountSubtitleFont: Font { .system(size: 16 * scale) }
     var accountBodyFont: Font { .system(size: 16 * scale) }

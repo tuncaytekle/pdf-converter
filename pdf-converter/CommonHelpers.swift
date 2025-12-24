@@ -113,3 +113,111 @@ func markdownText(
 
     return Text(attr).foregroundColor(color)
 }
+
+/// A view that renders text with clickable markdown-style links
+/// Example: "Accept our [Privacy Policy](privacy) and [Terms](terms)"
+struct ClickableTextView: View {
+    let key: String
+    let comment: String
+    let font: Font
+    let textColor: Color
+    let linkColor: Color
+    let linkActions: [String: () -> Void]
+
+    private struct TextSegment: Identifiable {
+        let id = UUID()
+        let text: String
+        let isLink: Bool
+        let linkID: String?
+    }
+
+    private var segments: [TextSegment] {
+        parseMarkdownLinks(NSLocalizedString(key, comment: comment))
+    }
+
+    var body: some View {
+        // Split into text before links and links section
+        VStack(spacing: 0) {
+            // Text before first link
+            if let firstLinkIndex = segments.firstIndex(where: { $0.isLink }) {
+                // All text segments before the first link
+                let beforeLinkSegments = segments[..<firstLinkIndex]
+                if !beforeLinkSegments.isEmpty {
+                    Text(beforeLinkSegments.map { $0.text }.joined())
+                        .font(font)
+                        .foregroundColor(textColor)
+                }
+
+                // Links and text between/after them in HStack
+                HStack(spacing: 0) {
+                    ForEach(segments[firstLinkIndex...]) { segment in
+                        if segment.isLink, let linkID = segment.linkID {
+                            Button(action: {
+                                linkActions[linkID]?()
+                            }) {
+                                Text(segment.text)
+                                    .font(font)
+                                    .foregroundColor(linkColor)
+                                    .underline()
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Text(segment.text)
+                                .font(font)
+                                .foregroundColor(textColor)
+                        }
+                    }
+                }
+            } else {
+                // No links, just render all text
+                Text(segments.map { $0.text }.joined())
+                    .font(font)
+                    .foregroundColor(textColor)
+            }
+        }
+    }
+
+    private func parseMarkdownLinks(_ text: String) -> [TextSegment] {
+        var segments: [TextSegment] = []
+        let currentText = text
+
+        let pattern = "\\[([^\\]]+)\\]\\(([^\\)]+)\\)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return [TextSegment(text: text, isLink: false, linkID: nil)]
+        }
+
+        let matches = regex.matches(in: currentText, range: NSRange(currentText.startIndex..., in: currentText))
+
+        var lastEnd = currentText.startIndex
+
+        for match in matches {
+            // Text before link
+            if let matchRange = Range(match.range, in: currentText) {
+                let beforeText = String(currentText[lastEnd..<matchRange.lowerBound])
+                if !beforeText.isEmpty {
+                    segments.append(TextSegment(text: beforeText, isLink: false, linkID: nil))
+                }
+
+                // Link text
+                if let linkTextRange = Range(match.range(at: 1), in: currentText),
+                   let linkIDRange = Range(match.range(at: 2), in: currentText) {
+                    let linkText = String(currentText[linkTextRange])
+                    let linkID = String(currentText[linkIDRange])
+                    segments.append(TextSegment(text: linkText, isLink: true, linkID: linkID))
+                }
+
+                lastEnd = matchRange.upperBound
+            }
+        }
+
+        // Remaining text
+        if lastEnd < currentText.endIndex {
+            let remainingText = String(currentText[lastEnd...])
+            if !remainingText.isEmpty {
+                segments.append(TextSegment(text: remainingText, isLink: false, linkID: nil))
+            }
+        }
+
+        return segments.isEmpty ? [TextSegment(text: text, isLink: false, linkID: nil)] : segments
+    }
+}

@@ -31,9 +31,10 @@ struct AccountView: View {
                 ScrollView {
                     VStack(spacing: metrics.verticalSpacingExtraLarge) {
                         VStack(spacing: metrics.verticalSpacingMedium) {
-                            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.title.subscribed", comment: "Pro account title") : NSLocalizedString("account.title.unsubscribed", comment: "Unlock Pro title"))
-                                .font(metrics.accountTitleFont)
-                                .frame(maxWidth: .infinity, alignment: .center)
+                            let key = subscriptionManager.isSubscribed ? "account.title.subscribed": "account.title.unsubscribed";
+                            markdownText(key: key,
+                                         comment: "account title", boldFont: metrics.accountTitleFont, lightFont: metrics.accountLightTitleFont, color: .primary)
+                            .frame(maxWidth: .infinity, alignment: .center)
 
                             ZStack(alignment: .bottom) {
                                 Image("account-community")
