@@ -81,3 +81,35 @@ extension Bundle {
         return url
     }
 }
+
+// MARK: - Markdown Text Helpers
+
+/// Parses a localized string with Markdown and applies custom fonts to bold and normal text
+/// - Parameters:
+///   - key: The localization key to look up
+///   - comment: The comment for the localized string
+///   - boldFont: The font to apply to **bold** (strongly emphasized) text
+///   - lightFont: The font to apply to normal text
+///   - color: The color to apply to the entire text
+/// - Returns: A Text view with the formatted attributed string
+func markdownText(
+    key: String,
+    comment: String,
+    boldFont: Font,
+    lightFont: Font,
+    color: Color
+) -> Text {
+    let localized = NSLocalizedString(key, comment: comment)
+
+    // Parse Markdown. If parsing fails for any reason, fall back to plain text.
+    var attr = (try? AttributedString(markdown: localized)) ?? AttributedString(localized)
+
+    for run in attr.runs {
+        let intent = run.inlinePresentationIntent
+        let isStrong = intent?.contains(InlinePresentationIntent.stronglyEmphasized) == true
+
+        attr[run.range].font = isStrong ? boldFont : lightFont
+    }
+
+    return Text(attr).foregroundColor(color)
+}

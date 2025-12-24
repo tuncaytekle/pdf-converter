@@ -154,7 +154,7 @@ struct PaywallView: View {
                let subscription = product.subscription {
                 let trialPrice = subscription.introductoryOffer?.displayPrice ?? "$0.49"
                 let regularPrice = product.displayPrice
-                Text("First 7 days at \(trialPrice). Auto-renews at \(regularPrice).\nNo commitment, cancel anytime!")
+                Text(String(format: NSLocalizedString("paywall.finePrint.withPrices", comment: "Paywall subscription terms with prices"), trialPrice, regularPrice))
                     .font(metrics.f4Font)
                     .foregroundColor(Color(hex: "#363636"))
                     .multilineTextAlignment(.center)
@@ -196,28 +196,18 @@ struct PaywallView: View {
             }
             .padding(.horizontal, metrics.horizontalPadding)
             
-            paywallTitle(metrics: metrics)
+            markdownText(
+                key: "paywall_title",
+                comment: "Paywall title",
+                boldFont: metrics.f1BoldFont,
+                lightFont: metrics.f1LightFont,
+                color: Color(hex: "#363636")
+            )
             badgeSection(metrics: metrics)
             
             featureTags(metrics: metrics)
         }
         .padding(.top, metrics.verticalSpacingIntraSection)
-    }
-    
-    private func paywallTitle(metrics: PaywallMetrics) -> Text {
-        let localized = NSLocalizedString("paywall_title", comment: "Paywall title")
-
-        // Parse Markdown. If parsing fails for any reason, fall back to plain text.
-        var attr = (try? AttributedString(markdown: localized)) ?? AttributedString(localized)
-
-        for run in attr.runs {
-            let intent = run.inlinePresentationIntent
-            let isStrong = intent?.contains(InlinePresentationIntent.stronglyEmphasized) == true
-
-            attr[run.range].font = isStrong ? metrics.f1BoldFont : metrics.f1LightFont
-        }
-
-        return Text(attr).foregroundColor(Color(hex: "#363636"))
     }
 
     private func badgeSection(metrics: PaywallMetrics) -> some View {
@@ -255,13 +245,13 @@ struct PaywallView: View {
                         )
                     )
                 HStack(spacing: 0) {
-                    Text("100+ ")
-                        .font(metrics.f3BoldFont)
-                        .foregroundColor(Color(hex: "#363636"))
-                    
-                    Text(NSLocalizedString("formats supported", comment: "Formats supported description"))
-                        .font(metrics.f3LightFont)
-                        .foregroundColor(Color(hex: "#363636"))
+                    markdownText(
+                        key: "100formats",
+                        comment: "Formats supported",
+                        boldFont: metrics.f3BoldFont,
+                        lightFont: metrics.f3LightFont,
+                        color: Color(hex: "#363636")
+                    )
                 }
                 
                 
@@ -426,7 +416,17 @@ struct CustomToggleStyle: ToggleStyle {
 
 // MARK: - Preview
 
-#Preview {
-    PaywallView()
-        .environmentObject(SubscriptionManager())
+
+struct PaywallView_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            PaywallView()
+                .environmentObject(SubscriptionManager())
+                .environment(\.locale, .init(identifier: "en"))
+            
+            PaywallView()
+                .environmentObject(SubscriptionManager())
+                .environment(\.locale, .init(identifier: "tr"))
+        }
+    }
 }
