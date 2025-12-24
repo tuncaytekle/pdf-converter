@@ -41,6 +41,15 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
+#if DEBUG
+    /// Debug-only initializer for SwiftUI previews
+    init(mockSubscribed: Bool) {
+        productID = Bundle.main.subscriptionProductID
+        isSubscribed = mockSubscribed
+        // Don't start monitoring tasks for mock instances
+    }
+#endif
+
     deinit {
         loadProductTask?.cancel()
         monitorEntitlementsTask?.cancel()

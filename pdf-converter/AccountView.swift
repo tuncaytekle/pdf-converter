@@ -202,3 +202,15 @@ struct AccountView: View {
             .padding(.leading, metrics.checkmarkLeadingPadding)
     }
 }
+
+// MARK: - Preview
+
+#Preview("Subscribed") {
+    AccountView(showPaywall: .constant(false))
+        .environmentObject(SubscriptionManager(mockSubscribed: true))
+}
+
+#Preview("Not Subscribed") {
+    AccountView(showPaywall: .constant(false))
+        .environmentObject(SubscriptionManager(mockSubscribed: false))
+}

@@ -1,5 +1,5 @@
 //
-//  GotenbergError.swift
+//  GotenbergClient.swift
 //  pdf-converter
 //
 //  Created by Tuncay Tekle on 11/25/25.
@@ -15,7 +15,7 @@ import Foundation
 
 // MARK: - Errors
 
-public enum GotenbergError: Error {
+public enum ConversionError: Error {
     case invalidURL
     case invalidResponse
     case serverError(status: Int, message: String)
@@ -156,7 +156,7 @@ public final class GotenbergClient {
     ) async throws -> Data {
         
         guard let url = URL(string: endpoint, relativeTo: baseURL) else {
-            throw GotenbergError.invalidURL
+            throw ConversionError.invalidURL
         }
         
         let boundary = "Boundary-\(UUID().uuidString)"
@@ -206,7 +206,7 @@ public final class GotenbergClient {
                 let (data, response) = try await session.data(for: request)
                 
                 guard let http = response as? HTTPURLResponse else {
-                    throw GotenbergError.invalidResponse
+                    throw ConversionError.invalidResponse
                 }
                 
                 if (200...299).contains(http.statusCode) {
@@ -221,7 +221,7 @@ public final class GotenbergClient {
                 }
                 
                 let msg = String(data: data, encoding: .utf8) ?? ""
-                throw GotenbergError.serverError(status: http.statusCode, message: msg)
+                throw ConversionError.serverError(status: http.statusCode, message: msg)
                 
             } catch {
                 // retry only network errors
@@ -230,7 +230,7 @@ public final class GotenbergClient {
                     try await delayForRetry(attempt: attempts)
                     continue
                 }
-                throw GotenbergError.networkError(error)
+                throw ConversionError.networkError(error)
             }
         }
     }

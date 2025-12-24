@@ -155,7 +155,14 @@ enum PDFStorage {
 
     static func prepareShareURL(for document: ScannedDocument) throws -> URL {
         let tempDirectory = FileManager.default.temporaryDirectory
-        let destination = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("pdf")
+        let sanitizedFileName = document.fileName.hasSuffix(".pdf") ? document.fileName : "\(document.fileName).pdf"
+        let destination = tempDirectory.appendingPathComponent(sanitizedFileName)
+
+        // Remove existing file if it exists to avoid conflicts
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try? FileManager.default.removeItem(at: destination)
+        }
+
         try FileManager.default.copyItem(at: document.pdfURL, to: destination)
         return destination
     }
