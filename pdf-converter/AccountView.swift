@@ -23,98 +23,146 @@ struct AccountView: View {
     @Binding var showPaywall: Bool
     @State private var showManageSubscriptionsSheet = false
 
-    private let featureList: [String] = [
-        "Unlimited scans & conversions",
-        "Create PDFs from photo album",
-        "Sign documents",
-        "Easy & instant share",
-        "Organize all your files",
-        "Keep your original designs"
-    ]
-
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 32) {
-                    VStack(spacing: 24) {
-                        Text(subscriptionManager.isSubscribed ? "Pro Account" : "Unlock Pro")
-                            .font(.system(size: 34, weight: .bold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
+            GeometryReader { proxy in
+                let metrics = PaywallMetrics(size: proxy.size)
 
-                        Image("account-community")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                ScrollView {
+                    VStack(spacing: metrics.verticalSpacingExtraLarge) {
+                        VStack(spacing: metrics.verticalSpacingMedium) {
+                            Text(subscriptionManager.isSubscribed ? NSLocalizedString("account.title.subscribed", comment: "Pro account title") : NSLocalizedString("account.title.unsubscribed", comment: "Unlock Pro title"))
+                                .font(metrics.accountTitleFont)
+                                .frame(maxWidth: .infinity, alignment: .center)
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(subscriptionManager.isSubscribed ? "Help us grow" : "Support our work")
-                                .font(.title3.weight(.semibold))
-                            Text(subscriptionManager.isSubscribed ? "We are a small community" : "Help us grow by subscribing")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            ZStack(alignment: .bottom) {
+                                Image("account-community")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: metrics.accountImageWidth, height: metrics.accountImageHeight)
+                                    .clipped()
+
+                                if subscriptionManager.isSubscribed {
+                                    HStack(alignment: .bottom, spacing: 0) {
+                                        VStack(alignment: .leading, spacing: 0) {
+                                            Text(NSLocalizedString("account.help.title", comment: "Help us grow title"))
+                                                .font(metrics.accountSectionTitleFont)
+                                                .lineLimit(1)
+                                            Text(NSLocalizedString("account.help.subtitle", comment: "We are a small community subtitle"))
+                                                .font(metrics.accountSubtitleFont)
+                                                .lineLimit(1)
+                                        }
+                                        
+                                        Spacer()
+
+                                        Button {
+                                            requestAppReview()
+                                        } label: {
+                                            Text(NSLocalizedString("account.review.button", comment: "Leave us a review button"))
+                                                .font(metrics.accountSubtitleFont)
+                                                .lineLimit(1)
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .clipShape(RoundedRectangle(cornerRadius: metrics.accountButtonCornerRadius, style: .continuous))
+                                        .padding(.vertical, metrics.accountReviewButtonVerticalPadding)
+                                        .padding(.horizontal, metrics.accountReviewButtonHorizontalPadding)
+                                    }
+                                    .padding(.horizontal, metrics.horizontalSmallPadding)
+                                    .frame(maxWidth: .infinity, minHeight: metrics.accountGradientHeight, maxHeight: metrics.accountGradientHeight, alignment: .bottom)
+                                    .background(
+                                        LinearGradient(
+                                            stops: [
+                                                Gradient.Stop(color: .white.opacity(0), location: 0.00),
+                                                Gradient.Stop(color: .white, location: 0.58),
+                                                Gradient.Stop(color: .white, location: 1.00),
+                                            ],
+                                            startPoint: UnitPoint(x: 0.5, y: 0),
+                                            endPoint: UnitPoint(x: 0.5, y: 1)
+                                        )
+                                    )
+                                } else {
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        Text(NSLocalizedString("account.support.title", comment: "Support our work title"))
+                                            .font(metrics.accountSectionTitleFont)
+                                        Text(NSLocalizedString("account.support.subtitle", comment: "Help us grow by subscribing subtitle"))
+                                            .font(metrics.accountSubtitleFont)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.horizontal, metrics.horizontalPadding)
+                                    .frame(maxWidth: .infinity, minHeight: metrics.accountGradientHeight, maxHeight: metrics.accountGradientHeight, alignment: .bottomLeading)
+                                    .background(
+                                        LinearGradient(
+                                            stops: [
+                                                Gradient.Stop(color: .white.opacity(0), location: 0.00),
+                                                Gradient.Stop(color: .white, location: 0.58),
+                                                Gradient.Stop(color: .white, location: 1.00),
+                                            ],
+                                            startPoint: UnitPoint(x: 0.5, y: 0),
+                                            endPoint: UnitPoint(x: 0.5, y: 1)
+                                        )
+                                    )
+                                }
+                            }
+                            .clipShape(
+                                UnevenRoundedRectangle(
+                                    topLeadingRadius: metrics.accountImageCornerRadius,
+                                    bottomLeadingRadius: 0,
+                                    bottomTrailingRadius: 0,
+                                    topTrailingRadius: metrics.accountImageCornerRadius
+                                )
+                            )
+
+                            if !subscriptionManager.isSubscribed {
+                                Button {
+                                    showPaywall = true
+                                } label: {
+                                    HStack(alignment: .center) {
+                                        Spacer()
+                                        Text(NSLocalizedString("account.viewplans.button", comment: "View Plans button"))
+                                            .font(metrics.accountViewPlansFont)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(metrics.accountButtonFont)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, metrics.accountButtonVerticalPadding)
+                                    .padding(.horizontal, metrics.accountButtonHorizontalPadding)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .clipShape(RoundedRectangle(cornerRadius: metrics.cardCornerRadius, style: .continuous))
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(spacing: metrics.separatorHeight * 4) {
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
+                            featureDivider(metrics: metrics)
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"))
+                            featureDivider(metrics: metrics)
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Sign documents", comment: "Paywall feature description"))
+                            featureDivider(metrics: metrics)
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
+                            featureDivider(metrics: metrics)
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
+                            featureDivider(metrics: metrics)
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
+                        }
 
                         if subscriptionManager.isSubscribed {
                             Button {
-                                requestAppReview()
+                                presentManageSubscriptions()
                             } label: {
-                                Text("Leave us a review")
-                                    .font(.body.weight(.medium))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
+                                Text(NSLocalizedString("account.manage.button", comment: "Manage Subscription button"))
+                                    .font(metrics.accountBodyFont)
+                                    .foregroundStyle(Color(hex: "#363636"))
+                                    .underline()
                             }
-                            .buttonStyle(.borderedProminent)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        } else {
-                            Button {
-                                showPaywall = true
-                            } label: {
-                                HStack {
-                                    Text("View Plans")
-                                        .font(.body.weight(.medium))
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.body.weight(.semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .padding(.horizontal, 20)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, metrics.verticalSpacingSmall)
                         }
                     }
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        ForEach(featureList, id: \.self) { feature in
-                            HStack(alignment: .top, spacing: 12) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(.blue)
-                                Text(feature)
-                                    .font(.body)
-                                    .foregroundStyle(.primary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-
-                    if subscriptionManager.isSubscribed {
-                        Button {
-                            presentManageSubscriptions()
-                        } label: {
-                            Text("Manage Subscription")
-                                .font(.body)
-                                .foregroundStyle(.blue)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 8)
-                    }
+                    .padding(.horizontal, metrics.accountHorizontalPadding)
+                    .padding(.vertical, metrics.accountVerticalPadding)
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 20)
             }
             .navigationTitle("")
             .toolbar {
@@ -146,5 +194,11 @@ struct AccountView: View {
                 SKStoreReviewController.requestReview(in: windowScene)
             }
         }
+    }
+
+    private func featureDivider(metrics: PaywallMetrics) -> some View {
+        Divider().overlay(Color(hex: "#979494"))
+            .padding(.trailing, metrics.dividerTrailingPadding)
+            .padding(.leading, metrics.checkmarkLeadingPadding)
     }
 }

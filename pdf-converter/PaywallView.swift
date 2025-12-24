@@ -196,17 +196,28 @@ struct PaywallView: View {
             }
             .padding(.horizontal, metrics.horizontalPadding)
             
-            (Text(NSLocalizedString("Unlimited ", comment: "Paywall title prefix"))
-                .font(metrics.f1LightFont) +
-            Text(NSLocalizedString("Access", comment: "Unlimited access title"))
-                .font(metrics.f1BoldFont))
-                .foregroundColor(Color(hex: "#363636"))
-            
+            paywallTitle(metrics: metrics)
             badgeSection(metrics: metrics)
             
             featureTags(metrics: metrics)
         }
         .padding(.top, metrics.verticalSpacingIntraSection)
+    }
+    
+    private func paywallTitle(metrics: PaywallMetrics) -> Text {
+        let localized = NSLocalizedString("paywall_title", comment: "Paywall title")
+
+        // Parse Markdown. If parsing fails for any reason, fall back to plain text.
+        var attr = (try? AttributedString(markdown: localized)) ?? AttributedString(localized)
+
+        for run in attr.runs {
+            let intent = run.inlinePresentationIntent
+            let isStrong = intent?.contains(InlinePresentationIntent.stronglyEmphasized) == true
+
+            attr[run.range].font = isStrong ? metrics.f1BoldFont : metrics.f1LightFont
+        }
+
+        return Text(attr).foregroundColor(Color(hex: "#363636"))
     }
 
     private func badgeSection(metrics: PaywallMetrics) -> some View {

@@ -124,6 +124,7 @@
     },
     "Access" : {
       "comment" : "Unlimited access title",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -387,6 +388,74 @@
         }
       }
     },
+    "account.help.subtitle" : {
+      "comment" : "We are a small community subtitle",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We are a small community"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Küçük bir topluluk"
+          }
+        }
+      }
+    },
+    "account.help.title" : {
+      "comment" : "Help us grow title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help us grow"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Büyümemize yardım edin"
+          }
+        }
+      }
+    },
+    "account.manage.button" : {
+      "comment" : "Manage Subscription button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage Subscriptions"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonelikleri Yönet"
+          }
+        }
+      }
+    },
+    "account.review.button" : {
+      "comment" : "Leave us a review button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave us a review"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bize yorum bırakın"
+          }
+        }
+      }
+    },
     "account.status.subscribed.message" : {
       "comment" : "Subscribed status message",
       "extractionState" : "stale",
@@ -459,6 +528,40 @@
         }
       }
     },
+    "account.support.subtitle" : {
+      "comment" : "Help us grow by subscribing subtitle",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help us grow by subscribing"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abone olarak büyümemize yardım edin"
+          }
+        }
+      }
+    },
+    "account.support.title" : {
+      "comment" : "Support our work title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support our work"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çalışmamızı destekleyin"
+          }
+        }
+      }
+    },
     "account.title" : {
       "comment" : "Account navigation title",
       "extractionState" : "stale",
@@ -477,6 +580,40 @@
         }
       }
     },
+    "account.title.subscribed" : {
+      "comment" : "Pro account title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Account"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Hesap"
+          }
+        }
+      }
+    },
+    "account.title.unsubscribed" : {
+      "comment" : "Unlock Pro title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock Pro"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro’yu Aralayın"
+          }
+        }
+      }
+    },
     "account.trial.copy" : {
       "comment" : "Trial copy text",
       "extractionState" : "stale",
@@ -491,6 +628,23 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "7 günlük reklamsız 0,99 $ deneme sürümünün keyfini çıkarın, ardından haftada 9,99 $. İstediğiniz zaman App Store aboneliklerinizden iptal edin."
+          }
+        }
+      }
+    },
+    "account.viewplans.button" : {
+      "comment" : "View Plans button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View Plans"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planları Görüntüle"
           }
         }
       }
@@ -1922,14 +2076,6 @@
         }
       }
     },
-    "Help us grow" : {
-      "comment" : "A description of the benefit of supporting the app.",
-      "isCommentAutoGenerated" : true
-    },
-    "Help us grow by subscribing" : {
-      "comment" : "A description of the benefit of subscribing to the app.",
-      "isCommentAutoGenerated" : true
-    },
     "Keep your original designs" : {
       "comment" : "Paywall feature description",
       "localizations" : {
@@ -1946,14 +2092,6 @@
           }
         }
       }
-    },
-    "Leave us a review" : {
-      "comment" : "A button label that encourages users to leave a review for the app.",
-      "isCommentAutoGenerated" : true
-    },
-    "Manage Subscription" : {
-      "comment" : "A button label that, when tapped, presents a sheet allowing the user to manage their subscription.",
-      "isCommentAutoGenerated" : true
     },
     "Organize" : {
       "comment" : "Paywall feature tag",
@@ -1985,6 +2123,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tüm dosyalarınızı düzenleyin"
+          }
+        }
+      }
+    },
+    "paywall_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlimited **Access**"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sınırsız **Erişim**"
           }
         }
       }
@@ -2061,10 +2216,6 @@
           }
         }
       }
-    },
-    "Pro Account" : {
-      "comment" : "The title of the premium account option in the account screen.",
-      "isCommentAutoGenerated" : true
     },
     "proButton.active" : {
       "comment" : "Active Pro label",
@@ -3243,10 +3394,6 @@
         }
       }
     },
-    "Support our work" : {
-      "comment" : "A call-to-action text that encourages users to support the app's development.",
-      "isCommentAutoGenerated" : true
-    },
     "tab.account" : {
       "comment" : "Account tab label",
       "localizations" : {
@@ -3470,6 +3617,7 @@
     },
     "Unlimited " : {
       "comment" : "Paywall title prefix",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3502,20 +3650,16 @@
         }
       }
     },
-    "Unlock Pro" : {
-      "comment" : "A call-to-action label that encourages users to subscribe to the premium version of the app.",
-      "isCommentAutoGenerated" : true
-    },
     "Untitled" : {
-      "comment" : "Fallback file name"
-    },
-    "View Plans" : {
-      "comment" : "A button label that links to a view of available subscription plans.",
-      "isCommentAutoGenerated" : true
-    },
-    "We are a small community" : {
-      "comment" : "A sentence describing the small size of the development team behind the app.",
-      "isCommentAutoGenerated" : true
+      "comment" : "Fallback file name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isimsiz"
+          }
+        }
+      }
     },
     "We couldn't create PDF data from the scanned pages." : {
       "comment" : "Scanned PDF creation error message",
