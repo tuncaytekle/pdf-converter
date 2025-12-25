@@ -218,7 +218,13 @@ final class SubscriptionManager: ObservableObject {
         purchaseState = .purchasing
 
         do {
-            let result = try await product.purchase()
+            let anonIdString = AnonymousIdProvider.getOrCreate()
+
+            guard let appAccountToken = UUID(uuidString: anonIdString) else {
+                // Extremely unlikely if you always store UUID strings, but handle defensively
+                throw NSError(domain: "AppAccountToken", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid UUID in Keychain"])
+            }
+            let result = try await product.purchase(options: [.appAccountToken(appAccountToken)])
             debugLog("Purchase result received from StoreKit")
 
             switch result {

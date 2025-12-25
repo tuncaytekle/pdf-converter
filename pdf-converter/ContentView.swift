@@ -53,6 +53,8 @@ struct ContentView: View {
     @State private var paywallSource = "onboarding"
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasCheckedPaywall = false
+    @State private var documentPendingAfterPaywall: ScannedDocument?
+    @State private var editingContextPendingAfterPaywall: PDFEditingContext?
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @Environment(\.colorScheme) private var scheme
     @State private var hasAttemptedCloudRestore = false
@@ -97,12 +99,21 @@ struct ContentView: View {
                 document: document,
                 onSave: { saveScannedDocument($0) },
                 onShare: { shareScannedDocument($0) },
-                onCancel: { discardTemporaryDocument($0) }
+                onCancel: { discardTemporaryDocument($0) },
+                showPaywall: $showPaywall,
+                paywallSource: $paywallSource,
+                documentPendingAfterPaywall: $documentPendingAfterPaywall
             )
+            .environmentObject(subscriptionManager)
         }
         .sheet(item: $previewFile) { file in
             NavigationView {
-                SavedPDFDetailView(file: file)
+                SavedPDFDetailView(
+                    file: file,
+                    showPaywall: $showPaywall,
+                    paywallSource: $paywallSource
+                )
+                .environmentObject(subscriptionManager)
             }
         }
         .sheet(item: $renameTarget) { file in
@@ -153,8 +164,12 @@ struct ContentView: View {
                     },
                     onCancel: {
                         editingContext = nil
-                    }
+                    },
+                    showPaywall: $showPaywall,
+                    paywallSource: $paywallSource,
+                    editingContextPendingAfterPaywall: $editingContextPendingAfterPaywall
                 )
+                .environmentObject(subscriptionManager)
             }
             .navigationViewStyle(.stack)
         }
@@ -226,6 +241,24 @@ struct ContentView: View {
             // When paywall is dismissed after onboarding flow, mark onboarding as completed
             if !isShowing && !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            }
+
+            // When paywall is dismissed, restore the scan review sheet if needed
+            if !isShowing, let savedDoc = documentPendingAfterPaywall {
+                documentPendingAfterPaywall = nil
+                // Small delay to ensure paywall dismiss animation completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    pendingDocument = savedDoc
+                }
+            }
+
+            // When paywall is dismissed, restore the PDF editor if needed
+            if !isShowing, let savedContext = editingContextPendingAfterPaywall {
+                editingContextPendingAfterPaywall = nil
+                // Small delay to ensure paywall dismiss animation completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    editingContext = savedContext
+                }
             }
         }
         .fullScreenCover(isPresented: $showOnboarding) {
@@ -620,6 +653,13 @@ struct ContentView: View {
 
     /// Prepares a share sheet for an already-saved PDF.
     private func shareSavedFile(_ file: PDFFile) {
+        // Check subscription before sharing
+        guard subscriptionManager.isSubscribed else {
+            paywallSource = "files_list_share"
+            showPaywall = true
+            return
+        }
+
         shareItem = nil
         shareItem = ShareItem(url: file.url, cleanupHandler: nil)
     }
@@ -1681,14 +1721,29 @@ struct PDFEditorView: View {
     let onSave: () -> Void
     let onCancel: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @Binding var showPaywall: Bool
+    @Binding var paywallSource: String
+    @Binding var editingContextPendingAfterPaywall: PDFEditingContext?
     @StateObject private var controller: PDFEditorController
     @State private var inlineAlert: InlineAlert?
     @State private var cachedSignature: SignatureStore.Signature? = SignatureStore.load()
 
-    init(context: PDFEditingContext, onSave: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    init(
+        context: PDFEditingContext,
+        onSave: @escaping () -> Void,
+        onCancel: @escaping () -> Void,
+        showPaywall: Binding<Bool>,
+        paywallSource: Binding<String>,
+        editingContextPendingAfterPaywall: Binding<PDFEditingContext?>
+    ) {
         self.context = context
         self.onSave = onSave
         self.onCancel = onCancel
+        _showPaywall = showPaywall
+        _paywallSource = paywallSource
+        _editingContextPendingAfterPaywall = editingContextPendingAfterPaywall
         _controller = StateObject(wrappedValue: PDFEditorController(document: context.document))
     }
 
@@ -1732,6 +1787,19 @@ struct PDFEditorView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(NSLocalizedString("action.save", comment: "Save action")) {
+                    // Check subscription before saving
+                    guard subscriptionManager.isSubscribed else {
+                        paywallSource = "pdf_editor_save"
+                        // Save the current editing context before dismissing
+                        editingContextPendingAfterPaywall = context
+                        dismiss()
+                        // Delay to ensure dismiss completes before showing paywall
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showPaywall = true
+                        }
+                        return
+                    }
+
                     if controller.hasActiveSignaturePlacement() {
                         if controller.confirmSignaturePlacement() {
                             onSave()
@@ -2136,6 +2204,10 @@ struct ScanReviewSheet: View {
     let onCancel: (ScannedDocument) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @Binding var showPaywall: Bool
+    @Binding var paywallSource: String
+    @Binding var documentPendingAfterPaywall: ScannedDocument?
     @State private var fileName: String
     @State private var shareItem: ShareItem?
 
@@ -2143,12 +2215,18 @@ struct ScanReviewSheet: View {
         document: ScannedDocument,
         onSave: @escaping (ScannedDocument) -> Void,
         onShare: @escaping (ScannedDocument) -> ShareItem?,
-        onCancel: @escaping (ScannedDocument) -> Void
+        onCancel: @escaping (ScannedDocument) -> Void,
+        showPaywall: Binding<Bool>,
+        paywallSource: Binding<String>,
+        documentPendingAfterPaywall: Binding<ScannedDocument?>
     ) {
         self.document = document
         self.onSave = onSave
         self.onShare = onShare
         self.onCancel = onCancel
+        _showPaywall = showPaywall
+        _paywallSource = paywallSource
+        _documentPendingAfterPaywall = documentPendingAfterPaywall
         _fileName = State(initialValue: document.fileName)
     }
 
@@ -2175,6 +2253,19 @@ struct ScanReviewSheet: View {
 
                 VStack(spacing: 12) {
                     Button {
+                        // Check subscription before sharing
+                        guard subscriptionManager.isSubscribed else {
+                            paywallSource = "scan_review_share"
+                            // Save the current document state before dismissing
+                            documentPendingAfterPaywall = sanitizedDocument()
+                            dismiss()
+                            // Delay to ensure dismiss completes before showing paywall
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                showPaywall = true
+                            }
+                            return
+                        }
+
                         let updated = sanitizedDocument()
                         if let item = onShare(updated) {
                             shareItem = item
@@ -2187,6 +2278,19 @@ struct ScanReviewSheet: View {
                     .buttonStyle(.bordered)
 
                     Button {
+                        // Check subscription before saving
+                        guard subscriptionManager.isSubscribed else {
+                            paywallSource = "scan_review_save"
+                            // Save the current document state before dismissing
+                            documentPendingAfterPaywall = sanitizedDocument()
+                            dismiss()
+                            // Delay to ensure dismiss completes before showing paywall
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                showPaywall = true
+                            }
+                            return
+                        }
+
                         let updated = sanitizedDocument()
                         onSave(updated)
                         dismiss()
