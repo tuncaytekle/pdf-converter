@@ -21,7 +21,7 @@ struct PDFConverterApp: App {
         // and what to expect
         config.sessionReplay = true
         // choose whether to mask images or text
-        config.sessionReplayConfig.maskAllImages = false
+        config.sessionReplayConfig.maskAllImages = true
         config.sessionReplayConfig.maskAllTextInputs = true
         // screenshot is disabled by default
         // The screenshot may contain sensitive information, use with caution
