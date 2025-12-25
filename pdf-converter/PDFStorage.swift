@@ -8,7 +8,7 @@ enum PDFStorage {
         category: "Storage"
     )
 
-    static func loadSavedFiles() -> [PDFFile] {
+    static func loadSavedFiles() async -> [PDFFile] {
         guard let directory = documentsDirectory(),
               let urls = try? FileManager.default.contentsOfDirectory(
                 at: directory,
@@ -20,21 +20,37 @@ enum PDFStorage {
 
         let pdfs = urls.filter { $0.pathExtension.lowercased() == "pdf" }
 
+        // Load files quickly without computing page counts
+        // Page counts will be loaded lazily via PageCountCache
         return pdfs.compactMap { url in
-            let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
-            let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
-            let size = Int64(resourceValues?.fileSize ?? 0)
-            let pageCount = PDFDocument(url: url)?.pageCount ?? 0
-            let folderId = loadFileFolderId(for: url)
-            return PDFFile(
-                url: url,
-                name: url.deletingPathExtension().lastPathComponent,
-                date: date,
-                pageCount: pageCount,
-                fileSize: size,
-                folderId: folderId
-            )
+            loadPDFFileMetadataFast(url: url)
         }
+    }
+
+    // Fast metadata loading without parsing PDF (no page count)
+    private nonisolated static func loadPDFFileMetadataFast(url: URL) -> PDFFile? {
+        let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
+        let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
+        let size = Int64(resourceValues?.fileSize ?? 0)
+        let folderId = loadFileFolderId(for: url)
+        let stableID = getOrCreateStableID(for: url)
+
+        // Don't compute page count here - it will be loaded lazily
+        return PDFFile(
+            url: url,
+            name: url.deletingPathExtension().lastPathComponent,
+            date: date,
+            pageCount: 0,  // Will be populated lazily by PageCountCache
+            fileSize: size,
+            folderId: folderId,
+            stableID: stableID
+        )
+    }
+
+    // Asynchronously compute page count for a single PDF (called on-demand)
+    nonisolated static func computePageCount(for url: URL) async -> Int {
+        guard let document = PDFDocument(url: url) else { return 0 }
+        return document.pageCount
     }
 
     static func save(document: ScannedDocument) throws -> PDFFile {
@@ -55,6 +71,7 @@ enum PDFStorage {
         let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
         let size = Int64(resourceValues?.fileSize ?? 0)
         let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+        let stableID = getOrCreateStableID(for: destination)
 
         return PDFFile(
             url: destination,
@@ -62,7 +79,8 @@ enum PDFStorage {
             date: date,
             pageCount: pageCount,
             fileSize: size,
-            folderId: nil
+            folderId: nil,
+            stableID: stableID
         )
     }
 
@@ -98,13 +116,15 @@ enum PDFStorage {
                 let date = Date()
                 let size = Int64(resourceValues?.fileSize ?? 0)
                 let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+                let stableID = getOrCreateStableID(for: destination)
                 let file = PDFFile(
                     url: destination,
                     name: destination.deletingPathExtension().lastPathComponent,
                     date: date,
                     pageCount: pageCount,
                     fileSize: size,
-                    folderId: nil
+                    folderId: nil,
+                    stableID: stableID
                 )
                 imported.append(file)
             } catch {
@@ -127,7 +147,8 @@ enum PDFStorage {
                 date: file.date,
                 pageCount: file.pageCount,
                 fileSize: file.fileSize,
-                folderId: file.folderId
+                folderId: file.folderId,
+                stableID: file.stableID  // Preserve existing stable ID
             )
         }
 
@@ -135,6 +156,8 @@ enum PDFStorage {
 
         do {
             try FileManager.default.moveItem(at: file.url, to: destination)
+            // Update stable ID mapping to point to new filename
+            updateStableIDMapping(oldURL: file.url, newURL: destination)
         } catch {
             throw ScanWorkflowError.underlying(error)
         }
@@ -145,7 +168,8 @@ enum PDFStorage {
             date: file.date,
             pageCount: file.pageCount,
             fileSize: file.fileSize,
-            folderId: file.folderId
+            folderId: file.folderId,
+            stableID: file.stableID  // Preserve existing stable ID
         )
     }
 
@@ -215,7 +239,7 @@ enum PDFStorage {
         }
     }
 
-    static func loadFileFolderId(for fileURL: URL) -> String? {
+    nonisolated static func loadFileFolderId(for fileURL: URL) -> String? {
         guard let url = fileFoldersFileURL,
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
@@ -229,7 +253,7 @@ enum PDFStorage {
 
     // MARK: - Helpers
 
-    private static func documentsDirectory() -> URL? {
+    private nonisolated static func documentsDirectory() -> URL? {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
 
@@ -266,8 +290,75 @@ enum PDFStorage {
         documentsDirectory()?.appendingPathComponent(".folders.json")
     }
 
-    private static var fileFoldersFileURL: URL? {
+    private nonisolated static var fileFoldersFileURL: URL? {
         documentsDirectory()?.appendingPathComponent(".file_folders.json")
+    }
+
+    private nonisolated static var fileStableIDsFileURL: URL? {
+        documentsDirectory()?.appendingPathComponent(".file_stable_ids.json")
+    }
+
+    // MARK: - Stable ID Management
+
+    /// Get or create a stable UUID for a file
+    nonisolated static func getOrCreateStableID(for fileURL: URL) -> String {
+        let key = fileURL.lastPathComponent
+
+        // Try to load existing mapping
+        if let url = fileStableIDsFileURL,
+           FileManager.default.fileExists(atPath: url.path),
+           let data = try? Data(contentsOf: url),
+           let mapping = try? JSONDecoder().decode([String: String].self, from: data),
+           let existingID = mapping[key] {
+            return existingID
+        }
+
+        // Generate new UUID for this file
+        let newID = UUID().uuidString
+        saveStableID(newID, for: fileURL)
+        return newID
+    }
+
+    /// Save a stable ID for a file
+    private nonisolated static func saveStableID(_ stableID: String, for fileURL: URL) {
+        guard let url = fileStableIDsFileURL else { return }
+
+        var mapping: [String: String] = [:]
+        if FileManager.default.fileExists(atPath: url.path),
+           let data = try? Data(contentsOf: url),
+           let existing = try? JSONDecoder().decode([String: String].self, from: data) {
+            mapping = existing
+        }
+
+        let key = fileURL.lastPathComponent
+        mapping[key] = stableID
+
+        if let data = try? JSONEncoder().encode(mapping) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    /// Update stable ID mapping when a file is renamed
+    static func updateStableIDMapping(oldURL: URL, newURL: URL) {
+        guard let url = fileStableIDsFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              var mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return
+        }
+
+        let oldKey = oldURL.lastPathComponent
+        let newKey = newURL.lastPathComponent
+
+        // Move the stable ID to the new filename
+        if let stableID = mapping[oldKey] {
+            mapping.removeValue(forKey: oldKey)
+            mapping[newKey] = stableID
+
+            if let updatedData = try? JSONEncoder().encode(mapping) {
+                try? updatedData.write(to: url, options: .atomic)
+            }
+        }
     }
 
     static func storeCloudAsset(from sourceURL: URL, preferredName: String) throws -> PDFFile {
@@ -288,13 +379,16 @@ enum PDFStorage {
         let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
         let size = Int64(resourceValues?.fileSize ?? 0)
         let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+        let stableID = getOrCreateStableID(for: destination)
 
         return PDFFile(
             url: destination,
             name: destination.deletingPathExtension().lastPathComponent,
             date: date,
             pageCount: pageCount,
-            fileSize: size
+            fileSize: size,
+            folderId: nil,
+            stableID: stableID
         )
     }
 }

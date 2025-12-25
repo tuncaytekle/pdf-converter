@@ -317,7 +317,8 @@ struct FilesView: View {
             date: file.date,
             pageCount: file.pageCount,
             fileSize: file.fileSize,
-            folderId: folderId
+            folderId: folderId,
+            stableID: file.stableID  // Preserve stable ID
         )
 
         withAnimation(.easeInOut(duration: 0.3)) {
@@ -615,6 +616,7 @@ struct PDFFile: Identifiable, Equatable {
     let pageCount: Int
     let fileSize: Int64
     var folderId: String?
+    let stableID: String  // Stable UUID for CloudKit record identity
 
     var id: URL { url }
 

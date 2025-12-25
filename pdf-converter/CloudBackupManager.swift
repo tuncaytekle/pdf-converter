@@ -53,7 +53,8 @@ actor CloudBackupManager {
                 continue
             }
             do {
-                let recordID = await CKRecord.ID(recordName: CloudRecordNaming.recordName(for: file.url.lastPathComponent))
+                // Use stable UUID as record name to avoid collisions and orphans
+                let recordID = CKRecord.ID(recordName: file.stableID)
 #if DEBUG
                 print("☁️ Backing up record: \(recordID.recordName)")
 #endif
@@ -96,7 +97,8 @@ actor CloudBackupManager {
 
     /// Removes the remote copy for a specific file.
     func deleteBackup(for file: PDFFile) async {
-        await deleteRecord(named: CloudRecordNaming.recordName(for: file.url.lastPathComponent))
+        // Use stable UUID to delete the correct record
+        await deleteRecord(named: file.stableID)
     }
 
     /// Removes a record by name (used when renaming files).

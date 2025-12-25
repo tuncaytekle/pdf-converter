@@ -517,16 +517,18 @@ struct ContentView: View {
     @MainActor
     private func promptEditDocuments() {
         showCreateActions = false
-        refreshFilesFromDisk()
-        guard !files.isEmpty else {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.noPDFs.title", comment: "No PDFs available title"),
-                message: NSLocalizedString("alert.noPDFs.message", comment: "No PDFs available message"),
-                onDismiss: nil
-            )
-            return
+        Task {
+            await refreshFilesFromDisk()
+            guard !files.isEmpty else {
+                alertContext = ScanAlert(
+                    title: NSLocalizedString("alert.noPDFs.title", comment: "No PDFs available title"),
+                    message: NSLocalizedString("alert.noPDFs.message", comment: "No PDFs available message"),
+                    onDismiss: nil
+                )
+                return
+            }
+            showEditSelector = true
         }
-        showEditSelector = true
     }
 
     /// Loads the selected PDF into the editing context and presents the editor sheet.
@@ -562,7 +564,9 @@ struct ContentView: View {
 
             _ = try FileManager.default.replaceItemAt(context.file.url, withItemAt: tempURL)
             try? FileManager.default.removeItem(at: tempURL)
-            refreshFilesFromDisk()
+            Task {
+                await refreshFilesFromDisk()
+            }
             editingContext = nil
         } catch {
             try? FileManager.default.removeItem(at: tempURL)
@@ -981,15 +985,40 @@ struct ContentView: View {
 
         // Then load files if not already loaded
         guard !hasLoadedInitialFiles else { return }
-        refreshFilesFromDisk()
-        hasLoadedInitialFiles = true
-        attemptCloudRestoreIfNeeded()
+        Task {
+            await refreshFilesFromDisk()
+            hasLoadedInitialFiles = true
+            attemptCloudRestoreIfNeeded()
+        }
     }
 
     /// Rebuilds the in-memory file list from whatever is stored on disk.
-    private func refreshFilesFromDisk() {
-        files = PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
+    private func refreshFilesFromDisk() async {
+        let loadedFiles = await PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
+        files = loadedFiles
         folders = PDFStorage.loadFolders()
+
+        // Start loading page counts in the background
+        // As each page count loads, update the corresponding file
+        Task {
+            for file in loadedFiles {
+                let pageCount = await PDFStorage.computePageCount(for: file.url)
+
+                // Update this specific file in the array with the computed page count
+                // (even if it's 0 - that might be the correct value for empty/corrupted PDFs)
+                if let index = files.firstIndex(where: { $0.id == file.id }) {
+                    files[index] = PDFFile(
+                        url: file.url,
+                        name: file.name,
+                        date: file.date,
+                        pageCount: pageCount,
+                        fileSize: file.fileSize,
+                        folderId: file.folderId,
+                        stableID: file.stableID  // Preserve stable ID
+                    )
+                }
+            }
+        }
     }
 
     /// Fetches any remote backups and merges them into the local library once.
@@ -1028,7 +1057,8 @@ struct ContentView: View {
                     date: file.date,
                     pageCount: file.pageCount,
                     fileSize: file.fileSize,
-                    folderId: folderId
+                    folderId: folderId,
+                    stableID: file.stableID  // Preserve stable ID
                 )
             }
 
