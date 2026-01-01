@@ -170,6 +170,29 @@ final class FileManagementService {
         let savedFile = try PDFStorage.save(document: document)
         files.insert(savedFile, at: 0)
 
+        // Compute page count asynchronously for the new file
+        Task {
+            let fileURL = savedFile.url
+            let fileStableID = savedFile.stableID
+
+            // Compute page count off-main via a background actor
+            let pageCount = await metadataActor.pageCount(for: fileURL)
+
+            // Update the file with the computed page count
+            if let index = files.firstIndex(where: { $0.stableID == fileStableID }) {
+                let current = files[index]
+                files[index] = PDFFile(
+                    url: current.url,
+                    name: current.name,
+                    date: current.date,
+                    pageCount: pageCount,
+                    fileSize: current.fileSize,
+                    folderId: current.folderId,
+                    stableID: current.stableID
+                )
+            }
+        }
+
         // Trigger cloud backup asynchronously
         Task {
             await backupToCloud(savedFile)
@@ -188,6 +211,31 @@ final class FileManagementService {
         // Merge new files and keep list sorted by date desc
         files.append(contentsOf: imported)
         files.sort { $0.date > $1.date }
+
+        // Compute page counts asynchronously for imported files
+        Task {
+            for file in imported {
+                let fileURL = file.url
+                let fileStableID = file.stableID
+
+                // Compute page count off-main via a background actor
+                let pageCount = await metadataActor.pageCount(for: fileURL)
+
+                // Update the file with the computed page count
+                if let index = files.firstIndex(where: { $0.stableID == fileStableID }) {
+                    let current = files[index]
+                    files[index] = PDFFile(
+                        url: current.url,
+                        name: current.name,
+                        date: current.date,
+                        pageCount: pageCount,
+                        fileSize: current.fileSize,
+                        folderId: current.folderId,
+                        stableID: current.stableID
+                    )
+                }
+            }
+        }
 
         // Trigger cloud backup asynchronously
         Task {

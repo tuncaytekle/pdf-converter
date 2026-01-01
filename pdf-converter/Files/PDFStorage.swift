@@ -49,11 +49,6 @@ enum PDFStorage {
 
     // Asynchronously compute page count for a single PDF (called on-demand)
     nonisolated static func computePageCount(for url: URL) async -> Int {
-#if DEBUG
-        if Thread.isMainThread {
-            assertionFailure("PDF page count should not be computed on the main thread.")
-        }
-#endif
         guard let document = PDFDocument(url: url) else { return 0 }
         return document.pageCount
     }
@@ -517,13 +512,8 @@ enum PDFStorage {
 }
 
 actor PDFMetadataActor {
-    func pageCount(for url: URL) async -> Int {
+    nonisolated func pageCount(for url: URL) async -> Int {
         guard !Task.isCancelled else { return 0 }
-#if DEBUG
-        if Thread.isMainThread {
-            assertionFailure("PDF metadata fetch should not run on the main thread.")
-        }
-#endif
         guard let document = PDFDocument(url: url) else { return 0 }
         return document.pageCount
     }

@@ -148,6 +148,14 @@ struct CloudSyncBanner: View {
                     .font(.caption.weight(.medium))
                     .foregroundColor(.blue)
             }
+
+            Button(action: {
+                status.dismiss()
+            }) {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -156,6 +164,9 @@ struct CloudSyncBanner: View {
         .padding(.horizontal)
         .padding(.top, 8)
         .transition(.move(edge: .top).combined(with: .opacity))
+        .onTapGesture {
+            status.dismiss()
+        }
     }
 }
 

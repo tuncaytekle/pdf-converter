@@ -80,6 +80,19 @@ extension Bundle {
         }
         return url
     }
+
+    var pdfGatewayBaseURL: URL? {
+        guard let rawValue = object(forInfoDictionaryKey: "PDFGatewayBaseURL") as? String else {
+            return nil
+        }
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed != "$(PDF_GATEWAY_BASE_URL)",
+              let url = URL(string: trimmed) else {
+            return nil
+        }
+        return url
+    }
 }
 
 // MARK: - Markdown Text Helpers

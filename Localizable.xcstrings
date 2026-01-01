@@ -1366,6 +1366,57 @@
         }
       }
     },
+    "conversion.downloading" : {
+      "comment" : "Downloading PDF",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İndiriliyor…"
+          }
+        }
+      }
+    },
+    "conversion.processing" : {
+      "comment" : "Converting page",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Converting…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dönüştürülüyor…"
+          }
+        }
+      }
+    },
+    "conversion.uploading" : {
+      "comment" : "Uploading file",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uploading…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yükleniyor…"
+          }
+        }
+      }
+    },
     "Convert" : {
       "comment" : "Paywall feature tag",
       "localizations" : {
@@ -2030,6 +2081,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tüm dosyalarınızı düzenleyin"
+          }
+        }
+      }
+    },
+    "Pages: N/A" : {
+      "comment" : "Page count unavailable",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sayfa: N/A"
           }
         }
       }

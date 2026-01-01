@@ -16,8 +16,8 @@ final class ScanFlowCoordinator {
 
     // MARK: - Dependencies
 
-    /// Optional Gotenberg client for web and office document conversions
-    private let gotenbergClient: GotenbergClient?
+    /// Optional PDF Gateway client for web and office document conversions
+    private let pdfGatewayClient: PDFGatewayClient?
 
     /// File service for final document persistence
     private let fileService: FileManagementService
@@ -25,10 +25,10 @@ final class ScanFlowCoordinator {
     // MARK: - Initialization
 
     init(
-        gotenbergClient: GotenbergClient?,
+        pdfGatewayClient: PDFGatewayClient?,
         fileService: FileManagementService
     ) {
-        self.gotenbergClient = gotenbergClient
+        self.pdfGatewayClient = pdfGatewayClient
         self.fileService = fileService
     }
 
@@ -61,32 +61,45 @@ final class ScanFlowCoordinator {
 
     // MARK: - Document Conversions
 
-    /// Converts a local document into a PDF using Gotenberg's LibreOffice route
+    /// Converts a local document into a PDF using the PDF Gateway
     /// - Parameter url: The document file URL to convert
     /// - Returns: A scanned document ready for review
     /// - Throws: ScanWorkflowError if the conversion fails or service is unavailable
-    func convertFileUsingLibreOffice(url: URL) async throws -> ScannedDocument {
-        guard let client = gotenbergClient else {
+    func convertFileUsingLibreOffice(url: URL, progressHandler: ((String) -> Void)? = nil) async throws -> ScannedDocument {
+        guard let client = pdfGatewayClient else {
             throw ScanWorkflowError.unavailable
         }
 
         isConverting = true
-        defer { isConverting = false }
+        defer {
+            isConverting = false
+            conversionProgress = nil
+        }
 
         do {
             let filename = url.lastPathComponent
             let baseName = url.deletingPathExtension().lastPathComponent
-            let data = try readDataForSecurityScopedURL(url)
 
             // Check for cancellation before network call
             try Task.checkCancellation()
 
-            let pdfData = try await client.convertOfficeDocToPDF(
-                fileName: filename,
-                data: data
-            )
+            // Step 1: Uploading file
+            conversionProgress = NSLocalizedString("conversion.uploading", comment: "Uploading file")
+            progressHandler?(conversionProgress!)
 
-            // Check for cancellation after network call
+            // Convert file to PDF via gateway (gateway handles upload internally)
+            let result = try await client.convert(fileURL: url, filename: filename)
+
+            // Check for cancellation after conversion
+            try Task.checkCancellation()
+
+            // Step 2: Downloading result
+            conversionProgress = NSLocalizedString("conversion.downloading", comment: "Downloading PDF")
+            progressHandler?(conversionProgress!)
+
+            let pdfData = try await downloadPDF(from: result.downloadURL)
+
+            // Check for cancellation after download
             try Task.checkCancellation()
 
             let outputURL = try persistPDFData(pdfData)
@@ -95,17 +108,19 @@ final class ScanFlowCoordinator {
                 pdfURL: outputURL,
                 fileName: String(format: NSLocalizedString("converted.fileNameFormat", comment: "Converted file name format"), baseName)
             )
+        } catch let error as PDFGatewayError {
+            throw ScanWorkflowError.failed(error.localizedDescription)
         } catch {
             throw ScanWorkflowError.failed(error.localizedDescription)
         }
     }
 
-    /// Sends a URL to Gotenberg's Chromium route and returns the resulting PDF
+    /// Sends a URL to the PDF Gateway for conversion
     /// - Parameter url: The web URL to convert
     /// - Returns: A scanned document ready for review
     /// - Throws: ScanWorkflowError if the conversion fails or service is unavailable
-    func convertWebPage(url: URL) async throws -> ScannedDocument {
-        guard let client = gotenbergClient else {
+    func convertWebPage(url: URL, progressHandler: ((String) -> Void)? = nil) async throws -> ScannedDocument {
+        guard let client = pdfGatewayClient else {
             throw ScanWorkflowError.unavailable
         }
 
@@ -117,9 +132,23 @@ final class ScanFlowCoordinator {
             // Check for cancellation before network call
             try Task.checkCancellation()
 
-            let pdfData = try await client.convertURLToPDF(url: url.absoluteString)
+            // Step 1: Converting page
+            conversionProgress = NSLocalizedString("conversion.processing", comment: "Converting page")
+            progressHandler?(conversionProgress!)
 
-            // Check for cancellation after network call
+            // Convert URL to PDF via gateway
+            let result = try await client.convert(publicURL: url)
+
+            // Check for cancellation after conversion
+            try Task.checkCancellation()
+
+            // Step 2: Downloading result
+            conversionProgress = NSLocalizedString("conversion.downloading", comment: "Downloading PDF")
+            progressHandler?(conversionProgress!)
+
+            let pdfData = try await downloadPDF(from: result.downloadURL)
+
+            // Check for cancellation after download
             try Task.checkCancellation()
 
             let outputURL = try persistPDFData(pdfData)
@@ -128,6 +157,8 @@ final class ScanFlowCoordinator {
                 pdfURL: outputURL,
                 fileName: defaultFileName(prefix: host)
             )
+        } catch let error as PDFGatewayError {
+            throw ScanWorkflowError.failed(error.localizedDescription)
         } catch {
             throw ScanWorkflowError.failed(error.localizedDescription)
         }
@@ -177,6 +208,24 @@ final class ScanFlowCoordinator {
     }
 
     // MARK: - Private Helpers
+
+    /// Downloads a PDF from a signed URL (returned by the gateway)
+    /// - Parameter url: The signed download URL
+    /// - Returns: The PDF data
+    /// - Throws: Error if download fails
+    private func downloadPDF(from url: URL) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ScanWorkflowError.failed("Invalid response from server")
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw ScanWorkflowError.failed("Download failed with status \(httpResponse.statusCode)")
+        }
+
+        return data
+    }
 
     /// Writes raw PDF data to a temporary location we can hand to the review sheet
     private func persistPDFData(_ data: Data) throws -> URL {

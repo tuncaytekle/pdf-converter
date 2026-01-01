@@ -13,9 +13,9 @@ import PostHog
 
 /// Root container view that orchestrates tabs, quick actions, and all modal flows.
 struct ContentView: View {
-    private static let gotenbergLogger = Logger(
+    private static let conversionLogger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
-        category: "Gotenberg"
+        category: "Conversion"
     )
 
     // MARK: - Coordinators & Services
@@ -46,26 +46,28 @@ struct ContentView: View {
 
     init() {
         let cloudBackup = CloudBackupManager.shared
-        let gotenbergClient = Self.makeGotenbergClient()
+        let pdfGatewayClient = Self.makePDFGatewayClient()
 
         let fileService = FileManagementService(cloudBackup: cloudBackup)
         let scanCoordinator = ScanFlowCoordinator(
-            gotenbergClient: gotenbergClient,
+            pdfGatewayClient: pdfGatewayClient,
             fileService: fileService
         )
         _fileService = State(initialValue: fileService)
         _scanCoordinator = State(initialValue: scanCoordinator)
     }
 
-    private static func makeGotenbergClient() -> GotenbergClient? {
-        guard let baseURL = Bundle.main.gotenbergBaseURL else {
-            gotenbergLogger.error("Missing or invalid Gotenberg base URL configuration.")
+    private static func makePDFGatewayClient() -> PDFGatewayClient? {
+        guard let baseURL = Bundle.main.pdfGatewayBaseURL else {
+            conversionLogger.error("Missing or invalid PDF Gateway base URL configuration.")
             return nil
         }
-        return GotenbergClient(
-            baseURL: baseURL,
-            retryPolicy: RetryPolicy(maxRetries: 2, baseDelay: 0.5, exponential: true),
-            timeout: 120
+        return PDFGatewayClient(
+            config: PDFGatewayClient.Config(
+                baseURL: baseURL,
+                pollInterval: 1.0,
+                timeout: 120.0
+            )
         )
     }
 
@@ -352,7 +354,9 @@ private struct ConfirmationDialogs: ViewModifier {
                     Color.black.opacity(0.25).ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView()
-                        Text(NSLocalizedString("status.converting", comment: "Conversion in progress"))
+                        Text(coordinator.conversionProgress.isEmpty
+                             ? NSLocalizedString("status.converting", comment: "Conversion in progress")
+                             : coordinator.conversionProgress)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -414,7 +418,9 @@ private struct ConfirmationDialogs: ViewModifier {
                     Color.black.opacity(0.25).ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView()
-                        Text(NSLocalizedString("status.converting", comment: "Conversion in progress"))
+                        Text(coordinator.conversionProgress.isEmpty
+                             ? NSLocalizedString("status.converting", comment: "Conversion in progress")
+                             : coordinator.conversionProgress)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -626,7 +632,7 @@ extension ContentView {
         }
     }
     fileprivate static let convertibleExtensions: [String] = [
-        "123","602","abw","bib","bmp","cdr","cgm","cmx","csv","cwk","dbf","dif","doc","docm","docx","dot","dotm","dotx","dxf","emf","eps","epub","fodg","fodp","fods","fodt","fopd","gif","htm","html","hwp","jpeg","jpg","key","ltx","lwp","mcw","met","mml","mw","numbers","odd","odg","odm","odp","ods","odt","otg","oth","otp","ots","ott","pages","pbm","pcd","pct","pcx","pdb","pdf","pgm","png","pot","potm","potx","ppm","pps","ppt","pptm","pptx","psd","psw","pub","pwp","pxl","ras","rtf","sda","sdc","sdd","sdp","sdw","sgl","slk","smf","stc","std","sti","stw","svg","svm","swf","sxc","sxd","sxg","sxi","sxm","sxw","tga","tif","tiff","txt","uof","uop","uos","uot","vdx","vor","vsd","vsdm","vsdx","wb2","wk1","wks","wmf","wpd","wpg","wps","xbm","xhtml","xls","xlsb","xlsm","xlsx","xlt","xltm","xltx","xlw","xml","xpm","zabw"
+        "123","602","abw","bib","bmp","cdr","cgm","cmx","csv","cwk","dbf","dif","doc","docm","docx","dot","dotm","dotx","dxf","emf","eps","epub","fodg","fodp","fods","fodt","fopd","gif","htm","html","hwp","jpeg","jpg","key","ltx","lwp","mcw","met","mml","mobi", "mw","numbers","odd","odg","odm","odp","ods","odt","otg","oth","otp","ots","ott","pages","pbm","pcd","pct","pcx","pdb","pdf","pgm","png","pot","potm","potx","ppm","pps","ppt","pptm","pptx","psd","psw","pub","pwp","pxl","ras","rtf","sda","sdc","sdd","sdp","sdw","sgl","slk","smf","stc","std","sti","stw","svg","svm","swf","sxc","sxd","sxg","sxi","sxm","sxw","tga","tif","tiff","txt","uof","uop","uos","uot","vdx","vor","vsd","vsdm","vsdx","wb2","wk1","wks","wmf","wpd","wpg","wps","xbm","xhtml","xls","xlsb","xlsm","xlsx","xlt","xltm","xltx","xlw","xml","xpm","zabw"
     ]
 
     fileprivate static let convertibleContentTypes: [UTType] = {

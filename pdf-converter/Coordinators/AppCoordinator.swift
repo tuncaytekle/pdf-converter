@@ -74,6 +74,9 @@ final class AppCoordinator {
     /// Whether a file conversion is in progress
     var isConvertingFile = false
 
+    /// Progress message for ongoing conversions
+    var conversionProgress: String = ""
+
     // MARK: - Paywall State
 
     /// Onboarding flow visibility
@@ -334,14 +337,6 @@ final class AppCoordinator {
                 message: error.message,
                 onDismiss: nil
             )
-        } catch let error as ConversionError {
-            if !error.localizedDescription.isEmpty {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.scanFailed.title", comment: "Scan failed title"),
-                    message: error.localizedDescription,
-                    onDismiss: nil
-                )
-            }
         } catch {
             alertContext = ScanAlert(
                 title: NSLocalizedString("alert.pdfError.title", comment: "PDF error title"),
@@ -567,18 +562,19 @@ final class AppCoordinator {
         }
 
         isConvertingFile = true
-        defer { isConvertingFile = false }
+        defer {
+            isConvertingFile = false
+            conversionProgress = ""
+        }
 
         do {
-            let document = try await scanCoordinator.convertWebPage(url: resolvedURL)
+            let document = try await scanCoordinator.convertWebPage(url: resolvedURL) { [weak self] progress in
+                Task { @MainActor in
+                    self?.conversionProgress = progress
+                }
+            }
             pendingDocument = document
             webURLInput = resolvedURL.absoluteString
-        } catch let error as ConversionError {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
-                message: error.localizedDescription,
-                onDismiss: nil
-            )
         } catch {
             alertContext = ScanAlert(
                 title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
@@ -600,17 +596,18 @@ final class AppCoordinator {
             fileConversionTask?.cancel()
             fileConversionTask = Task {
                 isConvertingFile = true
-                defer { isConvertingFile = false }
+                defer {
+                    isConvertingFile = false
+                    conversionProgress = ""
+                }
 
                 do {
-                    let document = try await scanCoordinator.convertFileUsingLibreOffice(url: url)
+                    let document = try await scanCoordinator.convertFileUsingLibreOffice(url: url) { [weak self] progress in
+                        Task { @MainActor in
+                            self?.conversionProgress = progress
+                        }
+                    }
                     pendingDocument = document
-                } catch let error as ConversionError {
-                    alertContext = ScanAlert(
-                        title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
-                        message: error.localizedDescription,
-                        onDismiss: nil
-                    )
                 } catch {
                     alertContext = ScanAlert(
                         title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),

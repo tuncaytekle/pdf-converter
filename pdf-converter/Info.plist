@@ -54,5 +54,7 @@
 	<string>$(SUBSCRIPTION_PRODUCT_ID)</string>
 	<key>GotenbergBaseURL</key>
 	<string>$(GOTENBERG_BASE_URL)</string>
+	<key>PDFGatewayBaseURL</key>
+	<string>$(PDF_GATEWAY_BASE_URL)</string>
 </dict>
 </plist>
