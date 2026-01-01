@@ -107,9 +107,10 @@ final class FileManagementService {
         guard !hasAttemptedCloudRestore else { return }
         hasAttemptedCloudRestore = true
 
+        #if DEBUG
         // DIAGNOSTIC: Check CloudKit environment and records
         await cloudBackup.printEnvironmentDiagnostics()
-        _ = await cloudBackup.fetchAllRecordsWithoutQuery()
+        #endif
 
         // Restore folders
         let existingFolderIds = Set(PDFStorage.loadFolders().map { $0.id })
@@ -121,8 +122,8 @@ final class FileManagementService {
         }
 
         // Restore files
-        let existingNames = Set(files.map { CloudRecordNaming.recordName(for: $0.url.lastPathComponent) })
-        let restored = await cloudBackup.restoreMissingFiles(existingRecordNames: existingNames)
+        let existingRecordIDs = Set(files.map(\.stableID)) // Stable IDs drive CloudKit record identity.
+        let restored = await cloudBackup.restoreMissingFiles(existingRecordNames: existingRecordIDs)
         guard !restored.isEmpty else { return }
 
         // Get file-folder mappings from CloudKit
@@ -130,8 +131,7 @@ final class FileManagementService {
 
         // Apply folder mappings to restored files
         let restoredWithFolders = restored.map { file -> PDFFile in
-            let fileName = file.url.lastPathComponent
-            let folderId = mappings[fileName]
+            let folderId = mappings[file.stableID] // Use recordName == stableID for mappings.
             return PDFFile(
                 url: file.url,
                 name: file.name,
@@ -198,8 +198,6 @@ final class FileManagementService {
     /// - Returns: The renamed PDFFile
     /// - Throws: If the rename operation fails
     func renameFile(_ file: PDFFile, to newName: String) throws -> PDFFile {
-        let previousRecordName = CloudRecordNaming.recordName(for: file.url.lastPathComponent)
-
         let renamed = try PDFStorage.rename(file: file, to: newName)
 
         // Update the local array
@@ -207,9 +205,8 @@ final class FileManagementService {
             files[index] = renamed
         }
 
-        // Update cloud: delete old record, backup new one
+        // Update cloud: same recordName (stableID) with new metadata.
         Task {
-            await cloudBackup.deleteRecord(named: previousRecordName)
             await backupToCloud(renamed)
         }
 

@@ -361,7 +361,7 @@ enum PDFStorage {
         }
     }
 
-    static func storeCloudAsset(from sourceURL: URL, preferredName: String) throws -> PDFFile {
+    static func storeCloudAsset(from sourceURL: URL, preferredName: String, stableID: String) throws -> PDFFile {
         guard let directory = documentsDirectory() else {
             throw ScanWorkflowError.failed(NSLocalizedString("Unable to access the Documents folder", comment: "Documents folder access error"))
         }
@@ -379,7 +379,8 @@ enum PDFStorage {
         let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
         let size = Int64(resourceValues?.fileSize ?? 0)
         let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
-        let stableID = getOrCreateStableID(for: destination)
+        // Persist the CloudKit record identity so restores don't create duplicates.
+        saveStableID(stableID, for: destination)
 
         return PDFFile(
             url: destination,

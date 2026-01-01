@@ -661,7 +661,7 @@ struct PDFFile: Identifiable, Equatable {
     var folderId: String?
     let stableID: String  // Stable UUID for CloudKit record identity
 
-    var id: URL { url }
+    var id: String { stableID } // Stable identity across renames/moves.
 
     var formattedDate: String {
         Self.dateFormatter.string(from: date)
@@ -697,6 +697,6 @@ struct PDFFile: Identifiable, Equatable {
 
 extension PDFFile {
     static func == (lhs: PDFFile, rhs: PDFFile) -> Bool {
-        lhs.url == rhs.url
+        lhs.stableID == rhs.stableID
     }
 }

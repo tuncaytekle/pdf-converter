@@ -210,7 +210,17 @@ actor CloudBackupManager {
                     continue
                 }
                 let preferredName = await (record[CloudRecordKey.fileName] as? String) ?? "PDF-\(UUID().uuidString)"
-                if let stored = try? await PDFStorage.storeCloudAsset(from: assetURL, preferredName: preferredName) {
+                if let stored = try? await PDFStorage.storeCloudAsset(
+                    from: assetURL,
+                    preferredName: preferredName,
+                    stableID: recordName
+                ) {
+                    if stored.stableID != recordName {
+#if DEBUG
+                        assertionFailure("Restored stableID mismatch: expected \(recordName), got \(stored.stableID)")
+#endif
+                        print("☁️ Restored stableID mismatch: expected \(recordName), got \(stored.stableID)")
+                    }
                     restored.append(stored)
 #if DEBUG
                     print("☁️ Successfully restored: \(preferredName)")
@@ -355,9 +365,9 @@ actor CloudBackupManager {
             var mappings: [String: String] = [:]
 
             for record in records {
-                if let fileName = await record[CloudRecordKey.fileName] as? String,
-                   let folderId = await record[CloudRecordKey.folderId] as? String {
-                    mappings[fileName] = folderId
+                if let folderId = await record[CloudRecordKey.folderId] as? String {
+                    let recordName = record.recordID.recordName
+                    mappings[recordName] = folderId // Keyed by stableID-based record name.
                 }
             }
 
@@ -684,6 +694,7 @@ private enum CloudRecordKey {
     static let folderCreatedDate = "folderCreatedDate"
 }
 
+// Legacy filename-based record naming retained for migration only.
 struct CloudRecordNaming {
     static func recordName(for fileName: String) -> String {
         let sanitized = fileName
