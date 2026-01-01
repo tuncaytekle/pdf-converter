@@ -668,8 +668,12 @@ struct PDFFile: Identifiable, Equatable {
     }
 
     var pageSummary: String {
-        let count = max(pageCount, 0)
-        return count == 1 ? NSLocalizedString("1 Page", comment: "Page count for single page") : String(format: NSLocalizedString("%d Pages", comment: "Page count for multiple pages"), count)
+        if pageCount == 0 {
+            return NSLocalizedString("Pages: N/A", comment: "Page count unavailable")
+        }
+        return pageCount == 1
+            ? NSLocalizedString("1 Page", comment: "Page count for single page")
+            : String(format: NSLocalizedString("%d Pages", comment: "Page count for multiple pages"), pageCount)
     }
 
     var formattedSize: String {

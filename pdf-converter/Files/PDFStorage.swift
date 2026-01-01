@@ -3,7 +3,7 @@ import PDFKit
 import OSLog
 
 enum PDFStorage {
-    private static let logger = Logger(
+    private nonisolated static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
         category: "Storage"
     )
@@ -32,8 +32,8 @@ enum PDFStorage {
         let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
         let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
         let size = Int64(resourceValues?.fileSize ?? 0)
-        let folderId = loadFileFolderId(for: url)
         let stableID = getOrCreateStableID(for: url)
+        let folderId = loadFileFolderId(forStableID: stableID)
 
         // Don't compute page count here - it will be loaded lazily
         return PDFFile(
@@ -49,6 +49,11 @@ enum PDFStorage {
 
     // Asynchronously compute page count for a single PDF (called on-demand)
     nonisolated static func computePageCount(for url: URL) async -> Int {
+#if DEBUG
+        if Thread.isMainThread {
+            assertionFailure("PDF page count should not be computed on the main thread.")
+        }
+#endif
         guard let document = PDFDocument(url: url) else { return 0 }
         return document.pageCount
     }
@@ -70,7 +75,8 @@ enum PDFStorage {
         let resourceValues = try? destination.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey, .fileSizeKey])
         let date = resourceValues?.contentModificationDate ?? resourceValues?.creationDate ?? Date()
         let size = Int64(resourceValues?.fileSize ?? 0)
-        let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+        // Defer page count parsing to the background loader to avoid UI stalls.
+        let pageCount = 0
         let stableID = getOrCreateStableID(for: destination)
 
         return PDFFile(
@@ -115,7 +121,8 @@ enum PDFStorage {
                 let resourceValues = try? destination.resourceValues(forKeys: [.fileSizeKey])
                 let date = Date()
                 let size = Int64(resourceValues?.fileSize ?? 0)
-                let pageCount = PDFDocument(url: destination)?.pageCount ?? 0
+                // Defer page count parsing to the background loader to avoid UI stalls.
+                let pageCount = 0
                 let stableID = getOrCreateStableID(for: destination)
                 let file = PDFFile(
                     url: destination,
@@ -174,7 +181,38 @@ enum PDFStorage {
     }
 
     static func delete(file: PDFFile) throws {
-        try FileManager.default.removeItem(at: file.url)
+        // Always delete through this path to keep stableID and folder mappings in sync.
+        let stableID = loadStableID(for: file.url)
+        do {
+            try FileManager.default.removeItem(at: file.url)
+        } catch {
+#if DEBUG
+            logger.error("Failed to delete file at \(file.url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+#endif
+            throw error
+        }
+
+        // Remove stableID mapping so a future file with the same name gets a new ID.
+        removeStableIDMapping(forFileURL: file.url)
+
+        if let stableID {
+            removeFileFolderMapping(forStableID: stableID)
+        } else {
+#if DEBUG
+            logger.error("Missing stableID for deleted file \(file.url.lastPathComponent, privacy: .public)")
+#endif
+        }
+    }
+
+    static func deleteTemporaryFile(at url: URL?) {
+        guard let url else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+#if DEBUG
+            logger.error("Failed to delete temporary file at \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+#endif
+        }
     }
 
     static func prepareShareURL(for document: ScannedDocument) throws -> URL {
@@ -215,15 +253,8 @@ enum PDFStorage {
     static func updateFileFolderId(file: PDFFile, folderId: String?) {
         guard let url = fileFoldersFileURL else { return }
 
-        var mapping: [String: String] = [:]
-
-        if FileManager.default.fileExists(atPath: url.path),
-           let data = try? Data(contentsOf: url),
-           let existing = try? JSONDecoder().decode([String: String].self, from: data) {
-            mapping = existing
-        }
-
-        let key = file.url.lastPathComponent
+        var mapping = loadFileFolderMapping()
+        let key = file.stableID
         if let folderId = folderId {
             mapping[key] = folderId
         } else {
@@ -239,16 +270,10 @@ enum PDFStorage {
         }
     }
 
-    nonisolated static func loadFileFolderId(for fileURL: URL) -> String? {
-        guard let url = fileFoldersFileURL,
-              FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
-            return nil
-        }
-
-        let key = fileURL.lastPathComponent
-        return mapping[key]
+    // Folder mappings are keyed by stableID to survive renames and avoid collisions.
+    nonisolated static func loadFileFolderId(forStableID stableID: String) -> String? {
+        let mapping = loadFileFolderMapping()
+        return mapping[stableID]
     }
 
     // MARK: - Helpers
@@ -319,6 +344,19 @@ enum PDFStorage {
         return newID
     }
 
+    /// Load a stable ID without creating one (used during deletion).
+    private nonisolated static func loadStableID(for fileURL: URL) -> String? {
+        guard let url = fileStableIDsFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return nil
+        }
+
+        let key = fileURL.lastPathComponent
+        return mapping[key]
+    }
+
     /// Save a stable ID for a file
     private nonisolated static func saveStableID(_ stableID: String, for fileURL: URL) {
         guard let url = fileStableIDsFileURL else { return }
@@ -335,6 +373,29 @@ enum PDFStorage {
 
         if let data = try? JSONEncoder().encode(mapping) {
             try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    /// Remove a stable ID mapping when a file is deleted.
+    private nonisolated static func removeStableIDMapping(forFileURL fileURL: URL) {
+        guard let url = fileStableIDsFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              var mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return
+        }
+
+        let key = fileURL.lastPathComponent
+        mapping.removeValue(forKey: key)
+
+        if let updatedData = try? JSONEncoder().encode(mapping) {
+            do {
+                try updatedData.write(to: url, options: .atomic)
+            } catch {
+#if DEBUG
+                logger.error("Failed to remove stableID mapping for \(key, privacy: .public): \(error.localizedDescription, privacy: .public)")
+#endif
+            }
         }
     }
 
@@ -391,5 +452,79 @@ enum PDFStorage {
             folderId: nil,
             stableID: stableID
         )
+    }
+
+    // MARK: - Folder Mapping Migration
+
+    private nonisolated static func loadFileFolderMapping() -> [String: String] {
+        guard let url = fileFoldersFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+
+        if isStableIDKeyedMapping(mapping) {
+            return mapping
+        }
+
+        // Migrate legacy filename-keyed mappings to stableID-keyed mappings.
+        let migrated = migrateFileFolderMapping(mapping)
+        if let updatedData = try? JSONEncoder().encode(migrated) {
+            try? updatedData.write(to: url, options: .atomic)
+        }
+        return migrated
+    }
+
+    private nonisolated static func isStableIDKeyedMapping(_ mapping: [String: String]) -> Bool {
+        mapping.keys.allSatisfy { UUID(uuidString: $0) != nil }
+    }
+
+    private nonisolated static func migrateFileFolderMapping(_ legacy: [String: String]) -> [String: String] {
+        guard let directory = documentsDirectory() else { return [:] }
+
+        var migrated: [String: String] = [:]
+        for (fileName, folderId) in legacy {
+            let fileURL = directory.appendingPathComponent(fileName)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else { continue }
+            let stableID = getOrCreateStableID(for: fileURL)
+            migrated[stableID] = folderId
+        }
+
+        return migrated
+    }
+
+    private nonisolated static func removeFileFolderMapping(forStableID stableID: String) {
+        guard let url = fileFoldersFileURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              var mapping = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return
+        }
+
+        mapping.removeValue(forKey: stableID)
+
+        if let updatedData = try? JSONEncoder().encode(mapping) {
+            do {
+                try updatedData.write(to: url, options: .atomic)
+            } catch {
+#if DEBUG
+                logger.error("Failed to remove folder mapping for stableID \(stableID, privacy: .public): \(error.localizedDescription, privacy: .public)")
+#endif
+            }
+        }
+    }
+}
+
+actor PDFMetadataActor {
+    func pageCount(for url: URL) async -> Int {
+        guard !Task.isCancelled else { return 0 }
+#if DEBUG
+        if Thread.isMainThread {
+            assertionFailure("PDF metadata fetch should not run on the main thread.")
+        }
+#endif
+        guard let document = PDFDocument(url: url) else { return 0 }
+        return document.pageCount
     }
 }

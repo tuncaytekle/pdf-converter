@@ -572,6 +572,7 @@ actor CloudBackupManager {
         guard let database else { throw CloudBackupError.unavailable }
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
             var fetched: [CKRecord] = []
+            let fetchedLock = NSLock() // CloudKit may call recordMatchedBlock concurrently.
             var didFinish = false
 
             func run(with cursor: CKQueryOperation.Cursor?) {
@@ -588,7 +589,9 @@ actor CloudBackupManager {
                 operation.recordMatchedBlock = { _, result in
                     switch result {
                     case .success(let record):
+                        fetchedLock.lock()
                         fetched.append(record)
+                        fetchedLock.unlock()
                     case .failure:
                         break
                     }
@@ -628,6 +631,7 @@ actor CloudBackupManager {
         // This queries by a sortable field that CloudKit automatically indexes
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
             var fetched: [CKRecord] = []
+            let fetchedLock = NSLock() // CloudKit may call recordMatchedBlock concurrently.
             var didFinish = false
 
             func run(with cursor: CKQueryOperation.Cursor?) {
@@ -646,7 +650,9 @@ actor CloudBackupManager {
                 operation.recordMatchedBlock = { _, result in
                     switch result {
                     case .success(let record):
+                        fetchedLock.lock()
                         fetched.append(record)
+                        fetchedLock.unlock()
                     case .failure:
                         break
                     }

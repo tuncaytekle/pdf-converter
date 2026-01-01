@@ -173,8 +173,7 @@ final class ScanFlowCoordinator {
     /// Deletes the temporary PDF sitting in `/tmp` once we no longer need it
     /// - Parameter url: The URL of the temporary file to delete
     func cleanupTemporaryFile(at url: URL?) {
-        guard let url else { return }
-        try? FileManager.default.removeItem(at: url)
+        PDFStorage.deleteTemporaryFile(at: url)
     }
 
     // MARK: - Private Helpers

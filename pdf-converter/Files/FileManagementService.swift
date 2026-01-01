@@ -26,6 +26,7 @@ final class FileManagementService {
 
     /// Active page count loading task
     private var pageCountLoadingTask: Task<Void, Never>?
+    private let metadataActor = PDFMetadataActor()
 
     // MARK: - Dependencies
 
@@ -80,22 +81,27 @@ final class FileManagementService {
                 // Check for cancellation before each file
                 guard !Task.isCancelled else { return }
 
-                let pageCount = await PDFStorage.computePageCount(for: file.url)
+                let fileURL = file.url
+                let fileStableID = file.stableID
+
+                // Compute page count off-main via a background actor to avoid UI stalls.
+                let pageCount = await metadataActor.pageCount(for: fileURL)
 
                 // Check again after computation
                 guard !Task.isCancelled else { return }
 
-                // Update this specific file in the array with the computed page count
-                // (even if it's 0 - that might be the correct value for empty/corrupted PDFs)
-                if let index = files.firstIndex(where: { $0.id == file.id }) {
+                // Update UI state on MainActor, validating stableID to avoid races.
+                if let index = files.firstIndex(where: { $0.stableID == fileStableID }),
+                   files[index].stableID == fileStableID {
+                    let current = files[index]
                     files[index] = PDFFile(
-                        url: file.url,
-                        name: file.name,
-                        date: file.date,
+                        url: current.url,
+                        name: current.name,
+                        date: current.date,
                         pageCount: pageCount,
-                        fileSize: file.fileSize,
-                        folderId: file.folderId,
-                        stableID: file.stableID  // Preserve stable ID
+                        fileSize: current.fileSize,
+                        folderId: current.folderId,
+                        stableID: current.stableID  // Preserve stable ID
                     )
                 }
             }
@@ -251,7 +257,7 @@ final class FileManagementService {
 
         // Delete each file
         for file in filesInFolder {
-            try? FileManager.default.removeItem(at: file.url)
+            try? PDFStorage.delete(file: file)
         }
 
         // Remove files from the array

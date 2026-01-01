@@ -381,7 +381,7 @@ final class AppCoordinator {
             return ShareItem(
                 url: shareURL,
                 cleanupHandler: {
-                    try? FileManager.default.removeItem(at: shareURL)
+                    PDFStorage.deleteTemporaryFile(at: shareURL)
                 }
             )
         } catch {
@@ -666,14 +666,14 @@ final class AppCoordinator {
             }
 
             _ = try FileManager.default.replaceItemAt(context.file.url, withItemAt: tempURL)
-            try? FileManager.default.removeItem(at: tempURL)
+            PDFStorage.deleteTemporaryFile(at: tempURL)
 
             Task {
                 await fileService.refreshFromDisk()
             }
             editingContext = nil
         } catch {
-            try? FileManager.default.removeItem(at: tempURL)
+            PDFStorage.deleteTemporaryFile(at: tempURL)
             alertContext = ScanAlert(
                 title: NSLocalizedString("alert.saveFailed.title", comment: "Save failed title"),
                 message: NSLocalizedString("alert.saveFailed.message", comment: "Save failed message"),
