@@ -25,6 +25,7 @@ struct FilesView: View {
     @State private var renameFolderName = ""
     @StateObject private var contentIndexer = FileContentIndexer()
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var cloudSyncStatus: CloudSyncStatus
 
     let onPreview: (PDFFile) -> Void
     let onShare: (PDFFile) -> Void
@@ -128,11 +129,17 @@ struct FilesView: View {
             PDFThumbnailView(file: file, size: thumbnailSize)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(file.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                HStack(spacing: 6) {
+                    Text(file.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    // Cloud sync indicator
+                    cloudSyncIndicator(for: file)
+                }
+
                 Text(file.detailsSummary)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -200,6 +207,39 @@ struct FilesView: View {
         .padding(.vertical, 10)
         .task {
             contentIndexer.ensureTextIndex(for: file)
+        }
+    }
+
+    @ViewBuilder
+    private func cloudSyncIndicator(for file: PDFFile) -> some View {
+        if let status = cloudSyncStatus.getFileStatus(file.url) {
+            switch status {
+            case .synced:
+                Image(systemName: "checkmark.icloud.fill")
+                    .font(.caption)
+                    .foregroundColor(.green)
+                    .accessibilityLabel(NSLocalizedString("Synced to iCloud", comment: "File synced status"))
+
+            case .syncing:
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .accessibilityLabel(NSLocalizedString("Syncing to iCloud", comment: "File syncing status"))
+
+            case .failed(let error):
+                Button(action: {
+                    // Retry sync for this file
+                    Task {
+                        await cloudBackup.backup(file: file, syncStatus: cloudSyncStatus)
+                    }
+                }) {
+                    Image(systemName: "exclamationmark.icloud.fill")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(NSLocalizedString("Sync failed, tap to retry", comment: "File sync failed status"))
+                .help(error)
+            }
         }
     }
 

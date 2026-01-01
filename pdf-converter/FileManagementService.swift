@@ -32,10 +32,19 @@ final class FileManagementService {
     /// Cloud backup manager for sync operations
     private let cloudBackup: CloudBackupManager
 
+    /// Cloud sync status for user feedback (optional)
+    private weak var syncStatus: CloudSyncStatus?
+
     // MARK: - Initialization
 
-    init(cloudBackup: CloudBackupManager = .shared) {
+    init(cloudBackup: CloudBackupManager = .shared, syncStatus: CloudSyncStatus? = nil) {
         self.cloudBackup = cloudBackup
+        self.syncStatus = syncStatus
+    }
+
+    /// Sets the sync status reporter (called after initialization)
+    func setSyncStatus(_ status: CloudSyncStatus?) {
+        self.syncStatus = status
     }
 
     nonisolated deinit {
@@ -276,12 +285,12 @@ final class FileManagementService {
 
     /// Backs up a single file to CloudKit
     private func backupToCloud(_ file: PDFFile) async {
-        await cloudBackup.backup(file: file)
+        await cloudBackup.backup(file: file, syncStatus: syncStatus)
     }
 
     /// Backs up multiple files to CloudKit
     private func backupToCloud(_ files: [PDFFile]) async {
-        await cloudBackup.backup(files: files)
+        await cloudBackup.backup(files: files, syncStatus: syncStatus)
     }
 
     /// Deletes a file's cloud backup

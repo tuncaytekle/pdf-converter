@@ -29,6 +29,7 @@ struct ContentView: View {
     @StateObject private var subscriptionManager = SubscriptionManager()
     @State private var subscriptionGate: SubscriptionGate!
     @StateObject private var tabNavVM = TabNavigationViewModel()
+    @EnvironmentObject private var cloudSyncStatus: CloudSyncStatus
     @Environment(\.analytics) private var analytics
     @Environment(\.colorScheme) private var scheme
 
@@ -83,6 +84,9 @@ struct ContentView: View {
                 subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
             }
             if coordinator == nil {
+                // Set sync status in file service for cloud backup feedback
+                fileService.setSyncStatus(cloudSyncStatus)
+
                 coordinator = AppCoordinator(
                     subscriptionManager: subscriptionManager,
                     subscriptionGate: subscriptionGate!,
@@ -431,12 +435,16 @@ extension ContentView {
 
     /// Outer container holding the tab interface and floating compose button.
     private var rootContent: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             tabInterface
 
             if coordinator.selectedTab == .files {
                 floatingCreateButton
             }
+
+            // Cloud sync status banner at the top
+            CloudSyncBanner(status: cloudSyncStatus)
+                .zIndex(100)
         }
     }
 

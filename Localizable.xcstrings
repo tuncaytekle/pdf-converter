@@ -3532,7 +3532,330 @@
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "**PDF Converter**’dan Merhaba"
+            "value" : "**PDF Converter**'dan Merhaba"
+          }
+        }
+      }
+    },
+    "1 file backed up" : {
+      "comment" : "Single file backed up",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 file backed up"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 dosya yedeklendi"
+          }
+        }
+      }
+    },
+    "%d files backed up" : {
+      "comment" : "Multiple files backed up",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d files backed up"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d dosya yedeklendi"
+          }
+        }
+      }
+    },
+    "%d of %d files backed up" : {
+      "comment" : "Partial backup success",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d of %d files backed up"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d / %d dosya yedeklendi"
+          }
+        }
+      }
+    },
+    "Failed to back up file" : {
+      "comment" : "Single file backup failed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to back up file"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dosya yedeklenemedi"
+          }
+        }
+      }
+    },
+    "Failed to back up %d files" : {
+      "comment" : "Multiple files backup failed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to back up %d files"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d dosya yedeklenemedi"
+          }
+        }
+      }
+    },
+    "iCloud access restricted" : {
+      "comment" : "iCloud restricted",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud access restricted"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud erişimi kısıtlı"
+          }
+        }
+      }
+    },
+    "iCloud not configured" : {
+      "comment" : "CloudKit not initialized",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud not configured"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud yapılandırılmamış"
+          }
+        }
+      }
+    },
+    "iCloud Sync Failed" : {
+      "comment" : "Sync error title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Sync Failed"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Senkronizasyonu Başarısız"
+          }
+        }
+      }
+    },
+    "iCloud temporarily unavailable" : {
+      "comment" : "Temporarily unavailable",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud temporarily unavailable"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud geçici olarak kullanılamıyor"
+          }
+        }
+      }
+    },
+    "iCloud Unavailable" : {
+      "comment" : "iCloud unavailable title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Unavailable"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Kullanılamıyor"
+          }
+        }
+      }
+    },
+    "Not signed in to iCloud" : {
+      "comment" : "No iCloud account",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not signed in to iCloud"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud'a giriş yapılmamış"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "comment" : "Settings button",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar"
+          }
+        }
+      }
+    },
+    "Sync failed, tap to retry" : {
+      "comment" : "File sync failed status",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync failed, tap to retry"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senkronizasyon başarısız, tekrar denemek için dokun"
+          }
+        }
+      }
+    },
+    "Synced to iCloud" : {
+      "comment" : "File synced status",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synced to iCloud"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud'a senkronize edildi"
+          }
+        }
+      }
+    },
+    "Syncing %d files..." : {
+      "comment" : "Syncing multiple files",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing %d files..."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d dosya senkronize ediliyor..."
+          }
+        }
+      }
+    },
+    "Syncing 1 file..." : {
+      "comment" : "Syncing single file",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing 1 file..."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 dosya senkronize ediliyor..."
+          }
+        }
+      }
+    },
+    "Syncing to iCloud" : {
+      "comment" : "File syncing status",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing to iCloud"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud'a senkronize ediliyor"
+          }
+        }
+      }
+    },
+    "Unable to verify iCloud status" : {
+      "comment" : "Could not determine",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to verify iCloud status"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud durumu doğrulanamıyor"
+          }
+        }
+      }
+    },
+    "Unknown iCloud status" : {
+      "comment" : "Unknown status",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown iCloud status"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilinmeyen iCloud durumu"
           }
         }
       }

@@ -28,16 +28,25 @@ actor CloudBackupManager {
     }
 
     /// Uploads a PDF and its metadata to CloudKit.
-    func backup(file: PDFFile) async {
-        await backup(files: [file])
+    func backup(file: PDFFile, syncStatus: CloudSyncStatus? = nil) async {
+        await backup(files: [file], syncStatus: syncStatus)
     }
 
     /// Uploads multiple PDFs sequentially.
-    func backup(files: [PDFFile]) async {
-        guard await isCloudAvailable(), let database else {
+    func backup(files: [PDFFile], syncStatus: CloudSyncStatus? = nil) async {
+        // Report syncing status
+        if let syncStatus {
+            await syncStatus.setSyncing(count: files.count)
+        }
+
+        let (isAvailable, unavailableReason) = await checkCloudAvailability()
+        guard isAvailable, let database else {
 #if DEBUG
-            print("☁️ Cloud backup skipped: iCloud not available or not signed in")
+            print("☁️ Cloud backup skipped: \(unavailableReason ?? "iCloud not available")")
 #endif
+            if let syncStatus, let reason = unavailableReason {
+                await syncStatus.setUnavailable(reason)
+            }
             return
         }
 #if DEBUG
@@ -45,13 +54,28 @@ actor CloudBackupManager {
         print("☁️ Container: \(container?.containerIdentifier ?? "none")")
         print("☁️ Database: \(database.databaseScope.rawValue)")
 #endif
+
+        var successCount = 0
+        var failedFiles: [(PDFFile, String)] = []
+
         for file in files {
+            // Report per-file syncing status
+            if let syncStatus {
+                await syncStatus.setFileSyncing(file.url)
+            }
+
             guard FileManager.default.fileExists(atPath: file.url.path) else {
 #if DEBUG
                 print("☁️ File does not exist at path: \(file.url.path)")
 #endif
+                let errorMsg = "File not found"
+                failedFiles.append((file, errorMsg))
+                if let syncStatus {
+                    await syncStatus.setFileFailed(file.url, error: errorMsg)
+                }
                 continue
             }
+
             do {
                 // Use stable UUID as record name to avoid collisions and orphans
                 let recordID = CKRecord.ID(recordName: file.stableID)
@@ -83,6 +107,12 @@ actor CloudBackupManager {
                 print("☁️ ✅ Successfully backed up: \(file.name)")
                 print("☁️ Saved record ID: \(result.saveResults.first?.key.recordName ?? "unknown")")
 #endif
+                successCount += 1
+
+                // Report per-file success
+                if let syncStatus {
+                    await syncStatus.setFileSynced(file.url)
+                }
             } catch {
 #if DEBUG
                 print("☁️ ❌ Cloud backup failed for \(file.name): \(error)")
@@ -91,6 +121,32 @@ actor CloudBackupManager {
                     print("☁️ CKError description: \(ckError.localizedDescription)")
                 }
 #endif
+                let errorMsg = error.localizedDescription
+                failedFiles.append((file, errorMsg))
+
+                // Report per-file failure
+                if let syncStatus {
+                    await syncStatus.setFileFailed(file.url, error: errorMsg)
+                }
+            }
+        }
+
+        // Report overall result
+        if let syncStatus {
+            if failedFiles.isEmpty {
+                let message = successCount == 1
+                    ? NSLocalizedString("1 file backed up", comment: "Single file backed up")
+                    : String(format: NSLocalizedString("%d files backed up", comment: "Multiple files backed up"), successCount)
+                await syncStatus.setSuccess(message)
+            } else if successCount == 0 {
+                let message = failedFiles.count == 1
+                    ? NSLocalizedString("Failed to back up file", comment: "Single file backup failed")
+                    : String(format: NSLocalizedString("Failed to back up %d files", comment: "Multiple files backup failed"), failedFiles.count)
+                await syncStatus.setError(message)
+            } else {
+                // Partial success
+                let message = String(format: NSLocalizedString("%d of %d files backed up", comment: "Partial backup success"), successCount, files.count)
+                await syncStatus.setError(message)
             }
         }
     }
@@ -418,6 +474,35 @@ actor CloudBackupManager {
     }
 
     // MARK: - Private helpers
+
+    /// Checks cloud availability and returns user-friendly reason if unavailable
+    private func checkCloudAvailability() async -> (isAvailable: Bool, reason: String?) {
+        guard let container else {
+            return (false, NSLocalizedString("iCloud not configured", comment: "CloudKit not initialized"))
+        }
+
+        do {
+            let status = try await container.accountStatus()
+            cachedAccountStatus = status
+
+            switch status {
+            case .available:
+                return (true, nil)
+            case .noAccount:
+                return (false, NSLocalizedString("Not signed in to iCloud", comment: "No iCloud account"))
+            case .restricted:
+                return (false, NSLocalizedString("iCloud access restricted", comment: "iCloud restricted"))
+            case .couldNotDetermine:
+                return (false, NSLocalizedString("Unable to verify iCloud status", comment: "Could not determine"))
+            case .temporarilyUnavailable:
+                return (false, NSLocalizedString("iCloud temporarily unavailable", comment: "Temporarily unavailable"))
+            @unknown default:
+                return (false, NSLocalizedString("Unknown iCloud status", comment: "Unknown status"))
+            }
+        } catch {
+            return (false, error.localizedDescription)
+        }
+    }
 
     private func isCloudAvailable() async -> Bool {
         guard let container else {

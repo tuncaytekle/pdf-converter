@@ -7,6 +7,7 @@ import PostHog
 struct PDFConverterApp: App {
     private let persistenceController = PersistenceController.shared
     private let tracker: AnalyticsTracking
+    @StateObject private var cloudSyncStatus = CloudSyncStatus()
 
     init() {
         let POSTHOG_API_KEY = "phc_FQdK7M4eYcjjhgNYiHScD1OoeOyYFVMwqWR2xvoq4yR"
@@ -43,6 +44,7 @@ struct PDFConverterApp: App {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(\.analytics, tracker)
+                .environmentObject(cloudSyncStatus)
         }
     }
 }
