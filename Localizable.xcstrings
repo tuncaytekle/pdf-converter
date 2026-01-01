@@ -705,6 +705,7 @@
     },
     "alert.conversionUnavailable.message" : {
       "comment" : "Conversion unavailable message",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -722,6 +723,7 @@
     },
     "alert.conversionUnavailable.title" : {
       "comment" : "Conversion unavailable title",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -994,6 +996,7 @@
     },
     "alert.noPages.message" : {
       "comment" : "No pages captured message",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1011,6 +1014,7 @@
     },
     "alert.noPages.title" : {
       "comment" : "No pages captured title",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1096,6 +1100,7 @@
     },
     "alert.pdfError.message" : {
       "comment" : "PDF error message",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

@@ -6,6 +6,7 @@ import PostHog
 /// Animated paywall presented to users who have never purchased a subscription
 struct PaywallView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var subscriptionGate: SubscriptionGate
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -58,7 +59,7 @@ struct PaywallView: View {
 
                 if newState == .purchased {
                     // Dismiss paywall after successful purchase
-                    dismiss()
+                    subscriptionGate.showPaywall = false
                 }
             }
             .postHogScreenView("Paywall", [
@@ -202,7 +203,7 @@ struct PaywallView: View {
             HStack {
                 Button(action: {
                     vm.trackPaywallDismissedIfNeeded(analytics: analytics, dismissMethod: "close_button")
-                    dismiss()
+                    subscriptionGate.showPaywall = false
                 }) {
                     Image(systemName: "xmark")
                         .font(metrics.f3Font)
@@ -501,13 +502,18 @@ struct CustomToggleStyle: ToggleStyle {
 
 struct PaywallView_Previews: PreviewProvider {
     static var previews: some View {
+        let subscriptionManager = SubscriptionManager()
+        let subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
+
         Group {
             PaywallView(productId: "com.example.product", source: "preview")
-                .environmentObject(SubscriptionManager())
+                .environmentObject(subscriptionManager)
+                .environmentObject(subscriptionGate)
                 .environment(\.locale, .init(identifier: "en"))
 
             PaywallView(productId: "com.example.product", source: "preview")
-                .environmentObject(SubscriptionManager())
+                .environmentObject(subscriptionManager)
+                .environmentObject(subscriptionGate)
                 .environment(\.locale, .init(identifier: "tr"))
         }
     }

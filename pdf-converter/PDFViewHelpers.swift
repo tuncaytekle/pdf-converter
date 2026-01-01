@@ -84,9 +84,7 @@ struct PDFThumbnailView: View {
 struct SavedPDFDetailView: View {
     let file: PDFFile
     @State private var showShareSheet = false
-    @EnvironmentObject private var subscriptionManager: SubscriptionManager
-    @Binding var showPaywall: Bool
-    @Binding var paywallSource: String
+    @EnvironmentObject private var subscriptionGate: SubscriptionGate
 
     var body: some View {
         PDFPreviewView(url: file.url)
@@ -96,14 +94,9 @@ struct SavedPDFDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        // Check subscription before sharing
-                        guard subscriptionManager.isSubscribed else {
-                            paywallSource = "pdf_preview_share"
-                            showPaywall = true
-                            return
+                        subscriptionGate.requireSubscription(for: "pdf_preview_share") {
+                            showShareSheet = true
                         }
-
-                        showShareSheet = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }

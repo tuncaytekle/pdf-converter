@@ -17,47 +17,44 @@ struct ContentView: View {
         subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
         category: "Gotenberg"
     )
-    private let cloudBackup = CloudBackupManager.shared
-    private let gotenbergClient = ContentView.makeGotenbergClient()
+
+    // MARK: - Coordinators & Services
+
+    @State private var coordinator: AppCoordinator!
+    @State private var fileService: FileManagementService
+    @State private var scanCoordinator: ScanFlowCoordinator
+
+    // MARK: - Environment
 
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @State private var subscriptionGate: SubscriptionGate!
     @StateObject private var tabNavVM = TabNavigationViewModel()
     @Environment(\.analytics) private var analytics
-    @State private var selection: Tab = .files
-    @State private var showCreateActions = false
-    @State private var files: [PDFFile] = []
-    @State private var folders: [PDFFolder] = []
-    @State private var activeScanFlow: ScanFlow?
-    @State private var pendingDocument: ScannedDocument?
-    @State fileprivate var shareItem: ShareItem?
-    @State private var alertContext: ScanAlert?
-    @State private var hasLoadedInitialFiles = false
-    @State private var previewFile: PDFFile?
-    @State private var renameTarget: PDFFile?
-    @State private var renameText: String = ""
-    @State private var deleteTarget: PDFFile?
-    @State private var showDeleteDialog = false
-    @State private var deleteFolderTarget: PDFFolder?
-    @State private var showDeleteFolderDialog = false
-    @State private var showImporter = false
-    @State private var importerTrigger = UUID()
-    @State private var showConvertPicker = false
-    @State private var showWebURLPrompt = false
-    @State private var webURLInput: String = ""
-    @State private var showEditSelector = false
-    @State private var editingContext: PDFEditingContext?
+    @Environment(\.colorScheme) private var scheme
+
+    // MARK: - Scene-Scoped State
+
+    @SceneStorage("requireBiometrics") private var requireBiometrics = false
+
+    // MARK: - UI State (stays in view)
+
     @State private var createButtonPulse = false
     @State private var didAnimateCreateButtonCue = false
-    @State private var isConvertingFile = false
-    @State private var showPaywall = false
-    @State private var paywallSource = "onboarding"
-    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-    @State private var hasCheckedPaywall = false
-    @State private var documentPendingAfterPaywall: ScannedDocument?
-    @State private var editingContextPendingAfterPaywall: PDFEditingContext?
-    @SceneStorage("requireBiometrics") private var requireBiometrics = false
-    @Environment(\.colorScheme) private var scheme
-    @State private var hasAttemptedCloudRestore = false
+
+    // MARK: - Initialization
+
+    init() {
+        let cloudBackup = CloudBackupManager.shared
+        let gotenbergClient = Self.makeGotenbergClient()
+
+        let fileService = FileManagementService(cloudBackup: cloudBackup)
+        let scanCoordinator = ScanFlowCoordinator(
+            gotenbergClient: gotenbergClient,
+            fileService: fileService
+        )
+        _fileService = State(initialValue: fileService)
+        _scanCoordinator = State(initialValue: scanCoordinator)
+    }
 
     private static func makeGotenbergClient() -> GotenbergClient? {
         guard let baseURL = Bundle.main.gotenbergBaseURL else {
@@ -73,217 +70,342 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if hasCheckedPaywall && !showPaywall {
-                rootContent
+            if let coordinator = coordinator, let subscriptionGate = subscriptionGate {
+                contentView(coordinator: coordinator, subscriptionGate: subscriptionGate)
             } else {
                 Color(.systemBackground).ignoresSafeArea()
             }
         }
         .environmentObject(subscriptionManager)
-        .onAppear(perform: checkPaywallAndLoadFiles)
-        // Present whatever flow you need
-        .sheet(item: $activeScanFlow) { flow in
+        .task {
+            // Initialize subscription gate and coordinator on first appearance
+            if subscriptionGate == nil {
+                subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
+            }
+            if coordinator == nil {
+                coordinator = AppCoordinator(
+                    subscriptionManager: subscriptionManager,
+                    subscriptionGate: subscriptionGate!,
+                    fileService: fileService,
+                    scanCoordinator: scanCoordinator
+                )
+                coordinator?.checkPaywallOnLaunch()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func contentView(coordinator: AppCoordinator, subscriptionGate: SubscriptionGate) -> some View {
+        rootContent
+            .environmentObject(subscriptionGate)
+        .modifier(ScanFlowSheets(coordinator: coordinator, scanCoordinator: scanCoordinator, subscriptionManager: subscriptionManager))
+        .modifier(FileManagementSheets(coordinator: coordinator, fileService: fileService, subscriptionManager: subscriptionManager))
+        .modifier(FileImporters(coordinator: coordinator))
+        .modifier(ConfirmationDialogs(coordinator: coordinator, fileService: fileService, subscriptionManager: subscriptionManager, subscriptionGate: subscriptionGate))
+        .modifier(PaywallPresenter(coordinator: coordinator, subscriptionManager: subscriptionManager, subscriptionGate: subscriptionGate))
+    }
+}
+
+// MARK: - View Modifiers for Sheet Presentations
+private struct ScanFlowSheets: ViewModifier {
+    let coordinator: AppCoordinator
+    let scanCoordinator: ScanFlowCoordinator
+    let subscriptionManager: SubscriptionManager
+
+    func body(content: Content) -> some View {
+        content
+        .sheet(item: coordinator.binding(for: \.activeScanFlow)) { flow in
             switch flow {
             case .documentCamera:
                 DocumentScannerView { result in
-                    handleScanResult(result, suggestedName: defaultFileName(prefix: "Scan"))
+                    coordinator.handleScanResult(result, suggestedName: scanCoordinator.defaultFileName(prefix: "Scan"))
                 }
             case .photoLibrary:
                 PhotoPickerView { result in
-                    handleScanResult(result, suggestedName: defaultFileName(prefix: "Photos"))
+                    coordinator.handleScanResult(result, suggestedName: scanCoordinator.defaultFileName(prefix: "Photos"))
                 }
             }
         }
-        .sheet(item: $pendingDocument) { document in
+        .sheet(item: coordinator.binding(for: \.pendingDocument)) { document in
             ScanReviewSheet(
                 document: document,
-                onSave: { saveScannedDocument($0) },
-                onShare: { shareScannedDocument($0) },
-                onCancel: { discardTemporaryDocument($0) },
-                showPaywall: $showPaywall,
-                paywallSource: $paywallSource,
-                documentPendingAfterPaywall: $documentPendingAfterPaywall
+                onSave: { coordinator.saveScanDocument($0) },
+                onShare: { coordinator.shareScanDocument($0) },
+                onCancel: { coordinator.discardScanDocument($0) }
             )
-            .environmentObject(subscriptionManager)
         }
-        .sheet(item: $previewFile) { file in
+    }
+}
+
+private struct FileManagementSheets: ViewModifier {
+    let coordinator: AppCoordinator
+    let fileService: FileManagementService
+    let subscriptionManager: SubscriptionManager
+
+    func body(content: Content) -> some View {
+        content
+        .sheet(item: coordinator.binding(for: \.previewFile)) { file in
             NavigationView {
-                SavedPDFDetailView(
-                    file: file,
-                    showPaywall: $showPaywall,
-                    paywallSource: $paywallSource
-                )
-                .environmentObject(subscriptionManager)
+                SavedPDFDetailView(file: file)
             }
         }
-        .sheet(item: $renameTarget) { file in
-            RenameFileSheet(fileName: $renameText) {
-                renameTarget = nil
-                renameText = file.name
+        .sheet(item: coordinator.binding(for: \.renameTarget)) { file in
+            RenameFileSheet(fileName: Binding(
+                get: { coordinator.renameText },
+                set: { coordinator.renameText = $0 }
+            )) {
+                coordinator.renameTarget = nil
+                coordinator.renameText = file.name
             } onSave: {
-                applyRename(for: file, newName: renameText)
+                coordinator.applyRename(for: file, newName: coordinator.renameText)
             }
         }
-        .sheet(item: $shareItem) { item in
+        .sheet(item: coordinator.binding(for: \.shareItem)) { item in
             ShareSheet(activityItems: [item.url]) {
                 item.cleanupHandler?()
-                shareItem = nil
+                coordinator.shareItem = nil
             }
         }
-        .sheet(isPresented: $showWebURLPrompt) {
+        .sheet(isPresented: Binding(
+            get: { coordinator.showWebURLPrompt },
+            set: { coordinator.showWebURLPrompt = $0 }
+        )) {
             WebConversionPrompt(
-                urlString: $webURLInput,
+                urlString: Binding(
+                    get: { coordinator.webURLInput },
+                    set: { coordinator.webURLInput = $0 }
+                ),
                 onConvert: { input in
-                    await handleWebConversion(urlString: input)
+                    await coordinator.handleWebConversion(urlString: input)
+                    return true
                 },
                 onCancel: {
-                    showWebURLPrompt = false
+                    coordinator.showWebURLPrompt = false
                 }
             )
         }
-        .sheet(isPresented: $showEditSelector) {
+        .sheet(isPresented: Binding(
+            get: { coordinator.showEditSelector },
+            set: { coordinator.showEditSelector = $0 }
+        )) {
             NavigationView {
                 PDFEditorSelectionView(
-                    files: $files,
+                    files: Binding(
+                        get: { fileService.files },
+                        set: { fileService.files = $0 }
+                    ),
                     onSelect: { file in
-                        beginEditing(file)
+                        coordinator.beginEditing(file)
                     },
                     onCancel: {
-                        showEditSelector = false
+                        coordinator.showEditSelector = false
                     }
                 )
             }
             .navigationViewStyle(.stack)
         }
-        .sheet(item: $editingContext) { context in
+        .sheet(item: coordinator.binding(for: \.editingContext)) { context in
             NavigationView {
                 PDFEditorView(
                     context: context,
                     onSave: {
-                        saveEditedDocument(context)
+                        coordinator.saveEditedDocument(context)
                     },
                     onCancel: {
-                        editingContext = nil
-                    },
-                    showPaywall: $showPaywall,
-                    paywallSource: $paywallSource,
-                    editingContextPendingAfterPaywall: $editingContextPendingAfterPaywall
+                        coordinator.editingContext = nil
+                    }
                 )
-                .environmentObject(subscriptionManager)
             }
             .navigationViewStyle(.stack)
         }
+    }
+}
+
+private struct FileImporters: ViewModifier {
+    let coordinator: AppCoordinator
+
+    func body(content: Content) -> some View {
+        content
         .background(
             EmptyView()
-                .id(importerTrigger)
+                .id(coordinator.importerTrigger)
                 .fileImporter(
-                    isPresented: $showImporter,
+                    isPresented: Binding(
+                        get: { coordinator.showImporter },
+                        set: { coordinator.showImporter = $0 }
+                    ),
                     allowedContentTypes: [.pdf],
                     allowsMultipleSelection: true,
-                    onCompletion: handleImportResult
+                    onCompletion: coordinator.handleImportResult
                 )
         )
-        .background(                                    // <- isolated host for “Convert Files to PDF”
+        .background(                                    // <- isolated host for "Convert Files to PDF"
             EmptyView()
                 .fileImporter(
-                    isPresented: $showConvertPicker,
-                    allowedContentTypes: Self.convertibleContentTypes,
+                    isPresented: Binding(
+                        get: { coordinator.showConvertPicker },
+                        set: { coordinator.showConvertPicker = $0 }
+                    ),
+                    allowedContentTypes: ContentView.convertibleContentTypes,
                     allowsMultipleSelection: false,
-                    onCompletion: handleConvertResult
+                    onCompletion: coordinator.handleConvertResult
                 )
         )
-        .confirmationDialog(NSLocalizedString("dialog.deletePDF.title", comment: "Delete PDF confirmation"), isPresented: $showDeleteDialog, presenting: deleteTarget) { file in
+    }
+}
+
+private struct ConfirmationDialogs: ViewModifier {
+    let coordinator: AppCoordinator
+    let fileService: FileManagementService
+    let subscriptionManager: SubscriptionManager
+    let subscriptionGate: SubscriptionGate
+
+    func body(content: Content) -> some View {
+        content
+        .confirmationDialog(NSLocalizedString("dialog.deletePDF.title", comment: "Delete PDF confirmation"), isPresented: Binding(
+            get: { coordinator.showDeleteDialog },
+            set: { coordinator.showDeleteDialog = $0 }
+        ), presenting: coordinator.deleteTarget) { file in
             Button(role: .destructive) {
-                deleteFile(file)
+                coordinator.deleteFile(file)
             } label: {
                 Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
             }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
-                deleteTarget = nil
-                showDeleteDialog = false
+                coordinator.deleteTarget = nil
+                coordinator.showDeleteDialog = false
             }
         } message: { file in
             Text(String(format: NSLocalizedString("dialog.deletePDF.message", comment: "Delete PDF message"), file.name))
         }
         .confirmationDialog(
             NSLocalizedString("dialog.deleteFolder.title", comment: "Delete folder confirmation title"),
-            isPresented: $showDeleteFolderDialog,
-            presenting: deleteFolderTarget
+            isPresented: Binding(
+                get: { coordinator.showDeleteFolderDialog },
+                set: { coordinator.showDeleteFolderDialog = $0 }
+            ),
+            presenting: coordinator.deleteFolderTarget
         ) { folder in
             Button(role: .destructive) {
-                deleteFolderAction(folder)
+                coordinator.deleteFolderAction(folder)
             } label: {
                 Label(NSLocalizedString("action.delete", comment: "Delete action"), systemImage: "trash")
             }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) {
-                deleteFolderTarget = nil
-                showDeleteFolderDialog = false
+                coordinator.deleteFolderTarget = nil
+                coordinator.showDeleteFolderDialog = false
             }
         } message: { folder in
-            let fileCount = files.filter { $0.folderId == folder.id }.count
+            let fileCount = fileService.files.filter { $0.folderId == folder.id }.count
             Text(String(format: NSLocalizedString("dialog.deleteFolder.message", comment: "Delete folder message"), fileCount))
         }
-        .alert(item: $alertContext) { context in
+        .alert(item: coordinator.binding(for: \.alertContext)) { context in
             Alert(
                 title: Text(context.title),
                 message: Text(context.message),
                 dismissButton: .default(Text(NSLocalizedString("action.ok", comment: "OK action"))) {
-                    alertContext = nil
+                    coordinator.alertContext = nil
                     context.onDismiss?()
                 }
             )
         }
-        .fullScreenCover(isPresented: $showPaywall) {
-            PaywallView(productId: Bundle.main.subscriptionProductID, source: paywallSource)
-                .environmentObject(subscriptionManager)
+        .fullScreenCover(isPresented: Binding(
+            get: { coordinator.showOnboarding },
+            set: { coordinator.showOnboarding = $0 }
+        )) {
+            OnboardingFlowView(isPresented: Binding(
+                get: { coordinator.showOnboarding },
+                set: { coordinator.showOnboarding = $0 }
+            ))
         }
-        .onChange(of: showPaywall) { _, isShowing in
-            // When paywall is dismissed after onboarding flow, mark onboarding as completed
-            if !isShowing && !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            }
-
-            // When paywall is dismissed, restore the scan review sheet if needed
-            if !isShowing, let savedDoc = documentPendingAfterPaywall {
-                documentPendingAfterPaywall = nil
-                // Small delay to ensure paywall dismiss animation completes
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    pendingDocument = savedDoc
-                }
-            }
-
-            // When paywall is dismissed, restore the PDF editor if needed
-            if !isShowing, let savedContext = editingContextPendingAfterPaywall {
-                editingContextPendingAfterPaywall = nil
-                // Small delay to ensure paywall dismiss animation completes
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    editingContext = savedContext
-                }
-            }
-        }
-        .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingFlowView(isPresented: $showOnboarding)
-        }
-        .onChange(of: showOnboarding) { _, isShowing in
+        .onChange(of: coordinator.showOnboarding) { _, isShowing in
             // When onboarding flow is dismissed on first launch, show paywall
             if !isShowing && !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-                showPaywall = true
+                subscriptionGate.showPaywall = true
             }
         }
-        .confirmationDialog("", isPresented: $showCreateActions, titleVisibility: .hidden) {
-            Button { scanDocumentsToPDF() } label: {
+        .confirmationDialog("", isPresented: Binding(
+            get: { coordinator.showCreateActions },
+            set: { coordinator.showCreateActions = $0 }
+        ), titleVisibility: .hidden) {
+            Button { coordinator.presentScanFlow(.documentCamera) } label: {
                 Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
             }
-            Button { convertPhotosToPDF() } label: {
+            Button { coordinator.presentScanFlow(.photoLibrary) } label: {
                 Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
             }
-            Button { convertFilesToPDF() } label: {
+            Button {
+                coordinator.showCreateActions = false
+                coordinator.showConvertPicker = true
+            } label: {
                 Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
             }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) { }
         }
         .overlay {
-            if isConvertingFile {
+            if coordinator.isConvertingFile {
+                ZStack {
+                    Color.black.opacity(0.25).ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text(NSLocalizedString("status.converting", comment: "Conversion in progress"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(.systemBackground))
+                    )
+                    .shadow(radius: 8)
+                }
+            }
+        }
+        .alert(item: coordinator.binding(for: \.alertContext)) { context in
+            Alert(
+                title: Text(context.title),
+                message: Text(context.message),
+                dismissButton: .default(Text(NSLocalizedString("action.ok", comment: "OK action"))) {
+                    coordinator.alertContext = nil
+                    context.onDismiss?()
+                }
+            )
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { coordinator.showOnboarding },
+            set: { coordinator.showOnboarding = $0 }
+        )) {
+            OnboardingFlowView(isPresented: Binding(
+                get: { coordinator.showOnboarding },
+                set: { coordinator.showOnboarding = $0 }
+            ))
+        }
+        .onChange(of: coordinator.showOnboarding) { _, isShowing in
+            // When onboarding flow is dismissed on first launch, show paywall
+            if !isShowing && !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+                subscriptionGate.showPaywall = true
+            }
+        }
+        .confirmationDialog("", isPresented: Binding(
+            get: { coordinator.showCreateActions },
+            set: { coordinator.showCreateActions = $0 }
+        ), titleVisibility: .hidden) {
+            Button { coordinator.presentScanFlow(.documentCamera) } label: {
+                Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
+            }
+            Button { coordinator.presentScanFlow(.photoLibrary) } label: {
+                Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
+            }
+            Button {
+                coordinator.showCreateActions = false
+                coordinator.showConvertPicker = true
+            } label: {
+                Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
+            }
+            Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) { }
+        }
+        .overlay {
+            if coordinator.isConvertingFile {
                 ZStack {
                     Color.black.opacity(0.25).ignoresSafeArea()
                     VStack(spacing: 12) {
@@ -302,7 +424,9 @@ struct ContentView: View {
             }
         }
     }
+}
 
+extension ContentView {
     // MARK: - Body Builders
 
     /// Outer container holding the tab interface and floating compose button.
@@ -310,7 +434,7 @@ struct ContentView: View {
         ZStack {
             tabInterface
 
-            if selection == .files {
+            if coordinator.selectedTab == .files {
                 floatingCreateButton
             }
         }
@@ -318,25 +442,34 @@ struct ContentView: View {
 
     /// Hosts the four main tabs and wires callbacks back into `ContentView`.
     private var tabInterface: some View {
-        TabView(selection: $selection) {
+        TabView(selection: Binding(
+            get: { coordinator.selectedTab },
+            set: { coordinator.selectedTab = $0 }
+        )) {
             FilesView(
-                files: $files,
-                folders: $folders,
-                onPreview: { previewSavedFile($0) },
-                onShare: { shareSavedFile($0) },
-                onRename: { beginRenamingFile($0) },
-                onDelete: { confirmDeletion(for: $0) },
-                onDeleteFolder: { confirmFolderDeletion(for: $0) },
-                cloudBackup: cloudBackup
+                files: Binding(
+                    get: { fileService.files },
+                    set: { fileService.files = $0 }
+                ),
+                folders: Binding(
+                    get: { fileService.folders },
+                    set: { fileService.folders = $0 }
+                ),
+                onPreview: { file in Task { await coordinator.presentPreview(file, requireAuth: requireBiometrics) } },
+                onShare: { coordinator.shareSavedFile($0) },
+                onRename: { coordinator.presentRename($0) },
+                onDelete: { coordinator.confirmDelete($0) },
+                onDeleteFolder: { coordinator.confirmFolderDelete($0) },
+                cloudBackup: CloudBackupManager.shared
             )
             .tabItem { Label(NSLocalizedString("tab.files", comment: "Files tab label"), systemImage: "doc") }
             .tag(Tab.files)
             .postHogScreenView("Files", [
-                "file_count": files.count,
-                "folder_count": folders.count
+                "file_count": fileService.files.count,
+                "folder_count": fileService.folders.count
             ])
 
-            ToolsView(onAction: handleToolAction)
+            ToolsView(onAction: coordinator.handleToolAction)
                 .tabItem { Label(NSLocalizedString("tab.tools", comment: "Tools tab label"), systemImage: "wrench.and.screwdriver") }
                 .tag(Tab.tools)
                 .postHogScreenView("Tools")
@@ -346,20 +479,20 @@ struct ContentView: View {
                 .tag(Tab.settings)
                 .postHogScreenView("Settings")
 
-            AccountView(showPaywall: $showPaywall, paywallSource: $paywallSource)
+            AccountView()
                 .tabItem { Label(NSLocalizedString("tab.account", comment: "Account tab label"), systemImage: "person.crop.circle") }
                 .tag(Tab.account)
                 .postHogScreenView("Account", [
                     "subscribed": subscriptionManager.isSubscribed
                 ])
         }
-        .onChange(of: selection) { _, newTab in
+        .onChange(of: coordinator.selectedTab) { _, newTab in
             tabNavVM.trackTabIfNeeded(analytics: analytics, tab: newTab)
             UISelectionFeedbackGenerator().selectionChanged()
         }
         .onAppear {
             // Track initial tab
-            tabNavVM.trackTabIfNeeded(analytics: analytics, tab: selection)
+            tabNavVM.trackTabIfNeeded(analytics: analytics, tab: coordinator.selectedTab)
         }
     }
 
@@ -387,21 +520,24 @@ struct ContentView: View {
 
                     // 2) Menu only controls interaction + icon; no shadow here
                     Menu {
-                        Button { scanDocumentsToPDF() } label: {
+                        Button { coordinator.presentScanFlow(.documentCamera) } label: {
                             Label(
                                 NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"),
                                 systemImage: "doc.text.viewfinder"
                             )
                         }
 
-                        Button { convertPhotosToPDF() } label: {
+                        Button { coordinator.presentScanFlow(.photoLibrary) } label: {
                             Label(
                                 NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"),
                                 systemImage: "photo.on.rectangle"
                             )
                         }
 
-                        Button { convertFilesToPDF() } label: {
+                        Button {
+                            coordinator.showCreateActions = false
+                            coordinator.showConvertPicker = true
+                        } label: {
                             Label(
                                 NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"),
                                 systemImage: "folder"
@@ -441,25 +577,25 @@ struct ContentView: View {
     /// Presents the document camera flow when the hardware supports it.
     private func scanDocumentsToPDF() {
         guard VNDocumentCameraViewController.isSupported else {
-            alertContext = ScanAlert(
+            coordinator.alertContext = ScanAlert(
                 title: NSLocalizedString("alert.scannerUnavailable.title", comment: "Scanner unavailable title"),
                 message: NSLocalizedString("alert.scannerUnavailable.message", comment: "Scanner unavailable message"),
                 onDismiss: nil
             )
             return
         }
-        activeScanFlow = .documentCamera
+        coordinator.activeScanFlow = .documentCamera
     }
 
     /// Opens the shared photo picker so the user can turn images into a PDF.
     private func convertPhotosToPDF() {
-        activeScanFlow = .photoLibrary
+        coordinator.activeScanFlow = .photoLibrary
     }
 
     /// Opens the "convert files" importer after collapsing the quick action sheet.
     private func convertFilesToPDF() {
-        showCreateActions = false
-        showConvertPicker = true
+        coordinator.showCreateActions = false
+        coordinator.showConvertPicker = true
     }
 
     // MARK: - Attention Cues
@@ -481,740 +617,11 @@ struct ContentView: View {
             createButtonPulse = false
         }
     }
-
-    // MARK: - Import & Conversion Flows
-
-    /// Forces SwiftUI to re-present the file importer by toggling a hidden anchor view.
-    @MainActor
-    private func presentImporter() {
-        importerTrigger = UUID()
-        let alreadyPresenting = showImporter
-        showImporter = false
-
-        Task { @MainActor in
-            if alreadyPresenting {
-                try? await Task.sleep(nanoseconds: 150_000_000)
-            }
-            showImporter = true
-        }
-    }
-
-    /// Entry point for `Import Documents` that routes through the shared importer.
-    @MainActor
-    private func importDocuments() {
-        showCreateActions = false
-        presentImporter()
-    }
-
-    /// Prompts the user for a URL that will later be rendered into a placeholder PDF.
-    @MainActor
-    private func promptWebConversion() {
-        showCreateActions = false
-        showWebURLPrompt = true
-    }
-
-    /// Ensures PDFs are loaded, then surfaces the edit selection sheet.
-    @MainActor
-    private func promptEditDocuments() {
-        showCreateActions = false
-        Task {
-            await refreshFilesFromDisk()
-            guard !files.isEmpty else {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.noPDFs.title", comment: "No PDFs available title"),
-                    message: NSLocalizedString("alert.noPDFs.message", comment: "No PDFs available message"),
-                    onDismiss: nil
-                )
-                return
-            }
-            showEditSelector = true
-        }
-    }
-
-    /// Loads the selected PDF into the editing context and presents the editor sheet.
-    @MainActor
-    private func beginEditing(_ file: PDFFile) {
-        guard let document = PDFDocument(url: file.url) else {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.openFailed.title", comment: "Open failed title"),
-                message: NSLocalizedString("alert.openFailed.message", comment: "Open failed message"),
-                onDismiss: nil
-            )
-            return
-        }
-
-        showEditSelector = false
-        let context = PDFEditingContext(file: file, document: document)
-        DispatchQueue.main.async {
-            editingContext = context
-        }
-    }
-
-    /// Writes the edited PDF to disk, replacing the original file atomically.
-    @MainActor
-    private func saveEditedDocument(_ context: PDFEditingContext) {
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("pdf")
-
-        do {
-            guard context.document.write(to: tempURL) else {
-                throw PDFEditingError.writeFailed
-            }
-
-            _ = try FileManager.default.replaceItemAt(context.file.url, withItemAt: tempURL)
-            try? FileManager.default.removeItem(at: tempURL)
-            Task {
-                await refreshFilesFromDisk()
-            }
-            editingContext = nil
-        } catch {
-            try? FileManager.default.removeItem(at: tempURL)
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.saveFailed.title", comment: "Save failed title"),
-                message: NSLocalizedString("alert.saveFailed.message", comment: "Save failed message"),
-                onDismiss: nil
-            )
-        }
-    }
-
-    /// Routes each `ToolAction` tap back into the same flows used by the quick actions.
-    @MainActor
-    private func handleToolAction(_ action: ToolAction) {
-        switch action {
-        case .scanDocuments:
-            scanDocumentsToPDF()
-        case .convertPhotos:
-            convertPhotosToPDF()
-        case .convertFiles:
-            convertFilesToPDF()
-        case .importDocuments:
-            importDocuments()
-        case .convertWebPage:
-            promptWebConversion()
-        case .editDocuments:
-            promptEditDocuments()
-        }
-    }
-
-    // MARK: - Preview & Biometrics
-
-    /// Handles the preview tap by optionally gating behind biometrics.
-    @MainActor
-    private func previewSavedFile(_ file: PDFFile) {
-        guard requireBiometrics else {
-            previewFile = file
-            return
-        }
-
-        Task { @MainActor in
-            await authenticateForPreview(file)
-        }
-    }
-
-    /// Requests biometric authentication when required and surfaces clear alerts per scenario.
-    @MainActor
-    private func authenticateForPreview(_ file: PDFFile) async {
-        let result = await BiometricAuthenticator.authenticate(reason: NSLocalizedString("biometrics.reason.preview", comment: "Reason for biometric prompt"))
-
-        switch result {
-        case .success:
-            handleBiometricResult(granted: true, file: file)
-        case .failed:
-            handleBiometricResult(granted: false, file: file)
-        case .cancelled:
-            break
-        case .unavailable(let message):
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.authUnavailable.title", comment: "Authentication unavailable title"),
-                message: message,
-                onDismiss: nil
-            )
-        case .error(let message):
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.authError.title", comment: "Authentication error title"),
-                message: message,
-                onDismiss: nil
-            )
-        }
-    }
-
-    /// Presents the requested file or alerts when authentication fails.
-    @MainActor
-    private func handleBiometricResult(granted: Bool, file: PDFFile) {
-        if granted {
-            previewFile = file
-        } else {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.authFailed.title", comment: "Authentication failed title"),
-                message: NSLocalizedString("alert.authFailed.message", comment: "Authentication failed message"),
-                onDismiss: nil
-            )
-        }
-    }
-
-    // MARK: - File Management & Sharing
-
-    /// Prepares a share sheet for an already-saved PDF.
-    private func shareSavedFile(_ file: PDFFile) {
-        // Check subscription before sharing
-        guard subscriptionManager.isSubscribed else {
-            paywallSource = "files_list_share"
-            showPaywall = true
-            return
-        }
-
-        shareItem = nil
-        shareItem = ShareItem(url: file.url, cleanupHandler: nil)
-    }
-
-    /// Seeds the rename sheet with the existing file name.
-    private func beginRenamingFile(_ file: PDFFile) {
-        renameText = file.name
-        renameTarget = file
-    }
-
-    /// Stores the pending deletion target and presents the destructive dialog.
-    private func confirmDeletion(for file: PDFFile) {
-        deleteTarget = file
-        showDeleteDialog = true
-    }
-
-    /// Deletes a PDF from storage and reconciles the in-memory list.
-    private func deleteFile(_ file: PDFFile) {
-        do {
-            try PDFStorage.delete(file: file)
-            files.removeAll { $0.url == file.url }
-            deleteTarget = nil
-            showDeleteDialog = false
-            Task {
-                await cloudBackup.deleteBackup(for: file)
-            }
-        } catch {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.deleteFailed.title", comment: "Delete failed title"),
-                message: NSLocalizedString("alert.deleteFailed.message", comment: "Delete failed message"),
-                onDismiss: {
-                    deleteTarget = nil
-                    showDeleteDialog = false
-                }
-            )
-        }
-    }
-
-    /// Stores the pending folder deletion target and presents the destructive dialog.
-    private func confirmFolderDeletion(for folder: PDFFolder) {
-        deleteFolderTarget = folder
-        showDeleteFolderDialog = true
-    }
-
-    /// Deletes a folder and all its files from storage.
-    private func deleteFolderAction(_ folder: PDFFolder) {
-        // Get all files in the folder before deletion
-        let filesInFolder = files.filter { $0.folderId == folder.id }
-
-        withAnimation(.easeInOut(duration: 0.3)) {
-            // Delete each file
-            for file in filesInFolder {
-                try? FileManager.default.removeItem(at: file.url)
-            }
-
-            // Remove files from the array
-            files.removeAll { $0.folderId == folder.id }
-
-            // Remove the folder
-            folders.removeAll { $0.id == folder.id }
-
-            // Save updated folders list
-            PDFStorage.saveFolders(folders)
-        }
-
-        // Delete from CloudKit
-        Task {
-            await cloudBackup.deleteFolder(folder)
-            // Also delete all files in the folder from CloudKit
-            for file in filesInFolder {
-                await cloudBackup.deleteBackup(for: file)
-            }
-        }
-
-        deleteFolderTarget = nil
-        showDeleteFolderDialog = false
-    }
-
-    // MARK: - Import Helpers
-
-    /// Finishes the document importer by persisting selected URLs into the app sandbox.
-    private func handleImportResult(_ result: Result<[URL], Error>) {
-        showImporter = false
-        switch result {
-        case .success(let urls):
-            guard !urls.isEmpty else { return }
-            do {
-                let imported = try PDFStorage.importDocuments(at: urls)
-                if imported.isEmpty {
-                    alertContext = ScanAlert(
-                        title: NSLocalizedString("alert.noImport.title", comment: "No PDFs imported title"),
-                        message: NSLocalizedString("alert.noImport.message", comment: "No PDFs imported message"),
-                        onDismiss: nil
-                    )
-                    return
-                }
-                // Merge new files and keep list sorted by date desc
-                files.append(contentsOf: imported)
-                files.sort { $0.date > $1.date }
-                Task {
-                    await cloudBackup.backup(files: imported)
-                }
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.importComplete.title", comment: "Import complete title"),
-                    message: imported.count == 1
-                        ? NSLocalizedString("alert.importComplete.single", comment: "Single PDF imported message")
-                        : String(format: NSLocalizedString("alert.importComplete.multiple", comment: "Multiple PDFs imported message"), imported.count),
-                    onDismiss: nil
-                )
-            } catch {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.importFailed.title", comment: "Import failed title"),
-                    message: NSLocalizedString("alert.importFailed.message", comment: "Import failed message"),
-                    onDismiss: nil
-                )
-            }
-        case .failure(let error):
-            if let nsError = error as NSError?, nsError.code == NSUserCancelledError {
-                // user cancelled, no action
-                return
-            }
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.importFailed.title", comment: "Import failed title"),
-                message: NSLocalizedString("alert.importAccessFailed.message", comment: "Import file access failed message"),
-                onDismiss: nil
-            )
-        }
-    }
-
-    /// Handles the "convert files to PDF" importer by sending the document to Gotenberg.
-    private func handleConvertResult(_ result: Result<[URL], Error>) {
-        showConvertPicker = false
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            Task {
-                await convertFileUsingLibreOffice(url: url)
-            }
-        case .failure(let error):
-            if let nsError = error as NSError?, nsError.code == NSUserCancelledError {
-                return
-            }
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
-                message: NSLocalizedString("alert.conversionFileAccessFailed.message", comment: "Conversion access failed message"),
-                onDismiss: nil
-            )
-        }
-    }
-
-    /// Converts a local document into a PDF using Gotenberg's LibreOffice route.
-    private func convertFileUsingLibreOffice(url: URL) async {
-        guard let client = gotenbergClient else {
-            await MainActor.run {
-                presentConversionServiceUnavailableAlert()
-            }
-            return
-        }
-
-        await MainActor.run { isConvertingFile = true }
-        defer { Task { await MainActor.run { isConvertingFile = false } } }
-
-        do {
-            let filename = url.lastPathComponent
-            let baseName = url.deletingPathExtension().lastPathComponent
-            let data = try readDataForSecurityScopedURL(url)
-            let pdfData = try await client.convertOfficeDocToPDF(
-                fileName: filename,
-                data: data
-            )
-            let outputURL = try persistPDFData(pdfData)
-            await MainActor.run {
-                pendingDocument = ScannedDocument(
-                    pdfURL: outputURL,
-                    fileName: String(format: NSLocalizedString("converted.fileNameFormat", comment: "Converted file name format"), baseName)
-                )
-            }
-        } catch {
-            await MainActor.run {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
-                    message: error.localizedDescription,
-                    onDismiss: nil
-                )
-            }
-        }
-    }
-
-    // MARK: - Web Conversion Helpers
-
-    /// Validates the supplied URL, builds a placeholder PDF, and stages it inside the review sheet.
-    @MainActor
-    private func handleWebConversion(urlString: String) async -> Bool {
-        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.invalidURL.title", comment: "Invalid URL title"),
-                message: NSLocalizedString("alert.invalidURL.message", comment: "Invalid URL message"),
-                onDismiss: nil
-            )
-            return false
-        }
-
-        guard let resolvedURL = normalizedWebURL(from: trimmed) else {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.invalidURL.title", comment: "Invalid URL title"),
-                message: NSLocalizedString("alert.invalidURL.unrecognized", comment: "Invalid URL unrecognized message"),
-                onDismiss: nil
-            )
-            return false
-        }
-
-        return await convertWebPage(url: resolvedURL)
-    }
-
-    /// Sends a URL to Gotenberg's Chromium route and stages the resulting PDF.
-    private func convertWebPage(url: URL) async -> Bool {
-        guard let client = gotenbergClient else {
-            await MainActor.run {
-                presentConversionServiceUnavailableAlert()
-            }
-            return false
-        }
-
-        let host = url.host?
-            .replacingOccurrences(of: "www.", with: "", options: [.caseInsensitive, .anchored])
-            ?? NSLocalizedString("webPrompt.defaultName", comment: "Default web host name")
-
-        do {
-            let pdfData = try await client.convertURLToPDF(url: url.absoluteString)
-            let outputURL = try persistPDFData(pdfData)
-            await MainActor.run {
-                pendingDocument = ScannedDocument(
-                    pdfURL: outputURL,
-                    fileName: defaultFileName(prefix: host)
-                )
-                webURLInput = url.absoluteString
-            }
-            return true
-        } catch {
-            await MainActor.run {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
-                    message: error.localizedDescription,
-                    onDismiss: nil
-                )
-            }
-            return false
-        }
-    }
-
-    /// Alerts when the remote conversion endpoint is unavailable or misconfigured.
-    @MainActor
-    private func presentConversionServiceUnavailableAlert() {
-        alertContext = ScanAlert(
-            title: NSLocalizedString("alert.conversionUnavailable.title", comment: "Conversion unavailable title"),
-            message: NSLocalizedString("alert.conversionUnavailable.message", comment: "Conversion unavailable message"),
-            onDismiss: nil
-        )
-    }
-
-    /// Normalizes partial URLs (missing scheme, etc.) into a canonical form we can fetch later.
-    private func normalizedWebURL(from input: String) -> URL? {
-        var candidate = input
-        if !candidate.contains("://") {
-            candidate = "https://\(candidate)"
-        }
-
-        guard var components = URLComponents(string: candidate) else {
-            return nil
-        }
-
-        if components.scheme == nil || components.scheme?.isEmpty == true {
-            components.scheme = "https"
-        }
-
-        guard let scheme = components.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              let host = components.host,
-              !host.isEmpty else {
-            return nil
-        }
-
-        return components.url
-    }
-
-    /// Writes raw PDF data to a temporary location we can hand to the review sheet.
-    private func persistPDFData(_ data: Data) throws -> URL {
-        let destination = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("pdf")
-        try data.write(to: destination, options: .atomic)
-        return destination
-    }
-
-    /// Reads data from a potentially security-scoped URL.
-    private func readDataForSecurityScopedURL(_ url: URL) throws -> Data {
-        let didAccess = url.startAccessingSecurityScopedResource()
-        defer {
-            if didAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-        return try Data(contentsOf: url)
-    }
-
-    // MARK: - Lifecycle & Scanning
-
-    /// Checks if paywall should be shown, then loads cached PDFs
-    private func checkPaywallAndLoadFiles() {
-        // Check if we should show the paywall (onboarding is now handled at initialization)
-        let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        if hasCompletedOnboarding && subscriptionManager.shouldShowPaywall {
-            showPaywall = true
-        }
-
-        // Mark that we've checked, allowing main content to render
-        hasCheckedPaywall = true
-
-        // Then load files if not already loaded
-        guard !hasLoadedInitialFiles else { return }
-        Task {
-            await refreshFilesFromDisk()
-            hasLoadedInitialFiles = true
-            attemptCloudRestoreIfNeeded()
-        }
-    }
-
-    /// Rebuilds the in-memory file list from whatever is stored on disk.
-    private func refreshFilesFromDisk() async {
-        let loadedFiles = await PDFStorage.loadSavedFiles().sorted { $0.date > $1.date }
-        files = loadedFiles
-        folders = PDFStorage.loadFolders()
-
-        // Start loading page counts in the background
-        // As each page count loads, update the corresponding file
-        Task {
-            for file in loadedFiles {
-                let pageCount = await PDFStorage.computePageCount(for: file.url)
-
-                // Update this specific file in the array with the computed page count
-                // (even if it's 0 - that might be the correct value for empty/corrupted PDFs)
-                if let index = files.firstIndex(where: { $0.id == file.id }) {
-                    files[index] = PDFFile(
-                        url: file.url,
-                        name: file.name,
-                        date: file.date,
-                        pageCount: pageCount,
-                        fileSize: file.fileSize,
-                        folderId: file.folderId,
-                        stableID: file.stableID  // Preserve stable ID
-                    )
-                }
-            }
-        }
-    }
-
-    /// Fetches any remote backups and merges them into the local library once.
-    private func attemptCloudRestoreIfNeeded() {
-        guard !hasAttemptedCloudRestore else { return }
-        hasAttemptedCloudRestore = true
-        Task {
-            // DIAGNOSTIC: Check CloudKit environment and records
-            await cloudBackup.printEnvironmentDiagnostics()
-            _ = await cloudBackup.fetchAllRecordsWithoutQuery()
-
-            // Restore folders
-            let existingFolderIds = Set(PDFStorage.loadFolders().map { $0.id })
-            let restoredFolders = await cloudBackup.restoreMissingFolders(existingFolderIds: existingFolderIds)
-            if !restoredFolders.isEmpty {
-                var folders = PDFStorage.loadFolders()
-                folders.append(contentsOf: restoredFolders)
-                PDFStorage.saveFolders(folders)
-            }
-
-            // Restore files
-            let existingNames = Set(files.map { CloudRecordNaming.recordName(for: $0.url.lastPathComponent) })
-            let restored = await cloudBackup.restoreMissingFiles(existingRecordNames: existingNames)
-            guard !restored.isEmpty else { return }
-
-            // Get file-folder mappings from CloudKit
-            let mappings = await cloudBackup.getFileFolderMappings()
-
-            // Apply folder mappings to restored files
-            let restoredWithFolders = restored.map { file -> PDFFile in
-                let fileName = file.url.lastPathComponent
-                let folderId = mappings[fileName]
-                return PDFFile(
-                    url: file.url,
-                    name: file.name,
-                    date: file.date,
-                    pageCount: file.pageCount,
-                    fileSize: file.fileSize,
-                    folderId: folderId,
-                    stableID: file.stableID  // Preserve stable ID
-                )
-            }
-
-            // Save folder mappings for restored files
-            for file in restoredWithFolders {
-                if let folderId = file.folderId {
-                    PDFStorage.updateFileFolderId(file: file, folderId: folderId)
-                }
-            }
-
-            await MainActor.run {
-                files.append(contentsOf: restoredWithFolders)
-                files.sort { $0.date > $1.date }
-            }
-        }
-    }
-
-    /// Converts successful scan/photo results into PDFs and stages them for review.
-    private func handleScanResult(_ result: Result<[UIImage], ScanWorkflowError>, suggestedName: String) {
-        activeScanFlow = nil
-
-        switch result {
-        case .success(let images):
-            guard !images.isEmpty else {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.noPages.title", comment: "No pages captured title"),
-                    message: NSLocalizedString("alert.noPages.message", comment: "No pages captured message"),
-                    onDismiss: nil
-                )
-                return
-            }
-            do {
-                let pdfURL = try PDFGenerator.makePDF(from: images)
-                pendingDocument = ScannedDocument(pdfURL: pdfURL, fileName: suggestedName)
-                showCreateActions = false
-            } catch {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.pdfError.title", comment: "PDF error title"),
-                    message: NSLocalizedString("alert.pdfError.message", comment: "PDF error message"),
-                    onDismiss: nil
-                )
-            }
-        case .failure(let error):
-            if error.shouldDisplayAlert {
-                alertContext = ScanAlert(
-                    title: NSLocalizedString("alert.scanFailed.title", comment: "Scan failed title"),
-                    message: error.message,
-                    onDismiss: nil
-                )
-            }
-        }
-    }
-
-    /// Persists the scanned document and removes any temporary files afterward.
-    private func saveScannedDocument(_ document: ScannedDocument) {
-        do {
-            let savedFile = try PDFStorage.save(document: document)
-            files.insert(savedFile, at: 0)
-            pendingDocument = nil
-            cleanupTemporaryFile(at: document.pdfURL)
-            Task {
-                await cloudBackup.backup(file: savedFile)
-            }
-        } catch {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.savePDFFailed.title", comment: "Save PDF failed title"),
-                message: NSLocalizedString("alert.savePDFFailed.message", comment: "Save PDF failed message"),
-                onDismiss: nil
-            )
-        }
-    }
-
-    /// Produces a temporary share item for the scanned document.
-    private func shareScannedDocument(_ document: ScannedDocument) -> ShareItem? {
-        do {
-            let shareURL = try PDFStorage.prepareShareURL(for: document)
-            return ShareItem(
-                url: shareURL,
-                cleanupHandler: {
-                    try? FileManager.default.removeItem(at: shareURL)
-                }
-            )
-        } catch {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.shareFailed.title", comment: "Share failed title"),
-                message: NSLocalizedString("alert.shareFailed.message", comment: "Share failed message"),
-                onDismiss: nil
-            )
-            return nil
-        }
-    }
-
-    /// Cleans up a staged scan if the user bails out of the preview sheet.
-    private func discardTemporaryDocument(_ document: ScannedDocument) {
-        pendingDocument = nil
-        cleanupTemporaryFile(at: document.pdfURL)
-    }
-
-    /// Builds a human-friendly default file name using the date and supplied prefix.
-    private func defaultFileName(prefix: String) -> String {
-        let timestamp = Self.fileNameFormatter.string(from: Date())
-        return "\(prefix) \(timestamp)"
-    }
-
-    /// Deletes the temporary PDF sitting in `/tmp` once we no longer need it.
-    private func cleanupTemporaryFile(at url: URL?) {
-        guard let url else { return }
-        try? FileManager.default.removeItem(at: url)
-    }
-
-    /// Performs the on-disk rename and keeps the SwiftUI list in sync.
-    private func applyRename(for file: PDFFile, newName: String) {
-        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.invalidName.title", comment: "Invalid name title"),
-                message: NSLocalizedString("alert.invalidName.message", comment: "Invalid name message"),
-                onDismiss: nil
-            )
-            return
-        }
-
-        let previousRecordName = CloudRecordNaming.recordName(for: file.url.lastPathComponent)
-
-        do {
-            let renamed = try PDFStorage.rename(file: file, to: trimmed)
-            if let index = files.firstIndex(where: { $0.url == file.url }) {
-                files[index] = renamed
-            }
-            renameText = renamed.name
-            renameTarget = nil
-            Task {
-                await cloudBackup.deleteRecord(named: previousRecordName)
-                await cloudBackup.backup(file: renamed)
-            }
-        } catch {
-            alertContext = ScanAlert(
-                title: NSLocalizedString("alert.renameFailed.title", comment: "Rename failed title"),
-                message: NSLocalizedString("alert.renameFailed.message", comment: "Rename failed message"),
-                onDismiss: nil
-            )
-        }
-    }
-
-    private static let fileNameFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
-
-    private static let convertibleExtensions: [String] = [
+    fileprivate static let convertibleExtensions: [String] = [
         "123","602","abw","bib","bmp","cdr","cgm","cmx","csv","cwk","dbf","dif","doc","docm","docx","dot","dotm","dotx","dxf","emf","eps","epub","fodg","fodp","fods","fodt","fopd","gif","htm","html","hwp","jpeg","jpg","key","ltx","lwp","mcw","met","mml","mw","numbers","odd","odg","odm","odp","ods","odt","otg","oth","otp","ots","ott","pages","pbm","pcd","pct","pcx","pdb","pdf","pgm","png","pot","potm","potx","ppm","pps","ppt","pptm","pptx","psd","psw","pub","pwp","pxl","ras","rtf","sda","sdc","sdd","sdp","sdw","sgl","slk","smf","stc","std","sti","stw","svg","svm","swf","sxc","sxd","sxg","sxi","sxm","sxw","tga","tif","tiff","txt","uof","uop","uos","uot","vdx","vor","vsd","vsdm","vsdx","wb2","wk1","wks","wmf","wpd","wpg","wps","xbm","xhtml","xls","xlsb","xlsm","xlsx","xlt","xltm","xltx","xlw","xml","xpm","zabw"
     ]
 
-    private static let convertibleContentTypes: [UTType] = {
+    fileprivate static let convertibleContentTypes: [UTType] = {
         var types = Set<UTType>()
         for ext in convertibleExtensions {
             if let type = UTType(filenameExtension: ext) {
@@ -1752,10 +1159,6 @@ struct PDFEditorView: View {
     let onCancel: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var subscriptionManager: SubscriptionManager
-    @Binding var showPaywall: Bool
-    @Binding var paywallSource: String
-    @Binding var editingContextPendingAfterPaywall: PDFEditingContext?
     @StateObject private var controller: PDFEditorController
     @State private var inlineAlert: InlineAlert?
     @State private var cachedSignature: SignatureStore.Signature? = SignatureStore.load()
@@ -1763,17 +1166,11 @@ struct PDFEditorView: View {
     init(
         context: PDFEditingContext,
         onSave: @escaping () -> Void,
-        onCancel: @escaping () -> Void,
-        showPaywall: Binding<Bool>,
-        paywallSource: Binding<String>,
-        editingContextPendingAfterPaywall: Binding<PDFEditingContext?>
+        onCancel: @escaping () -> Void
     ) {
         self.context = context
         self.onSave = onSave
         self.onCancel = onCancel
-        _showPaywall = showPaywall
-        _paywallSource = paywallSource
-        _editingContextPendingAfterPaywall = editingContextPendingAfterPaywall
         _controller = StateObject(wrappedValue: PDFEditorController(document: context.document))
     }
 
@@ -1817,19 +1214,6 @@ struct PDFEditorView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(NSLocalizedString("action.save", comment: "Save action")) {
-                    // Check subscription before saving
-                    guard subscriptionManager.isSubscribed else {
-                        paywallSource = "pdf_editor_save"
-                        // Save the current editing context before dismissing
-                        editingContextPendingAfterPaywall = context
-                        dismiss()
-                        // Delay to ensure dismiss completes before showing paywall
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            showPaywall = true
-                        }
-                        return
-                    }
-
                     if controller.hasActiveSignaturePlacement() {
                         if controller.confirmSignaturePlacement() {
                             onSave()
@@ -2234,10 +1618,7 @@ struct ScanReviewSheet: View {
     let onCancel: (ScannedDocument) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var subscriptionManager: SubscriptionManager
-    @Binding var showPaywall: Bool
-    @Binding var paywallSource: String
-    @Binding var documentPendingAfterPaywall: ScannedDocument?
+    @EnvironmentObject private var subscriptionGate: SubscriptionGate
     @State private var fileName: String
     @State private var shareItem: ShareItem?
 
@@ -2245,18 +1626,12 @@ struct ScanReviewSheet: View {
         document: ScannedDocument,
         onSave: @escaping (ScannedDocument) -> Void,
         onShare: @escaping (ScannedDocument) -> ShareItem?,
-        onCancel: @escaping (ScannedDocument) -> Void,
-        showPaywall: Binding<Bool>,
-        paywallSource: Binding<String>,
-        documentPendingAfterPaywall: Binding<ScannedDocument?>
+        onCancel: @escaping (ScannedDocument) -> Void
     ) {
         self.document = document
         self.onSave = onSave
         self.onShare = onShare
         self.onCancel = onCancel
-        _showPaywall = showPaywall
-        _paywallSource = paywallSource
-        _documentPendingAfterPaywall = documentPendingAfterPaywall
         _fileName = State(initialValue: document.fileName)
     }
 
@@ -2283,19 +1658,6 @@ struct ScanReviewSheet: View {
 
                 VStack(spacing: 12) {
                     Button {
-                        // Check subscription before sharing
-                        guard subscriptionManager.isSubscribed else {
-                            paywallSource = "scan_review_share"
-                            // Save the current document state before dismissing
-                            documentPendingAfterPaywall = sanitizedDocument()
-                            dismiss()
-                            // Delay to ensure dismiss completes before showing paywall
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                showPaywall = true
-                            }
-                            return
-                        }
-
                         let updated = sanitizedDocument()
                         if let item = onShare(updated) {
                             shareItem = item
@@ -2308,19 +1670,6 @@ struct ScanReviewSheet: View {
                     .buttonStyle(.bordered)
 
                     Button {
-                        // Check subscription before saving
-                        guard subscriptionManager.isSubscribed else {
-                            paywallSource = "scan_review_save"
-                            // Save the current document state before dismissing
-                            documentPendingAfterPaywall = sanitizedDocument()
-                            dismiss()
-                            // Delay to ensure dismiss completes before showing paywall
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                showPaywall = true
-                            }
-                            return
-                        }
-
                         let updated = sanitizedDocument()
                         onSave(updated)
                         dismiss()
@@ -2360,5 +1709,28 @@ struct ScanReviewSheet: View {
         let trimmed = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return document }
         return document.withFileName(trimmed)
+    }
+}
+
+// MARK: - Paywall Presenter
+
+private struct PaywallPresenter: ViewModifier {
+    let coordinator: AppCoordinator
+    let subscriptionManager: SubscriptionManager
+    @ObservedObject var subscriptionGate: SubscriptionGate
+
+    func body(content: Content) -> some View {
+        content
+            .fullScreenCover(isPresented: $subscriptionGate.showPaywall) {
+                PaywallView(productId: Bundle.main.subscriptionProductID, source: subscriptionGate.paywallSource)
+                    .environmentObject(subscriptionManager)
+                    .environmentObject(subscriptionGate)
+            }
+            .onChange(of: subscriptionGate.showPaywall) { _, isShowing in
+                if !isShowing {
+                    coordinator.handlePaywallDismissal()
+                    subscriptionGate.handlePaywallDismissal()
+                }
+            }
     }
 }

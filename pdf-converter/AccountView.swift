@@ -21,8 +21,7 @@ import PostHog
 /// Placeholder account screen showcasing subscription upsell copy.
 struct AccountView: View {
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
-    @Binding var showPaywall: Bool
-    @Binding var paywallSource: String
+    @EnvironmentObject private var subscriptionGate: SubscriptionGate
     @State private var showManageSubscriptionsSheet = false
     @StateObject private var vm = AccountViewModel()
     @Environment(\.analytics) private var analytics
@@ -121,8 +120,8 @@ struct AccountView: View {
 
                             if !subscriptionManager.isSubscribed {
                                 Button {
-                                    paywallSource = "account_tab"
-                                    showPaywall = true
+                                    subscriptionGate.paywallSource = "account_tab"
+                                    subscriptionGate.showPaywall = true
                                 } label: {
                                     HStack(alignment: .center) {
                                         Spacer()
@@ -216,12 +215,20 @@ struct AccountView: View {
 
 #if DEBUG
 #Preview("Subscribed") {
-    AccountView(showPaywall: .constant(false), paywallSource: .constant("preview"))
-        .environmentObject(SubscriptionManager(mockSubscribed: true))
+    let subscriptionManager = SubscriptionManager(mockSubscribed: true)
+    let subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
+
+    AccountView()
+        .environmentObject(subscriptionManager)
+        .environmentObject(subscriptionGate)
 }
 
 #Preview("Not Subscribed") {
-    AccountView(showPaywall: .constant(false), paywallSource: .constant("preview"))
-        .environmentObject(SubscriptionManager(mockSubscribed: false))
+    let subscriptionManager = SubscriptionManager(mockSubscribed: false)
+    let subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
+
+    AccountView()
+        .environmentObject(subscriptionManager)
+        .environmentObject(subscriptionGate)
 }
 #endif

@@ -64,6 +64,9 @@ struct FilesView: View {
                 .sheet(isPresented: $showRenameFolderDialog) {
                     renameFolderDialog
                 }
+                .onDisappear {
+                    contentIndexer.cancelPendingWork()
+                }
         }
     }
 

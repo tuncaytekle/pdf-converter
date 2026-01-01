@@ -6,6 +6,7 @@ import PDFKit
 final class FileContentIndexer: ObservableObject {
     @Published private var cache: [URL: String] = [:]
     private var inFlight = Set<URL>()
+    private var activeTasks: [URL: Task<Void, Never>] = [:]
 
     func text(for file: PDFFile) -> String? {
         cache[file.url]
@@ -16,25 +17,44 @@ final class FileContentIndexer: ObservableObject {
         inFlight.insert(file.url)
 
         // Use Task.detached to run heavy PDF work off the main actor
-        Task.detached(priority: .utility) { [weak self] in
-            let extractedText = await Self.extractText(from: file.url)
+        let fileURL = file.url
+        let task = Task.detached(priority: .utility) {
+            let extractedText = await Self.extractText(from: fileURL)
 
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 guard let self else { return }
                 if let text = extractedText {
-                    self.cache[file.url] = text
+                    self.cache[fileURL] = text
                 } else {
-                    self.cache[file.url] = ""
+                    self.cache[fileURL] = ""
                 }
-                self.inFlight.remove(file.url)
+                self.inFlight.remove(fileURL)
+                self.activeTasks[fileURL] = nil
             }
         }
+        activeTasks[fileURL] = task
+    }
+
+    /// Cancels all in-flight indexing tasks
+    func cancelPendingWork() {
+        for task in activeTasks.values {
+            task.cancel()
+        }
+        activeTasks.removeAll()
+        inFlight.removeAll()
     }
 
     // Nonisolated helper to perform heavy I/O and parsing off the main actor
     private nonisolated static func extractText(from url: URL) async -> String? {
-        guard let document = PDFDocument(url: url),
-              let rawText = document.string?
+        // Check for cancellation before heavy I/O
+        guard !Task.isCancelled else { return nil }
+
+        guard let document = PDFDocument(url: url) else { return nil }
+
+        // Check again after heavy PDF load
+        guard !Task.isCancelled else { return nil }
+
+        guard let rawText = document.string?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
               !rawText.isEmpty else { return nil }
         let snippet = String(rawText.prefix(4000))
