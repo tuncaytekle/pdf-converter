@@ -28,3 +28,9 @@ enum ScanWorkflowError: Error {
         return true
     }
 }
+
+extension ScanWorkflowError: LocalizedError {
+    var errorDescription: String? {
+        return message
+    }
+}

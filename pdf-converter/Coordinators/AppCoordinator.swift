@@ -621,6 +621,7 @@ final class AppCoordinator {
             if let nsError = error as NSError?, nsError.code == NSUserCancelledError {
                 return
             }
+            print("❌ File picker error: \(error)")
             alertContext = ScanAlert(
                 title: NSLocalizedString("alert.conversionFailed.title", comment: "Conversion failed title"),
                 message: NSLocalizedString("alert.conversionFileAccessFailed.message", comment: "Conversion access failed message"),

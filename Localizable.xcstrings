@@ -1384,7 +1384,7 @@
       }
     },
     "conversion.processing" : {
-      "comment" : "Converting page",
+      "comment" : "Converting file\nConverting page",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3828,6 +3828,584 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "**PDF Converter**'dan Merhaba"
+          }
+        }
+      }
+    },
+    "faq.header.title" : {
+      "comment" : "FAQ header title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help & FAQ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yardım & SSS"
+          }
+        }
+      }
+    },
+    "faq.header.subtitle" : {
+      "comment" : "FAQ header subtitle",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Everything you need to know to go paperless."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kağıtsız yaşam için bilmeniz gereken her şey."
+          }
+        }
+      }
+    },
+    "faq.search.prompt" : {
+      "comment" : "Search FAQ prompt",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search FAQ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSS'de Ara"
+          }
+        }
+      }
+    },
+    "faq.section.gettingStarted" : {
+      "comment" : "Getting Started section",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Getting Started"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başlarken"
+          }
+        }
+      }
+    },
+    "faq.gettingStarted.blueButton.question" : {
+      "comment" : "Blue button question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What is the Blue Button (+) for?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mavi Düğme (+) Ne İçin?"
+          }
+        }
+      }
+    },
+    "faq.gettingStarted.blueButton.answer" : {
+      "comment" : "Blue button answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Think of the Blue Button (+) on the main screen as your \"Start\" button. It is the quickest way to create a new PDF. Tap it to immediately access:\n\n• Scan Documents: Digitize receipts, IDs, and notes instantly.\n• Convert Files: Turn documents from your files or the cloud into PDFs.\n• Convert Photos: Turn images from your Camera Roll into PDFs.\n\nYou can always turn off the \"auto shutter\" option while scanning to have complete control on how or when to capture your document.\n\nWe recommend choosing a contrasting surface color while scanning a document for better results. [i.e. Refrain from using a white surface while scanning a white A4 paper.]"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ana ekrandaki Mavi Düğme (+) \"Başlat\" düğmeniz gibi düşünün. Yeni bir PDF oluşturmanın en hızlı yolu budur. Dokunduğunuzda hemen erişebilirsiniz:\n\n• Belgeleri Tara: Makbuzları, kimlikleri ve notları anında dijitalleştirin.\n• Dosyaları Dönüştür: Dosyalarınızdaki veya buluttaki belgeleri PDF'ye dönüştürün.\n• Fotoğrafları Dönüştür: Kamera Rulosunuzdaki resimleri PDF'ye dönüştürün.\n\nBelgenizi nasıl veya ne zaman yakalayacağınız konusunda tam kontrole sahip olmak için tarama sırasında \"otomatik deklanşör\" seçeneğini her zaman kapatabilirsiniz.\n\nDaha iyi sonuçlar için bir belgeyi tararken zıt bir yüzey rengi seçmenizi öneririz. [Örneğin beyaz bir A4 kağıdı tararken beyaz bir yüzey kullanmaktan kaçının.]"
+          }
+        }
+      }
+    },
+    "faq.gettingStarted.advancedTools.question" : {
+      "comment" : "Advanced tools question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where can I find the advanced tools?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelişmiş araçları nerede bulabilirim?"
+          }
+        }
+      }
+    },
+    "faq.gettingStarted.advancedTools.answer" : {
+      "comment" : "Advanced tools answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navigate to the Tools tab at the bottom of the screen. Here you can access specific power features like Import Documents, Edit Documents, and Convert Web Pages."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekranın alt kısmındaki Araçlar sekmesine gidin. Burada Belgeleri İçe Aktar, Belgeleri Düzenle ve Web Sayfalarını Dönüştür gibi özel güçlü özelliklere erişebilirsiniz."
+          }
+        }
+      }
+    },
+    "faq.section.converting" : {
+      "comment" : "Converting & Scanning section",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Converting & Scanning"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dönüştürme & Tarama"
+          }
+        }
+      }
+    },
+    "faq.converting.formats.question" : {
+      "comment" : "File formats question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Which file formats can I convert to PDF?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hangi dosya formatlarını PDF'ye dönüştürebilirim?"
+          }
+        }
+      }
+    },
+    "faq.converting.formats.answer" : {
+      "comment" : "File formats answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We support over 100+ file formats.\n\n• Documents: DOC, DOCX, PPT, PPTX, XLS, XLSX, PAGES, NUMBERS, KEY, TXT, RTF, and more.\n• Images: JPG, PNG, BMP, TIFF, SVG, HEIC, and dozens of others.\n• Others: HTML, EPUB, XML, VSD, and many specialized formats.\n\nIf you have a file, chances are we can convert it!"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100'den fazla dosya formatını destekliyoruz.\n\n• Belgeler: DOC, DOCX, PPT, PPTX, XLS, XLSX, PAGES, NUMBERS, KEY, TXT, RTF ve daha fazlası.\n• Görseller: JPG, PNG, BMP, TIFF, SVG, HEIC ve düzinelerce diğer format.\n• Diğerleri: HTML, EPUB, XML, VSD ve birçok özel format.\n\nBir dosyanız varsa, muhtemelen onu dönüştürebiliriz!"
+          }
+        }
+      }
+    },
+    "faq.converting.quality.question" : {
+      "comment" : "Document quality question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Will my document look exactly like the original?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belgem orijinaliyle birebir aynı görünecek mi?"
+          }
+        }
+      }
+    },
+    "faq.converting.quality.answer" : {
+      "comment" : "Document quality answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes. We use a high-fidelity conversion engine that keeps your formatting 100% intact. Whether it's a complex PowerPoint slide or a formatted Word doc, your layouts, fonts, and images are preserved perfectly as they were in the original file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evet. Biçimlendirmenizi %100 bozulmadan koruyan yüksek kaliteli bir dönüştürme motoru kullanıyoruz. Karmaşık bir PowerPoint slaytı veya biçimlendirilmiş bir Word belgesi olsun, düzenleriniz, yazı tipleriniz ve resimleriniz orijinal dosyadaki gibi mükemmel şekilde korunur."
+          }
+        }
+      }
+    },
+    "faq.converting.webPage.question" : {
+      "comment" : "Web page question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How do I convert a website URL to a PDF?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir web sitesi URL'sini PDF'ye nasıl dönüştürürüm?"
+          }
+        }
+      }
+    },
+    "faq.converting.webPage.answer" : {
+      "comment" : "Web page answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to the Tools page and select \"Convert Web Page.\" Paste the link, and the app will generate a PDF of the site for you."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Araçlar sayfasına gidin ve \"Web Sayfasını Dönüştür\"ü seçin. Bağlantıyı yapıştırın, uygulama sizin için sitenin PDF'ini oluşturacaktır."
+          }
+        }
+      }
+    },
+    "faq.converting.multiPage.question" : {
+      "comment" : "Multi-page question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can I scan multiple pages at once?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aynı anda birden fazla sayfa tarayabilir miyim?"
+          }
+        }
+      }
+    },
+    "faq.converting.multiPage.answer" : {
+      "comment" : "Multi-page answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes! When using the Scan Documents feature (via the Blue Button), you can snap multiple photos of notes or receipts, and the app will combine them into a single, clean PDF file."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evet! Belgeleri Tara özelliğini kullandığınızda (Mavi Düğme aracılığıyla), notların veya makbuzların birden fazla fotoğrafını çekebilirsiniz ve uygulama bunları tek, temiz bir PDF dosyasında birleştirecektir."
+          }
+        }
+      }
+    },
+    "faq.section.editing" : {
+      "comment" : "Editing & Signatures section",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editing & Signatures"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düzenleme & İmzalar"
+          }
+        }
+      }
+    },
+    "faq.editing.signature.question" : {
+      "comment" : "Signature question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How do I create and use my signature?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmzamı nasıl oluşturur ve kullanırım?"
+          }
+        }
+      }
+    },
+    "faq.editing.signature.answer" : {
+      "comment" : "Signature answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signing documents is a simple two-step process:\n\n1. Create it: Go to Settings > Add Signature to draw and save your signature. You can always come back and update your signature from the same menu.\n\n2. Use it: Go to Tools > Edit Documents, open your PDF, and tap to place your saved signature anywhere on the page."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belgeleri imzalamak basit iki adımlı bir süreçtir:\n\n1. Oluşturun: Ayarlar > İmza Ekle'ye giderek imzanızı çizin ve kaydedin. İmzanızı aynı menüden istediğiniz zaman güncelleyebilirsiniz.\n\n2. Kullanın: Araçlar > Belgeleri Düzenle'ye gidin, PDF'nizi açın ve kayıtlı imzanızı sayfada istediğiniz yere yerleştirmek için dokunun."
+          }
+        }
+      }
+    },
+    "faq.editing.highlight.question" : {
+      "comment" : "Highlight question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can I highlight text in my PDFs?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF'lerimdeki metni vurgulayabilir miyim?"
+          }
+        }
+      }
+    },
+    "faq.editing.highlight.answer" : {
+      "comment" : "Highlight answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absolutely. Go to Tools > Edit Documents. From there, you can select tools to highlight important text in your documents."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kesinlikle. Araçlar > Belgeleri Düzenle'ye gidin. Oradan belgelerinizdeki önemli metni vurgulamak için araçları seçebilirsiniz."
+          }
+        }
+      }
+    },
+    "faq.section.fileManagement" : {
+      "comment" : "File Management section",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File Management & Organization"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dosya Yönetimi & Organizasyon"
+          }
+        }
+      }
+    },
+    "faq.fileManagement.organize.question" : {
+      "comment" : "Organize question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How do I keep my files organized?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dosyalarımı nasıl düzenli tutarım?"
+          }
+        }
+      }
+    },
+    "faq.fileManagement.organize.answer" : {
+      "comment" : "Organize answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can create custom folders right on the Files (Home) page to categorize your documents (e.g., \"Work,\" \"Receipts,\" \"Personal\")."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belgelerinizi kategorize etmek için doğrudan Dosyalar (Ana Sayfa) sayfasında özel klasörler oluşturabilirsiniz (örn. \"İş,\" \"Makbuzlar,\" \"Kişisel\")."
+          }
+        }
+      }
+    },
+    "faq.fileManagement.actions.question" : {
+      "comment" : "File actions question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How do I move, rename, or share a file?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir dosyayı nasıl taşır, yeniden adlandırır veya paylaşırım?"
+          }
+        }
+      }
+    },
+    "faq.fileManagement.actions.answer" : {
+      "comment" : "File actions answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On the Files page, simply tap on a file or options button to the right to see your options. You can easily:\n\n• Rename files for better clarity.\n• Move files into specific folders.\n• Preview files before sending.\n• Share files via Email, WhatsApp, or AirDrop."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dosyalar sayfasında, seçeneklerinizi görmek için bir dosyaya veya sağdaki seçenekler düğmesine dokunun. Kolayca yapabilirsiniz:\n\n• Daha iyi netlik için dosyaları yeniden adlandırın.\n• Dosyaları belirli klasörlere taşıyın.\n• Göndermeden önce dosyaları önizleyin.\n• E-posta, WhatsApp veya AirDrop aracılığıyla dosyaları paylaşın."
+          }
+        }
+      }
+    },
+    "faq.fileManagement.import.question" : {
+      "comment" : "Import question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can I import PDFs I already have on my phone?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefonumda zaten bulunan PDF'leri içe aktarabilir miyim?"
+          }
+        }
+      }
+    },
+    "faq.fileManagement.import.answer" : {
+      "comment" : "Import answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes. We want this to be the only PDF app you need. Go to Tools > Import Documents to bring in PDFs from your device storage or iCloud so you can manage everything in one place."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evet. Bunun ihtiyacınız olan tek PDF uygulaması olmasını istiyoruz. Cihaz depolamanızdan veya iCloud'dan PDF'leri getirmek için Araçlar > Belgeleri İçe Aktar'a gidin, böylece her şeyi tek bir yerden yönetebilirsiniz."
+          }
+        }
+      }
+    },
+    "faq.section.account" : {
+      "comment" : "Account & Support section",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account & Support"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hesap & Destek"
+          }
+        }
+      }
+    },
+    "faq.account.subscription.question" : {
+      "comment" : "Subscription question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How do I manage my Pro subscription?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro aboneliğimi nasıl yönetirim?"
+          }
+        }
+      }
+    },
+    "faq.account.subscription.answer" : {
+      "comment" : "Subscription answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can view your plan details or manage your subscription anytime by visiting the Settings page or the Account tab."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan ayrıntılarınızı görüntüleyebilir veya aboneliğinizi istediğiniz zaman Ayarlar sayfasını veya Hesap sekmesini ziyaret ederek yönetebilirsiniz."
+          }
+        }
+      }
+    },
+    "faq.account.support.question" : {
+      "comment" : "Support question",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I have a question or found a bug. How do I contact you?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir sorum var veya bir hata buldum. Size nasıl ulaşabilirim?"
+          }
+        }
+      }
+    },
+    "faq.account.support.answer" : {
+      "comment" : "Support answer",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We love hearing from our community! Go to Settings and tap Contact Support. We are here to help."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Topluluğumuzdan haber almayı çok seviyoruz! Ayarlar'a gidin ve Desteğe Başvur'a dokunun. Size yardımcı olmak için buradayız."
           }
         }
       }

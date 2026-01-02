@@ -692,25 +692,23 @@ struct SettingsView: View {
     @State private var showManageSubscriptionsSheet = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
     @State private var infoSheet: InfoSheet?
+    @State private var showFAQ = false
+    @State private var showTerms = false
     @State private var shareItem: ShareItem?
     @State private var settingsAlert: SettingsAlert?
 
-    /// Light-weight presentation enum used to drive the FAQ/Terms/Privacy sheets.
+    /// Light-weight presentation enum used to drive the Privacy sheet.
     private enum InfoSheet: Identifiable {
-        case faq, terms, privacy
+        case privacy
 
         var id: Int {
             switch self {
-            case .faq: return 0
-            case .terms: return 1
             case .privacy: return 2
             }
         }
 
         var title: String {
             switch self {
-            case .faq: return NSLocalizedString("settings.info.faq", comment: "FAQ title")
-            case .terms: return NSLocalizedString("settings.info.terms", comment: "Terms title")
             case .privacy: return NSLocalizedString("settings.info.privacy", comment: "Privacy title")
             }
         }
@@ -735,6 +733,14 @@ struct SettingsView: View {
                     ProButton(subscriptionManager: subscriptionManager)
                 }
                 .hideSharedBackground
+            }
+            .sheet(isPresented: $showFAQ) {
+                FAQView()
+            }
+            .sheet(isPresented: $showTerms) {
+                if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                    SafariView(url: url)
+                }
             }
             .sheet(item: $infoSheet) { sheet in
                 NavigationView {
@@ -927,10 +933,10 @@ struct SettingsView: View {
 
     private var infoSection: some View {
         Section(NSLocalizedString("settings.info.section", comment: "Info section title")) {
-            Button { infoSheet = .faq } label: {
+            Button { showFAQ = true } label: {
                 Label(NSLocalizedString("settings.info.faq", comment: "FAQ title"), systemImage: "questionmark.circle")
             }
-            Button { infoSheet = .terms } label: {
+            Button { showTerms = true } label: {
                 Label(NSLocalizedString("settings.info.terms", comment: "Terms title"), systemImage: "doc.append")
             }
             Button { infoSheet = .privacy } label: {

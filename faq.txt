@@ -1,0 +1,63 @@
+
+PDF Converter: Help & FAQ
+
+Everything you need to know to go paperless.
+
+Getting Started
+
+What is the Blue Button (+) for? Think of the Blue Button (+) on the main screen as your "Start" button. It is the quickest way to create a new PDF. Tap it to immediately access:
+
+Scan Documents: Digitize receipts, IDs, and notes instantly.
+Convert Files: Turn documents from your files or the cloud into PDFs.
+Convert Photos: Turn images from your Camera Roll into PDFs.
+
+You can always turn off the "auto shutter" option while scanning to have complete control on how or when to capture your document.
+
+We recommend choosing a contrasting surface color while scanning a document for better results. [i.e. Refrain from using a white surface while scanning a white A4 paper.]
+
+Where can I find the advanced tools? Navigate to the Tools tab at the bottom of the screen. Here you can access specific power features like Import Documents, Edit Documents, and Convert Web Pages.
+
+Converting & Scanning
+
+Which file formats can I convert to PDF? We support over 100+ file formats.
+
+Documents: DOC, DOCX, PPT, PPTX, XLS, XLSX, PAGES, NUMBERS, KEY, TXT, RTF, and more.
+Images: JPG, PNG, BMP, TIFF, SVG, HEIC, and dozens of others.
+Others: HTML, EPUB, XML, VSD, and many specialized formats.
+
+If you have a file, chances are we can convert it!
+
+Will my document look exactly like the original? Yes. We use a high-fidelity conversion engine that keeps your formatting 100% intact. Whether it’s a complex PowerPoint slide or a formatted Word doc, your layouts, fonts, and images are preserved perfectly as they were in the original file.
+
+How do I convert a website URL to a PDF? Go to the Tools page and select "Convert Web Page." Paste the link, and the app will generate a PDF of the site for you.
+
+Can I scan multiple pages at once? Yes! When using the Scan Documents feature (via the Blue Button), you can snap multiple photos of notes or receipts, and the app will combine them into a single, clean PDF file.
+
+Editing & Signatures
+
+How do I create and use my signature? Signing documents is a simple two-step process:
+
+Create it: Go to Settings > Add Signature to draw and save your signature. You can always come back and update your signature from the same menu.
+
+Use it: Go to Tools > Edit Documents, open your PDF, and tap to place your saved signature anywhere on the page.
+
+Can I highlight text in my PDFs? Absolutely. Go to Tools > Edit Documents. From there, you can select tools to highlight important text in your documents.
+
+File Management & Organization
+
+How do I keep my files organized? You can create custom folders right on the Files (Home) page to categorize your documents (e.g., "Work," "Receipts," "Personal").
+
+How do I move, rename, or share a file? On the Files page, simply tap on a file or options button to the right to see your options. You can easily:
+
+Rename files for better clarity.
+Move files into specific folders.
+Preview files before sending.
+Share files via Email, WhatsApp, or AirDrop.
+
+Can I import PDFs I already have on my phone? Yes. We want this to be the only PDF app you need. Go to Tools > Import Documents to bring in PDFs from your device storage or iCloud so you can manage everything in one place.
+
+Account & Support
+
+How do I manage my Pro subscription? You can view your plan details or manage your subscription anytime by visiting the Settings page or the Account tab.
+
+I have a question or found a bug. How do I contact you? We love hearing from our community! Go to Settings and tap Contact Support. We are here to help.

@@ -80,20 +80,34 @@ final class ScanFlowCoordinator {
             let filename = url.lastPathComponent
             let baseName = url.deletingPathExtension().lastPathComponent
 
+            // Request security-scoped access to the file (required on real devices)
+            let canAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if canAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
             // Check for cancellation before network call
             try Task.checkCancellation()
 
-            // Step 1: Uploading file
-            conversionProgress = NSLocalizedString("conversion.uploading", comment: "Uploading file")
-            progressHandler?(conversionProgress!)
-
-            // Convert file to PDF via gateway (gateway handles upload internally)
-            let result = try await client.convert(fileURL: url, filename: filename)
+            // Convert file to PDF via gateway with progress tracking
+            let result = try await client.convert(fileURL: url, filename: filename) { [weak self] phase in
+                guard let self = self else { return }
+                switch phase {
+                case .uploading:
+                    self.conversionProgress = NSLocalizedString("conversion.uploading", comment: "Uploading file")
+                    progressHandler?(self.conversionProgress!)
+                case .converting:
+                    self.conversionProgress = NSLocalizedString("conversion.processing", comment: "Converting file")
+                    progressHandler?(self.conversionProgress!)
+                }
+            }
 
             // Check for cancellation after conversion
             try Task.checkCancellation()
 
-            // Step 2: Downloading result
+            // Downloading result
             conversionProgress = NSLocalizedString("conversion.downloading", comment: "Downloading PDF")
             progressHandler?(conversionProgress!)
 
@@ -108,9 +122,13 @@ final class ScanFlowCoordinator {
                 pdfURL: outputURL,
                 fileName: String(format: NSLocalizedString("converted.fileNameFormat", comment: "Converted file name format"), baseName)
             )
+        } catch is CancellationError {
+            throw ScanWorkflowError.cancelled
         } catch let error as PDFGatewayError {
+            print("❌ PDF Gateway error: \(error.localizedDescription)")
             throw ScanWorkflowError.failed(error.localizedDescription)
         } catch {
+            print("❌ File conversion error: \(error)")
             throw ScanWorkflowError.failed(error.localizedDescription)
         }
     }
@@ -132,17 +150,22 @@ final class ScanFlowCoordinator {
             // Check for cancellation before network call
             try Task.checkCancellation()
 
-            // Step 1: Converting page
-            conversionProgress = NSLocalizedString("conversion.processing", comment: "Converting page")
-            progressHandler?(conversionProgress!)
-
-            // Convert URL to PDF via gateway
-            let result = try await client.convert(publicURL: url)
+            // Convert URL to PDF via gateway with progress tracking
+            let result = try await client.convert(publicURL: url) { [weak self] phase in
+                guard let self = self else { return }
+                switch phase {
+                case .uploading:
+                    break // URL conversions don't upload
+                case .converting:
+                    self.conversionProgress = NSLocalizedString("conversion.processing", comment: "Converting page")
+                    progressHandler?(self.conversionProgress!)
+                }
+            }
 
             // Check for cancellation after conversion
             try Task.checkCancellation()
 
-            // Step 2: Downloading result
+            // Downloading result
             conversionProgress = NSLocalizedString("conversion.downloading", comment: "Downloading PDF")
             progressHandler?(conversionProgress!)
 

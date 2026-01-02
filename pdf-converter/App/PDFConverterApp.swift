@@ -2,9 +2,18 @@ import SwiftUI
 import CoreData
 import PostHog
 
+/// App delegate to control orientation locking
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        // Lock to portrait orientations only
+        return .portrait
+    }
+}
+
 /// Entry point for the SwiftUI app; injects the shared Core Data controller.
 @main
 struct PDFConverterApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     private let persistenceController = PersistenceController.shared
     private let tracker: AnalyticsTracking
     @StateObject private var cloudSyncStatus = CloudSyncStatus()

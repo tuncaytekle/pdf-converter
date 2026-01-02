@@ -18,6 +18,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>GotenbergBaseURL</key>
+	<string>$(GOTENBERG_BASE_URL)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>
@@ -25,9 +27,13 @@
 	<key>NSCameraUsageDescription</key>
 	<string>We use the camera to scan documents and photos into PDFs.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Face ID lets us confirm it&apos;s you before showing secure PDFs.</string>
+	<string>Face ID lets us confirm it's you before showing secure PDFs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library so you can import photos to convert into PDFs.</string>
+	<key>PDFGatewayBaseURL</key>
+	<string>$(PDF_GATEWAY_BASE_URL)</string>
+	<key>SubscriptionProductID</key>
+	<string>$(SUBSCRIPTION_PRODUCT_ID)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -40,21 +46,9 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>SubscriptionProductID</key>
-	<string>$(SUBSCRIPTION_PRODUCT_ID)</string>
-	<key>GotenbergBaseURL</key>
-	<string>$(GOTENBERG_BASE_URL)</string>
-	<key>PDFGatewayBaseURL</key>
-	<string>$(PDF_GATEWAY_BASE_URL)</string>
 </dict>
 </plist>

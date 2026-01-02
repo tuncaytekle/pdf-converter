@@ -80,15 +80,26 @@ public final class PDFGatewayClient: @unchecked Sendable {
     // MARK: - Public API
 
     /// Convert a public URL to PDF.
-    public func convert(publicURL: URL) async throws -> PDFGatewayResult {
+    ///
+    /// - Parameters:
+    ///   - publicURL: The public URL to convert
+    ///   - progress: Optional callback to report conversion progress
+    public func convert(publicURL: URL, progress: ((ConversionPhase) -> Void)? = nil) async throws -> PDFGatewayResult {
         guard publicURL.scheme == "https" || publicURL.scheme == "http" else {
             throw PDFGatewayError.invalidURL(publicURL.absoluteString)
         }
 
         let create = try await createURLJob(url: publicURL.absoluteString)
         let jobId = create.job_id
+        progress?(.converting)
         let final = try await waitForCompletion(jobId: jobId)
         return PDFGatewayResult(jobId: jobId, downloadURL: final)
+    }
+
+    /// Progress phases for file conversion
+    public enum ConversionPhase {
+        case uploading
+        case converting
     }
 
     /// Convert a local file to PDF. The client chooses calibre vs libreoffice automatically
@@ -98,7 +109,8 @@ public final class PDFGatewayClient: @unchecked Sendable {
     ///   - fileURL: Local file URL (must be file://)
     ///   - filename: Original filename including extension (e.g. "book.epub", "doc.docx").
     ///              This is important; the backend uses the extension.
-    public func convert(fileURL: URL, filename: String) async throws -> PDFGatewayResult {
+    ///   - progress: Optional callback to report conversion progress
+    public func convert(fileURL: URL, filename: String, progress: ((ConversionPhase) -> Void)? = nil) async throws -> PDFGatewayResult {
         guard fileURL.isFileURL else {
             throw PDFGatewayError.invalidURL(fileURL.absoluteString)
         }
@@ -118,9 +130,11 @@ public final class PDFGatewayClient: @unchecked Sendable {
         }
 
         // 2) PUT file bytes to signed URL
+        progress?(.uploading)
         try await uploadFile(to: uploadURL, fileURL: fileURL)
 
         // 3) Submit job (may return SUCCEEDED quickly, otherwise QUEUED)
+        progress?(.converting)
         let submit = try await submitFileJob(jobId: jobId)
 
         if submit.status == "SUCCEEDED", let dl = submit.download_url, let downloadURL = URL(string: dl) {
