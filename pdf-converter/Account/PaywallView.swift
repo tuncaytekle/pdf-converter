@@ -14,6 +14,8 @@ struct PaywallView: View {
     @State private var toggleEnabled = false
     @State private var showTrialText = false
     @State private var showFullPaywall = false
+    @State private var showTerms = false
+    @State private var showPrivacy = false
 
     @Environment(\.analytics) private var analytics
     @Environment(\.scenePhase) private var scenePhase
@@ -68,6 +70,15 @@ struct PaywallView: View {
                 "product_id": vm.productId,
                 "eligible_for_intro_offer": subscriptionManager.product?.subscription?.introductoryOffer != nil
             ])
+            .sheet(isPresented: $showTerms) {
+                if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                    SafariView(url: url)
+                }
+            }
+            .sheet(isPresented: $showPrivacy) {
+                // TODO: Add privacy policy URL when available
+                Text("Privacy Policy")
+            }
         }
     }
 
@@ -123,13 +134,13 @@ struct PaywallView: View {
     private func footerLinks(metrics: PaywallMetrics) -> some View {
         HStack(spacing: 0) {
             Button(NSLocalizedString("Terms of Use", comment: "Terms of use link")) {
-                // TODO: Open Terms of Use
+                showTerms = true
             }
-            
+
             Spacer()
-            
+
             Button(NSLocalizedString("Privacy Policy", comment: "Privacy policy link")) {
-                // TODO: Open Privacy Policy
+                showPrivacy = true
             }
         }
         .font(metrics.f4Font)
