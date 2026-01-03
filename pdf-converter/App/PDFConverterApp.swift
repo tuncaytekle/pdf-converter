@@ -17,6 +17,8 @@ struct PDFConverterApp: App {
     private let persistenceController = PersistenceController.shared
     private let tracker: AnalyticsTracking
     @StateObject private var cloudSyncStatus = CloudSyncStatus()
+    private let ratingPromptManager = RatingPromptManager()
+    private let ratingPromptCoordinator: RatingPromptCoordinator
 
     init() {
         let POSTHOG_API_KEY = "phc_FQdK7M4eYcjjhgNYiHScD1OoeOyYFVMwqWR2xvoq4yR"
@@ -47,10 +49,15 @@ struct PDFConverterApp: App {
         let t = PostHogTracker()
         t.identify(anonId)
         self.tracker = t
+
+        // Initialize rating prompt system
+        self.ratingPromptCoordinator = RatingPromptCoordinator(manager: ratingPromptManager)
+        
+        ASAUploader.sendIfNeeded()
     }
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(ratingPromptCoordinator: ratingPromptCoordinator, ratingPromptManager: ratingPromptManager)
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(\.analytics, tracker)
                 .environmentObject(cloudSyncStatus)

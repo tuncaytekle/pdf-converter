@@ -68,19 +68,6 @@ extension Bundle {
         return trimmed
     }
 
-    var gotenbergBaseURL: URL? {
-        guard let rawValue = object(forInfoDictionaryKey: "GotenbergBaseURL") as? String else {
-            return nil
-        }
-        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty,
-              trimmed != "$(GOTENBERG_BASE_URL)",
-              let url = URL(string: trimmed) else {
-            return nil
-        }
-        return url
-    }
-
     var pdfGatewayBaseURL: URL? {
         guard let rawValue = object(forInfoDictionaryKey: "PDFGatewayBaseURL") as? String else {
             return nil

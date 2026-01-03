@@ -175,7 +175,7 @@ struct AccountView: View {
             .navigationTitle("")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    ProButton(subscriptionManager: subscriptionManager)
+                    ProButton(subscriptionManager: subscriptionManager, source: "account_tab")
                 }
                 .hideSharedBackground
             }

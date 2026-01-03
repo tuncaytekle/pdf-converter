@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var coordinator: AppCoordinator!
     @State private var fileService: FileManagementService
     @State private var scanCoordinator: ScanFlowCoordinator
+    private let ratingPromptCoordinator: RatingPromptCoordinator
+    private let ratingPromptManager: RatingPromptManager
 
     // MARK: - Environment
 
@@ -32,6 +34,7 @@ struct ContentView: View {
     @EnvironmentObject private var cloudSyncStatus: CloudSyncStatus
     @Environment(\.analytics) private var analytics
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.scenePhase) private var scenePhase
 
     // MARK: - Scene-Scoped State
 
@@ -44,7 +47,10 @@ struct ContentView: View {
 
     // MARK: - Initialization
 
-    init() {
+    init(ratingPromptCoordinator: RatingPromptCoordinator, ratingPromptManager: RatingPromptManager) {
+        self.ratingPromptCoordinator = ratingPromptCoordinator
+        self.ratingPromptManager = ratingPromptManager
+
         let cloudBackup = CloudBackupManager.shared
         let pdfGatewayClient = Self.makePDFGatewayClient()
 
@@ -80,7 +86,16 @@ struct ContentView: View {
             }
         }
         .environmentObject(subscriptionManager)
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if oldPhase == .background && newPhase == .active {
+                // Refresh subscription state when returning to foreground
+                subscriptionManager.refreshOnForeground()
+            }
+        }
         .task {
+            // Record app open for rating prompt system
+            ratingPromptManager.recordAppOpen()
+
             // Initialize subscription gate and coordinator on first appearance
             if subscriptionGate == nil {
                 subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
@@ -93,9 +108,13 @@ struct ContentView: View {
                     subscriptionManager: subscriptionManager,
                     subscriptionGate: subscriptionGate!,
                     fileService: fileService,
-                    scanCoordinator: scanCoordinator
+                    scanCoordinator: scanCoordinator,
+                    ratingPromptCoordinator: ratingPromptCoordinator
                 )
                 coordinator?.checkPaywallOnLaunch()
+
+                // Check for recurring rating prompts
+                checkRecurringRatingPrompts()
             }
         }
     }
@@ -104,11 +123,12 @@ struct ContentView: View {
     private func contentView(coordinator: AppCoordinator, subscriptionGate: SubscriptionGate) -> some View {
         rootContent
             .environmentObject(subscriptionGate)
-        .modifier(ScanFlowSheets(coordinator: coordinator, scanCoordinator: scanCoordinator, subscriptionManager: subscriptionManager))
+        .modifier(ScanFlowSheets(coordinator: coordinator, scanCoordinator: scanCoordinator, subscriptionManager: subscriptionManager, ratingPromptCoordinator: ratingPromptCoordinator, ratingPromptManager: ratingPromptManager))
         .modifier(FileManagementSheets(coordinator: coordinator, fileService: fileService, subscriptionManager: subscriptionManager))
         .modifier(FileImporters(coordinator: coordinator))
-        .modifier(ConfirmationDialogs(coordinator: coordinator, fileService: fileService, subscriptionManager: subscriptionManager, subscriptionGate: subscriptionGate))
+        .modifier(ConfirmationDialogs(coordinator: coordinator, fileService: fileService, subscriptionManager: subscriptionManager, subscriptionGate: subscriptionGate, ratingPromptCoordinator: ratingPromptCoordinator, ratingPromptManager: ratingPromptManager))
         .modifier(PaywallPresenter(coordinator: coordinator, subscriptionManager: subscriptionManager, subscriptionGate: subscriptionGate))
+        .modifier(RatingPromptDialogs(coordinator: ratingPromptCoordinator))
     }
 }
 
@@ -117,6 +137,8 @@ private struct ScanFlowSheets: ViewModifier {
     let coordinator: AppCoordinator
     let scanCoordinator: ScanFlowCoordinator
     let subscriptionManager: SubscriptionManager
+    let ratingPromptCoordinator: RatingPromptCoordinator
+    let ratingPromptManager: RatingPromptManager
 
     func body(content: Content) -> some View {
         content
@@ -137,7 +159,9 @@ private struct ScanFlowSheets: ViewModifier {
                 document: document,
                 onSave: { coordinator.saveScanDocument($0) },
                 onShare: { coordinator.shareScanDocument($0) },
-                onCancel: { coordinator.discardScanDocument($0) }
+                onCancel: { coordinator.discardScanDocument($0) },
+                ratingPromptCoordinator: ratingPromptCoordinator,
+                ratingPromptManager: ratingPromptManager
             )
         }
     }
@@ -265,6 +289,8 @@ private struct ConfirmationDialogs: ViewModifier {
     let fileService: FileManagementService
     let subscriptionManager: SubscriptionManager
     let subscriptionGate: SubscriptionGate
+    let ratingPromptCoordinator: RatingPromptCoordinator
+    let ratingPromptManager: RatingPromptManager
 
     func body(content: Content) -> some View {
         content
@@ -319,10 +345,14 @@ private struct ConfirmationDialogs: ViewModifier {
             get: { coordinator.showOnboarding },
             set: { coordinator.showOnboarding = $0 }
         )) {
-            OnboardingFlowView(isPresented: Binding(
-                get: { coordinator.showOnboarding },
-                set: { coordinator.showOnboarding = $0 }
-            ))
+            OnboardingFlowView(
+                isPresented: Binding(
+                    get: { coordinator.showOnboarding },
+                    set: { coordinator.showOnboarding = $0 }
+                ),
+                ratingPromptCoordinator: ratingPromptCoordinator,
+                ratingPromptManager: ratingPromptManager
+            )
         }
         .onChange(of: coordinator.showOnboarding) { _, isShowing in
             // When onboarding flow is dismissed on first launch, show paywall
@@ -335,16 +365,16 @@ private struct ConfirmationDialogs: ViewModifier {
             set: { coordinator.showCreateActions = $0 }
         ), titleVisibility: .hidden) {
             Button { coordinator.presentScanFlow(.documentCamera) } label: {
-                Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
+                Label(NSLocalizedString("action.scanDocuments", comment: "Scan Docs"), systemImage: "doc.text.viewfinder")
             }
             Button { coordinator.presentScanFlow(.photoLibrary) } label: {
-                Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
+                Label(NSLocalizedString("action.convertPhotos", comment: "Convert Photos"), systemImage: "photo.on.rectangle")
             }
             Button {
                 coordinator.showCreateActions = false
                 coordinator.showConvertPicker = true
             } label: {
-                Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
+                Label(NSLocalizedString("action.convertFiles", comment: "Convert Files"), systemImage: "folder")
             }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) { }
         }
@@ -383,10 +413,14 @@ private struct ConfirmationDialogs: ViewModifier {
             get: { coordinator.showOnboarding },
             set: { coordinator.showOnboarding = $0 }
         )) {
-            OnboardingFlowView(isPresented: Binding(
-                get: { coordinator.showOnboarding },
-                set: { coordinator.showOnboarding = $0 }
-            ))
+            OnboardingFlowView(
+                isPresented: Binding(
+                    get: { coordinator.showOnboarding },
+                    set: { coordinator.showOnboarding = $0 }
+                ),
+                ratingPromptCoordinator: ratingPromptCoordinator,
+                ratingPromptManager: ratingPromptManager
+            )
         }
         .onChange(of: coordinator.showOnboarding) { _, isShowing in
             // When onboarding flow is dismissed on first launch, show paywall
@@ -399,16 +433,16 @@ private struct ConfirmationDialogs: ViewModifier {
             set: { coordinator.showCreateActions = $0 }
         ), titleVisibility: .hidden) {
             Button { coordinator.presentScanFlow(.documentCamera) } label: {
-                Label(NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"), systemImage: "doc.text.viewfinder")
+                Label(NSLocalizedString("action.scanDocuments", comment: "Scan Docs"), systemImage: "doc.text.viewfinder")
             }
             Button { coordinator.presentScanFlow(.photoLibrary) } label: {
-                Label(NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"), systemImage: "photo.on.rectangle")
+                Label(NSLocalizedString("action.convertPhotos", comment: "Convert Photos"), systemImage: "photo.on.rectangle")
             }
             Button {
                 coordinator.showCreateActions = false
                 coordinator.showConvertPicker = true
             } label: {
-                Label(NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"), systemImage: "folder")
+                Label(NSLocalizedString("action.convertFiles", comment: "Convert Files"), systemImage: "folder")
             }
             Button(NSLocalizedString("action.cancel", comment: "Cancel action"), role: .cancel) { }
         }
@@ -534,26 +568,33 @@ extension ContentView {
 
                     // 2) Menu only controls interaction + icon; no shadow here
                     Menu {
-                        Button { coordinator.presentScanFlow(.documentCamera) } label: {
+                        Button {
+                            analytics.capture("create_button_option_selected", properties: ["option": "scan_documents"])
+                            coordinator.presentScanFlow(.documentCamera)
+                        } label: {
                             Label(
-                                NSLocalizedString("action.scanDocuments", comment: "Scan documents to PDF"),
+                                NSLocalizedString("action.scanDocuments", comment: "Scan Docs"),
                                 systemImage: "doc.text.viewfinder"
                             )
                         }
 
-                        Button { coordinator.presentScanFlow(.photoLibrary) } label: {
+                        Button {
+                            analytics.capture("create_button_option_selected", properties: ["option": "convert_photos"])
+                            coordinator.presentScanFlow(.photoLibrary)
+                        } label: {
                             Label(
-                                NSLocalizedString("action.convertPhotos", comment: "Convert photos to PDF"),
+                                NSLocalizedString("action.convertPhotos", comment: "Convert Photos"),
                                 systemImage: "photo.on.rectangle"
                             )
                         }
 
                         Button {
+                            analytics.capture("create_button_option_selected", properties: ["option": "convert_files"])
                             coordinator.showCreateActions = false
                             coordinator.showConvertPicker = true
                         } label: {
                             Label(
-                                NSLocalizedString("action.convertFiles", comment: "Convert files to PDF"),
+                                NSLocalizedString("action.convertFiles", comment: "Convert Files"),
                                 systemImage: "folder"
                             )
                         }
@@ -570,6 +611,7 @@ extension ContentView {
                     }
                     .buttonStyle(.plain)
                     .simultaneousGesture(TapGesture().onEnded {
+                        analytics.capture("create_button_pressed", properties: [:])
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
                         createButtonPulse = false
@@ -629,6 +671,31 @@ extension ContentView {
         try? await Task.sleep(nanoseconds: 6_000_000_000)
         withAnimation(.easeOut(duration: 0.4)) {
             createButtonPulse = false
+        }
+    }
+
+    // MARK: - Rating Prompts
+
+    /// Check if should show recurring rating prompts (second open or recurring)
+    @MainActor
+    private func checkRecurringRatingPrompts() {
+        // Check second open prompt
+        if ratingPromptManager.shouldShowEnjoymentPromptOnSecondOpen() {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 500_000_000) // Small delay after launch
+                ratingPromptManager.markSecondOpenPromptShown()
+                ratingPromptCoordinator.presentEnjoymentFlow()
+            }
+            return
+        }
+
+        // Check recurring prompt
+        if ratingPromptManager.shouldShowRecurringEnjoymentPrompt() {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 500_000_000) // Small delay after launch
+                ratingPromptManager.recordRatingPromptShown()
+                ratingPromptCoordinator.presentEnjoymentFlow()
+            }
         }
     }
     fileprivate static let convertibleExtensions: [String] = [
@@ -730,7 +797,7 @@ struct SettingsView: View {
             .navigationTitle(NSLocalizedString("settings.title", comment: "Settings navigation title"))
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    ProButton(subscriptionManager: subscriptionManager)
+                    ProButton(subscriptionManager: subscriptionManager, source: "settings_tab")
                 }
                 .hideSharedBackground
             }
@@ -1607,7 +1674,7 @@ struct ToolsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    ProButton(subscriptionManager: subscriptionManager)
+                    ProButton(subscriptionManager: subscriptionManager, source: "tools_tab")
                 }
                 .hideSharedBackground
             }
@@ -1636,6 +1703,8 @@ struct ScanReviewSheet: View {
     let onSave: (ScannedDocument) -> Void
     fileprivate let onShare: (ScannedDocument) -> ShareItem?
     let onCancel: (ScannedDocument) -> Void
+    let ratingPromptCoordinator: RatingPromptCoordinator
+    let ratingPromptManager: RatingPromptManager
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var subscriptionGate: SubscriptionGate
@@ -1646,12 +1715,16 @@ struct ScanReviewSheet: View {
         document: ScannedDocument,
         onSave: @escaping (ScannedDocument) -> Void,
         onShare: @escaping (ScannedDocument) -> ShareItem?,
-        onCancel: @escaping (ScannedDocument) -> Void
+        onCancel: @escaping (ScannedDocument) -> Void,
+        ratingPromptCoordinator: RatingPromptCoordinator,
+        ratingPromptManager: RatingPromptManager
     ) {
         self.document = document
         self.onSave = onSave
         self.onShare = onShare
         self.onCancel = onCancel
+        self.ratingPromptCoordinator = ratingPromptCoordinator
+        self.ratingPromptManager = ratingPromptManager
         _fileName = State(initialValue: document.fileName)
     }
 
@@ -1721,6 +1794,16 @@ struct ScanReviewSheet: View {
                 shareItem = nil
             }
         }
+        .onAppear {
+            // Check if should show first conversion rating prompt
+            if ratingPromptManager.shouldShowOnFirstConversion() {
+                Task { @MainActor in
+                    ratingPromptManager.markFirstConversionCompleted()
+                    ratingPromptManager.recordRatingPromptShown()
+                    ratingPromptCoordinator.presentRatingPrompt()
+                }
+            }
+        }
         .postHogScreenView("Scan Review")
     }
 
@@ -1750,6 +1833,38 @@ private struct PaywallPresenter: ViewModifier {
                 if !isShowing {
                     coordinator.handlePaywallDismissal()
                     subscriptionGate.handlePaywallDismissal()
+                }
+            }
+    }
+}
+
+// MARK: - Rating Prompt Dialogs
+
+private struct RatingPromptDialogs: ViewModifier {
+    @Bindable var coordinator: RatingPromptCoordinator
+
+    func body(content: Content) -> some View {
+        content
+            .fullScreenCover(isPresented: $coordinator.showEnjoymentDialog) {
+                EnjoymentDialog(
+                    onYes: coordinator.handleEnjoymentYes,
+                    onNo: coordinator.handleEnjoymentNo
+                )
+                .presentationBackground(.clear)
+            }
+            .alert(
+                coordinator.showContactAlert?.title ?? "",
+                isPresented: Binding(
+                    get: { coordinator.showContactAlert != nil },
+                    set: { if !$0 { coordinator.dismissContactAlert() } }
+                )
+            ) {
+                Button(NSLocalizedString("action.ok", comment: "OK action")) {
+                    coordinator.dismissContactAlert()
+                }
+            } message: {
+                if let alert = coordinator.showContactAlert {
+                    Text(alert.message)
                 }
             }
     }

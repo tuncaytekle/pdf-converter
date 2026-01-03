@@ -466,35 +466,35 @@
       }
     },
     "action.convertFiles" : {
-      "comment" : "Convert files to PDF",
+      "comment" : "Convert Files",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Convert Files to PDF"
+            "value" : "Convert Files"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dosyaları PDF'ye Dönüştür"
+            "value" : "Dosya Dönüştür"
           }
         }
       }
     },
     "action.convertPhotos" : {
-      "comment" : "Convert photos to PDF",
+      "comment" : "Convert Photos",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Convert Photos to PDF"
+            "value" : "Convert Photos"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fotoğrafları PDF'ye Dönüştür"
+            "value" : "Fotoğraf Dönüştür"
           }
         }
       }
@@ -619,18 +619,18 @@
       }
     },
     "action.scanDocuments" : {
-      "comment" : "Scan documents to PDF",
+      "comment" : "Scan Docs",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scan Documents to PDF"
+            "value" : "Scan Docs"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Belgeleri PDF'ye Tara"
+            "value" : "Belge Tara"
           }
         }
       }
@@ -2051,6 +2051,24 @@
         }
       }
     },
+    "onboarding.feature.signature" : {
+      "comment" : "Onboarding signature feature title",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add **Signature** to your Docs"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belgelerinize **İmza** ekleyin"
+          }
+        }
+      }
+    },
     "Organize" : {
       "comment" : "Paywall feature tag",
       "localizations" : {
@@ -2298,6 +2316,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Geri Yükle"
+          }
+        }
+      }
+    },
+    "rating.enjoyment.no" : {
+      "comment" : "No",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hayır"
+          }
+        }
+      }
+    },
+    "rating.enjoyment.title" : {
+      "comment" : "Are you enjoying the app?",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you enjoying the app?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulamayı beğeniyor musunuz?"
+          }
+        }
+      }
+    },
+    "rating.enjoyment.yes" : {
+      "comment" : "Yes",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yes"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evet"
           }
         }
       }

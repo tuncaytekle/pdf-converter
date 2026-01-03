@@ -22,6 +22,9 @@ final class ScanFlowCoordinator {
     /// File service for final document persistence
     private let fileService: FileManagementService
 
+    /// Tracks whether we've disabled the idle timer (to restore it properly)
+    private var isIdleTimerDisabled = false
+
     // MARK: - Initialization
 
     init(
@@ -71,9 +74,11 @@ final class ScanFlowCoordinator {
         }
 
         isConverting = true
+        setIdleTimerDisabled(true)  // Keep screen awake during conversion
         defer {
             isConverting = false
             conversionProgress = nil
+            setIdleTimerDisabled(false)  // Re-enable auto-lock
         }
 
         do {
@@ -140,6 +145,11 @@ final class ScanFlowCoordinator {
     func convertWebPage(url: URL, progressHandler: ((String) -> Void)? = nil) async throws -> ScannedDocument {
         guard let client = pdfGatewayClient else {
             throw ScanWorkflowError.unavailable
+        }
+
+        setIdleTimerDisabled(true)  // Keep screen awake during conversion
+        defer {
+            setIdleTimerDisabled(false)  // Re-enable auto-lock
         }
 
         let host = url.host?
@@ -277,4 +287,13 @@ final class ScanFlowCoordinator {
         formatter.timeStyle = .short
         return formatter
     }()
+
+    /// Enables or disables the idle timer to prevent screen sleep during conversions
+    /// - Parameter disabled: true to keep screen awake, false to allow auto-lock
+    private func setIdleTimerDisabled(_ disabled: Bool) {
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = disabled
+            self.isIdleTimerDisabled = disabled
+        }
+    }
 }

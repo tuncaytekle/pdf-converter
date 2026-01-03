@@ -7,7 +7,15 @@ struct OnboardingFlowView: View {
     @StateObject private var vm = OnboardingViewModel()
     @Environment(\.analytics) private var analytics
 
-    private let totalPages = 6 // 1 welcome + 4 features + 1 formats
+    private let totalPages = 7 // 1 welcome + 5 features + 1 formats
+    private let ratingPromptCoordinator: RatingPromptCoordinator
+    private let ratingPromptManager: RatingPromptManager
+
+    init(isPresented: Binding<Bool>, ratingPromptCoordinator: RatingPromptCoordinator, ratingPromptManager: RatingPromptManager) {
+        self._isPresented = isPresented
+        self.ratingPromptCoordinator = ratingPromptCoordinator
+        self.ratingPromptManager = ratingPromptManager
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -19,8 +27,8 @@ struct OnboardingFlowView: View {
                     .tag(0)
                     .postHogScreenView("Onboarding Welcome", ["page": 0])
 
-                // Pages 1-4: Feature screens
-                ForEach(1...4, id: \.self) { index in
+                // Pages 1-5: Feature screens
+                ForEach(1...5, id: \.self) { index in
                     featurePage(for: index - 1, metrics: metrics)
                         .tag(index)
                         .postHogScreenView(
@@ -32,10 +40,10 @@ struct OnboardingFlowView: View {
                         )
                 }
 
-                // Page 5: Formats page
+                // Page 6: Formats page
                 formatsPage(metrics: metrics)
-                    .tag(5)
-                    .postHogScreenView("Onboarding Formats", ["page": 5])
+                    .tag(6)
+                    .postHogScreenView("Onboarding Formats", ["page": 6])
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
@@ -46,7 +54,7 @@ struct OnboardingFlowView: View {
             .onChange(of: currentPage) { _, newPage in
                 // Track page changes
                 let feature: String? = {
-                    if newPage >= 1 && newPage <= 4 {
+                    if newPage >= 1 && newPage <= 5 {
                         return features[newPage - 1].highlightedTag.lowercased()
                     }
                     return nil
@@ -260,6 +268,15 @@ struct OnboardingFlowView: View {
                 withAnimation {
                     currentPage += 1
                 }
+
+                // Check if just left page 3 (Share feature, index 3)
+                if currentPage == 4 && ratingPromptManager.shouldShowAfterOnboardingStep3() {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 300_000_000) // Small delay
+                        ratingPromptManager.markOnboardingStep3PromptShown()
+                        ratingPromptCoordinator.presentRatingPrompt()
+                    }
+                }
             } else {
                 // Last page - track completion and dismiss to show paywall
                 vm.trackCompleted(analytics: analytics)
@@ -442,6 +459,12 @@ struct OnboardingFlowView: View {
             titleKey: "onboarding.feature.organize",
             titleComment: "Onboarding organize feature title",
             highlightedTag: "Organize"
+        ),
+        FlowFeatureInfo(
+            imageName: "feature-signature",
+            titleKey: "onboarding.feature.signature",
+            titleComment: "Onboarding signature feature title",
+            highlightedTag: "Organize"
         )
     ]
 }
@@ -475,5 +498,11 @@ private struct FlowFeatureTag: View {
 // MARK: - Preview
 
 #Preview {
-    OnboardingFlowView(isPresented: .constant(true))
+    let manager = RatingPromptManager()
+    let coordinator = RatingPromptCoordinator(manager: manager)
+    return OnboardingFlowView(
+        isPresented: .constant(true),
+        ratingPromptCoordinator: coordinator,
+        ratingPromptManager: manager
+    )
 }

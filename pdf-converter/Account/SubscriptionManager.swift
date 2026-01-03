@@ -20,6 +20,8 @@ final class SubscriptionManager: ObservableObject {
 
     private let productID: String
     private let hasEverPurchasedKey = "hasEverPurchasedSubscription"
+    private let cachedSubscriptionStateKey = "cachedSubscriptionState"
+    private let cachedExpirationDateKey = "cachedExpirationDate"
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.roguewaveapps.pdfconverter",
         category: "Subscription"
@@ -27,9 +29,14 @@ final class SubscriptionManager: ObservableObject {
     private var loadProductTask: Task<Void, Never>?
     private var monitorEntitlementsTask: Task<Void, Never>?
     private var transactionUpdatesTask: Task<Void, Never>?
+    private var validationTimer: Timer?
 
     init() {
         productID = Bundle.main.subscriptionProductID
+
+        // Load cached subscription state for immediate UI rendering
+        isSubscribed = loadCachedSubscriptionState()
+
         loadProductTask = Task { [weak self] in
             await self?.loadProduct()
         }
@@ -39,6 +46,9 @@ final class SubscriptionManager: ObservableObject {
         transactionUpdatesTask = Task { [weak self] in
             await self?.listenForTransactions()
         }
+
+        // Start periodic expiration validation
+        startPeriodicValidation()
     }
 
 #if DEBUG
@@ -54,6 +64,29 @@ final class SubscriptionManager: ObservableObject {
         loadProductTask?.cancel()
         monitorEntitlementsTask?.cancel()
         transactionUpdatesTask?.cancel()
+        validationTimer?.invalidate()
+    }
+
+    private func loadCachedSubscriptionState() -> Bool {
+        guard let expirationDate = UserDefaults.standard.object(forKey: cachedExpirationDateKey) as? Date else {
+            return false
+        }
+
+        // Check if cached expiration is still valid
+        let isStillActive = expirationDate > Date()
+
+        debugLog("Loaded cached subscription state: \(isStillActive ? "active" : "expired"), expires: \(expirationDate)")
+        return isStillActive
+    }
+
+    private func cacheSubscriptionState(isActive: Bool, expirationDate: Date?) {
+        if isActive, let expirationDate = expirationDate {
+            UserDefaults.standard.set(expirationDate, forKey: cachedExpirationDateKey)
+            debugLog("Cached subscription state: active until \(expirationDate)")
+        } else {
+            UserDefaults.standard.removeObject(forKey: cachedExpirationDateKey)
+            debugLog("Cleared subscription cache (inactive or no expiration)")
+        }
     }
 
     var shouldShowPaywall: Bool {
@@ -62,6 +95,55 @@ final class SubscriptionManager: ObservableObject {
 
     private func markPurchaseCompleted() {
         UserDefaults.standard.set(true, forKey: hasEverPurchasedKey)
+    }
+
+    private func startPeriodicValidation() {
+        // Validate expiration every 60 seconds
+        validationTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.validateCurrentExpiration()
+            }
+        }
+    }
+
+    private func validateCurrentExpiration() async {
+        guard isSubscribed else { return }
+
+        // Check if we have a cached expiration date
+        guard let cachedExpiration = UserDefaults.standard.object(forKey: cachedExpirationDateKey) as? Date else {
+            debugLog("No cached expiration date - skipping validation")
+            return
+        }
+
+        // Check if subscription has expired based on cached date
+        if cachedExpiration <= Date() {
+            debugLog("Subscription expired based on cached date: \(cachedExpiration)")
+            isSubscribed = false
+            UserDefaults.standard.removeObject(forKey: cachedExpirationDateKey)
+
+            // Trigger entitlement refresh to get updated state from StoreKit
+            await refreshEntitlements()
+        }
+    }
+
+    private func refreshEntitlements() async {
+        debugLog("Refreshing entitlements from StoreKit")
+
+        for await entitlement in StoreKit.Transaction.currentEntitlements {
+            await updateSubscriptionState(from: entitlement)
+            // Only process the first matching entitlement
+            if case .verified(let transaction) = entitlement,
+               transaction.productID == productID {
+                break
+            }
+        }
+    }
+
+    /// Call this when app returns to foreground to refresh subscription state
+    func refreshOnForeground() {
+        Task { @MainActor in
+            await refreshEntitlements()
+        }
     }
 
     func purchase() {
@@ -88,6 +170,7 @@ final class SubscriptionManager: ObservableObject {
                         foundActiveSubscription = true
                         isSubscribed = true
                         markPurchaseCompleted()
+                        cacheSubscriptionState(isActive: true, expirationDate: transaction.expirationDate)
                         debugLog("Found active subscription during restore")
                         await transaction.finish()
                         break
@@ -167,9 +250,12 @@ final class SubscriptionManager: ObservableObject {
         case .verified(let transaction):
             guard transaction.productID == productID else { return }
 
-            let isActive = transaction.revocationDate == nil &&
-                (transaction.expirationDate ?? .distantFuture) > Date()
+            let expirationDate = transaction.expirationDate ?? .distantFuture
+            let isActive = transaction.revocationDate == nil && expirationDate > Date()
             isSubscribed = isActive
+
+            // Cache the updated state
+            cacheSubscriptionState(isActive: isActive, expirationDate: expirationDate)
 
             if isActive {
                 purchaseState = .purchased
@@ -187,9 +273,17 @@ final class SubscriptionManager: ObservableObject {
         switch result {
         case .verified(let transaction):
             guard transaction.productID == productID else { return }
-            let isActive = transaction.revocationDate == nil &&
-                (transaction.expirationDate ?? .distantFuture) > Date()
+
+            let expirationDate = transaction.expirationDate ?? .distantFuture
+            let isActive = transaction.revocationDate == nil && expirationDate > Date()
+
             isSubscribed = isActive
+
+            // Cache the state for next launch
+            cacheSubscriptionState(isActive: isActive, expirationDate: expirationDate)
+
+            debugLog("Updated subscription state: \(isActive ? "active" : "inactive"), expires: \(expirationDate)")
+
         case .unverified(_, let error):
             purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
         }
@@ -297,10 +391,19 @@ extension View {
 
 struct ProButton: View {
     @ObservedObject var subscriptionManager: SubscriptionManager
+    @Environment(\.analytics) private var analytics
+    let source: String
 
     var body: some View {
         Button {
             guard !subscriptionManager.isSubscribed else { return }
+
+            // Track Pro button tap
+            analytics.capture("pro_button_tapped", properties: [
+                "source": source,
+                "product_id": subscriptionManager.product?.id ?? "unknown"
+            ])
+
             subscriptionManager.purchase()
         } label: {
             HStack {

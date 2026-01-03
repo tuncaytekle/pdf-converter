@@ -52,7 +52,7 @@ struct FilesView: View {
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        ProButton(subscriptionManager: subscriptionManager)
+                        ProButton(subscriptionManager: subscriptionManager, source: "files_tab")
                     }
                     .hideSharedBackground
                 }

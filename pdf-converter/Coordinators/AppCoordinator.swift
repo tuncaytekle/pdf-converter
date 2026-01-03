@@ -110,6 +110,9 @@ final class AppCoordinator {
     /// Scan flow coordinator
     private let scanCoordinator: ScanFlowCoordinator
 
+    /// Rating prompt coordinator
+    private let ratingPromptCoordinator: RatingPromptCoordinator
+
     // MARK: - Task Management
 
     /// Initial file loading and cloud restore task
@@ -124,12 +127,14 @@ final class AppCoordinator {
         subscriptionManager: SubscriptionManager,
         subscriptionGate: SubscriptionGate,
         fileService: FileManagementService,
-        scanCoordinator: ScanFlowCoordinator
+        scanCoordinator: ScanFlowCoordinator,
+        ratingPromptCoordinator: RatingPromptCoordinator
     ) {
         self.subscriptionManager = subscriptionManager
         self.subscriptionGate = subscriptionGate
         self.fileService = fileService
         self.scanCoordinator = scanCoordinator
+        self.ratingPromptCoordinator = ratingPromptCoordinator
         self.showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     }
 
@@ -282,6 +287,15 @@ final class AppCoordinator {
 
     /// Handles paywall dismissal and restores any pending state
     func handlePaywallDismissal() {
+        // Check if user just subscribed and show rating prompt
+        if subscriptionManager.isSubscribed && ratingPromptCoordinator.manager.shouldShowAfterSubscriptionPurchase() {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 500_000_000) // Small delay
+                ratingPromptCoordinator.manager.recordRatingPromptShown()
+                ratingPromptCoordinator.presentRatingPrompt()
+            }
+        }
+
         // Mark onboarding as completed if needed
         if !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
