@@ -4,6 +4,8 @@ import PostHog
 struct OnboardingFlowView: View {
     @Binding var isPresented: Bool
     @State private var currentPage = 0
+    @State private var showPrivacyPolicy = false
+    @State private var showTerms = false
     @StateObject private var vm = OnboardingViewModel()
     @Environment(\.analytics) private var analytics
 
@@ -60,6 +62,16 @@ struct OnboardingFlowView: View {
                     return nil
                 }()
                 vm.trackPageViewed(analytics: analytics, page: newPage, feature: feature)
+            }
+            .sheet(isPresented: $showPrivacyPolicy) {
+                if let url = URL(string: "https://roguewaveapps.com/pdf-converter/privacy-policy") {
+                    SafariView(url: url)
+                }
+            }
+            .sheet(isPresented: $showTerms) {
+                if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                    SafariView(url: url)
+                }
             }
         }
     }
@@ -192,11 +204,11 @@ struct OnboardingFlowView: View {
             linkActions: [
                 "privacy": {
                     vm.trackLinkTapped(analytics: analytics, link: "privacy")
-                    // TODO: Open Privacy Policy
+                    showPrivacyPolicy = true
                 },
                 "terms": {
                     vm.trackLinkTapped(analytics: analytics, link: "terms")
-                    // TODO: Open Terms of Use
+                    showTerms = true
                 }
             ]
         )

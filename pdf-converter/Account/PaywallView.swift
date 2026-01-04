@@ -76,8 +76,9 @@ struct PaywallView: View {
                 }
             }
             .sheet(isPresented: $showPrivacy) {
-                // TODO: Add privacy policy URL when available
-                Text("Privacy Policy")
+                if let url = URL(string: "https://roguewaveapps.com/pdf-converter/privacy-policy") {
+                    SafariView(url: url)
+                }
             }
         }
     }
@@ -167,7 +168,7 @@ struct PaywallView: View {
                     .font(metrics.f3Font)
                     .foregroundColor(Color(hex: "#363636"))
             } else {
-                Text(NSLocalizedString("$0.49", comment: "Trial price"))
+                Text(NSLocalizedString("paywall.trialPrice.fallback", comment: "Trial price fallback"))
                     .font(metrics.f3Font)
                     .foregroundColor(Color(hex: "#363636"))
             }
@@ -197,7 +198,7 @@ struct PaywallView: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text(NSLocalizedString("First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!", comment: "Paywall subscription terms"))
+                Text(NSLocalizedString("paywall.finePrint.fallback", comment: "Paywall subscription terms fallback"))
                     .font(metrics.f4Font)
                     .foregroundColor(Color(hex: "#363636"))
                     .multilineTextAlignment(.center)

@@ -18,6 +18,12 @@
             "state" : "translated",
             "value" : "#1 Dönüştürücü Uygulaması"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "#1 変換アプリ"
+          }
         }
       }
     },
@@ -34,6 +40,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%d dosya yedeklendi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d件のファイルをバックアップしました"
           }
         }
       }
@@ -52,6 +64,12 @@
             "state" : "translated",
             "value" : "%d / %d dosya yedeklendi"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d / %d件のファイルをバックアップしました"
+          }
         }
       }
     },
@@ -69,22 +87,11 @@
             "state" : "translated",
             "value" : "%d Sayfa"
           }
-        }
-      }
-    },
-    "$0.49" : {
-      "comment" : "Trial price",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "$0.49"
-          }
         },
-        "tr" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "$0.49"
+            "value" : "%dページ"
           }
         }
       }
@@ -103,6 +110,12 @@
             "state" : "translated",
             "value" : "1 dosya yedeklendi"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1件のファイルをバックアップしました"
+          }
         }
       }
     },
@@ -119,6 +132,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 Sayfa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1ページ"
           }
         }
       }
@@ -137,6 +156,12 @@
             "state" : "translated",
             "value" : "7 günlük deneme etkinleştirildi"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7日間のトライアルが有効になりました"
+          }
         }
       }
     },
@@ -153,6 +178,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "7 Günlük Tam Erişim"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7日間のフルアクセス"
           }
         }
       }
@@ -171,6 +202,12 @@
             "state" : "translated",
             "value" : "**100+** destekli format"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "**100+**形式に対応"
+          }
         }
       }
     },
@@ -187,6 +224,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aramayı temizle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索をクリア"
           }
         }
       }
@@ -205,6 +248,12 @@
             "state" : "translated",
             "value" : "Oluştur"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作成"
+          }
         }
       }
     },
@@ -221,6 +270,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Daha fazla işlem"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他の操作"
           }
         }
       }
@@ -239,6 +294,12 @@
             "state" : "translated",
             "value" : "Dosyaları ara"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを検索"
+          }
         }
       }
     },
@@ -255,6 +316,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Küçük bir topluluk"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小さなコミュニティです"
           }
         }
       }
@@ -273,6 +340,12 @@
             "state" : "translated",
             "value" : "Büyümemize yardım edin"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成長にご協力ください"
+          }
         }
       }
     },
@@ -289,6 +362,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abonelikleri Yönet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サブスクリプションを管理"
           }
         }
       }
@@ -307,6 +386,12 @@
             "state" : "translated",
             "value" : "Bize yorum bırakın"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レビューを投稿"
+          }
         }
       }
     },
@@ -324,6 +409,12 @@
             "state" : "translated",
             "value" : "Abone olarak büyümemize yardım edin"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "購読して成長を支援してください"
+          }
         }
       }
     },
@@ -340,6 +431,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çalışmamızı destekleyin"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私たちの活動を支援"
           }
         }
       }
@@ -359,6 +456,12 @@
             "state" : "translated",
             "value" : "**Pro** Hesap"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "**Pro**アカウント"
+          }
         }
       }
     },
@@ -377,6 +480,12 @@
             "state" : "translated",
             "value" : "**Pro’yu** Aralayın"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "**Pro**をアンロック"
+          }
         }
       }
     },
@@ -393,6 +502,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Planları Görüntüle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プランを見る"
           }
         }
       }
@@ -411,6 +526,12 @@
             "state" : "translated",
             "value" : "İptal"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
         }
       }
     },
@@ -427,6 +548,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Temizle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリア"
           }
         }
       }
@@ -445,6 +572,12 @@
             "state" : "translated",
             "value" : "Devam"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続ける"
+          }
         }
       }
     },
@@ -461,6 +594,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dönüştür"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換"
           }
         }
       }
@@ -479,6 +618,12 @@
             "state" : "translated",
             "value" : "Dosya Dönüştür"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを変換"
+          }
         }
       }
     },
@@ -495,6 +640,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fotoğraf Dönüştür"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真を変換"
           }
         }
       }
@@ -513,6 +664,12 @@
             "state" : "translated",
             "value" : "Sil"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
         }
       }
     },
@@ -529,6 +686,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tamam"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
           }
         }
       }
@@ -547,6 +710,12 @@
             "state" : "translated",
             "value" : "Taşı..."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移動先..."
+          }
         }
       }
     },
@@ -563,6 +732,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tamam"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         }
       }
@@ -581,6 +756,12 @@
             "state" : "translated",
             "value" : "Önizle"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレビュー"
+          }
         }
       }
     },
@@ -597,6 +778,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yeniden Adlandır"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前を変更"
           }
         }
       }
@@ -615,6 +802,12 @@
             "state" : "translated",
             "value" : "Kaydet"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
         }
       }
     },
@@ -631,6 +824,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belge Tara"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書類をスキャン"
           }
         }
       }
@@ -649,6 +848,12 @@
             "state" : "translated",
             "value" : "Paylaş"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有"
+          }
         }
       }
     },
@@ -665,6 +870,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kimlik Doğrulama Hatası"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証エラー"
           }
         }
       }
@@ -683,6 +894,12 @@
             "state" : "translated",
             "value" : "Kimliğinizi doğrulayamadık."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本人確認ができませんでした。"
+          }
         }
       }
     },
@@ -699,6 +916,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kimlik Doğrulama Başarısız"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証に失敗しました"
           }
         }
       }
@@ -717,6 +940,12 @@
             "state" : "translated",
             "value" : "Kimlik Doğrulama Kullanılamıyor"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証を利用できません"
+          }
         }
       }
     },
@@ -733,6 +962,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dönüştürme Başarısız"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換に失敗しました"
           }
         }
       }
@@ -751,6 +986,12 @@
             "state" : "translated",
             "value" : "Seçilen dosyaya erişemedik. Lütfen tekrar deneyin."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したファイルにアクセスできませんでした。もう一度お試しください。"
+          }
         }
       }
     },
@@ -767,6 +1008,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF'yi kaldıramadık. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFを削除できませんでした。もう一度お試しください。"
           }
         }
       }
@@ -785,6 +1032,12 @@
             "state" : "translated",
             "value" : "Silme Başarısız"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除に失敗しました"
+          }
         }
       }
     },
@@ -801,6 +1054,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Seçilen dosyalara erişemedik. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したファイルにアクセスできませんでした。もう一度お試しください。"
           }
         }
       }
@@ -819,6 +1078,12 @@
             "state" : "translated",
             "value" : "Kitaplığınıza %d PDF eklendi."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリに%d件のPDFを追加しました。"
+          }
         }
       }
     },
@@ -835,6 +1100,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kitaplığınıza 1 PDF eklendi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリにPDFを1件追加しました。"
           }
         }
       }
@@ -853,6 +1124,12 @@
             "state" : "translated",
             "value" : "İçe Aktarma Tamamlandı"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポート完了"
+          }
         }
       }
     },
@@ -869,6 +1146,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Seçilen dosyaları içe aktaramadık. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したファイルをインポートできませんでした。もう一度お試しください。"
           }
         }
       }
@@ -887,6 +1170,12 @@
             "state" : "translated",
             "value" : "İçe Aktarma Başarısız"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポートに失敗しました"
+          }
         }
       }
     },
@@ -903,6 +1192,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lütfen kaydetmeden önce bir dosya adı girin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存する前にファイル名を入力してください。"
           }
         }
       }
@@ -921,6 +1216,12 @@
             "state" : "translated",
             "value" : "Geçersiz Ad"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無効な名前"
+          }
         }
       }
     },
@@ -937,6 +1238,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lütfen dönüştürmek için bir web adresi girin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換するWebアドレスを入力してください。"
           }
         }
       }
@@ -955,6 +1262,12 @@
             "state" : "translated",
             "value" : "Geçersiz URL"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無効なURL"
+          }
         }
       }
     },
@@ -971,6 +1284,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu web adresini anlayamadık. Tam URL'yi eklemeyi deneyin (örneğin, https://example.com)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "そのWebアドレスを理解できませんでした。完全なURL（例：https://example.com）を含めてみてください。"
           }
         }
       }
@@ -989,6 +1308,12 @@
             "state" : "translated",
             "value" : "Seçilen dosyalardan hiçbirini ekleyemedik. Lütfen PDF'leri seçin ve tekrar deneyin."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したファイルを追加できませんでした。PDFを選んで再度お試しください。"
+          }
         }
       }
     },
@@ -1005,6 +1330,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF İçe Aktarılmadı"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFがインポートされませんでした"
           }
         }
       }
@@ -1023,6 +1354,12 @@
             "state" : "translated",
             "value" : "Düzenlemeden önce bir PDF ekleyin veya içe aktarın."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編集する前にPDFを追加またはインポートしてください。"
+          }
         }
       }
     },
@@ -1039,6 +1376,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF Yok"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用できるPDFがありません"
           }
         }
       }
@@ -1057,6 +1400,12 @@
             "state" : "translated",
             "value" : "Bu PDF'yi düzenleme için yükleyemedik."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "そのPDFを編集用に読み込めませんでした。"
+          }
         }
       }
     },
@@ -1073,6 +1422,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Açma Başarısız"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開くことに失敗しました"
           }
         }
       }
@@ -1091,6 +1446,12 @@
             "state" : "translated",
             "value" : "PDF Hatası"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFエラー"
+          }
         }
       }
     },
@@ -1107,6 +1468,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF'yi yeniden adlandıramadık. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFの名前を変更できませんでした。もう一度お試しください。"
           }
         }
       }
@@ -1125,6 +1492,12 @@
             "state" : "translated",
             "value" : "Yeniden Adlandırma Başarısız"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前の変更に失敗しました"
+          }
         }
       }
     },
@@ -1141,6 +1514,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Değişiklikleriniz kaydedilemedi. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更を保存できませんでした。もう一度お試しください。"
           }
         }
       }
@@ -1159,6 +1538,12 @@
             "state" : "translated",
             "value" : "Kaydetme Başarısız"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存に失敗しました"
+          }
         }
       }
     },
@@ -1175,6 +1560,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF'yi kaydedemedik. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFを保存できませんでした。もう一度お試しください。"
           }
         }
       }
@@ -1193,6 +1584,12 @@
             "state" : "translated",
             "value" : "Kaydetme Başarısız"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存に失敗しました"
+          }
         }
       }
     },
@@ -1209,6 +1606,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tarama Başarısız"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキャンに失敗しました"
           }
         }
       }
@@ -1227,6 +1630,12 @@
             "state" : "translated",
             "value" : "Belge tarama bu cihazda desteklenmiyor."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスでは書類のスキャンはサポートされていません。"
+          }
         }
       }
     },
@@ -1243,6 +1652,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tarayıcı Kullanılamıyor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキャナーを利用できません"
           }
         }
       }
@@ -1261,6 +1676,12 @@
             "state" : "translated",
             "value" : "PDF'yi paylaşıma hazırlayamadık. Lütfen tekrar deneyin."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有用にPDFを準備できませんでした。もう一度お試しください。"
+          }
         }
       }
     },
@@ -1277,6 +1698,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Paylaşma Başarısız"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有に失敗しました"
           }
         }
       }
@@ -1295,6 +1722,12 @@
             "state" : "translated",
             "value" : "Face ID korumasını kapat"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID保護をオフにする"
+          }
         }
       }
     },
@@ -1311,6 +1744,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Şifre Kullan"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パスコードを使用"
           }
         }
       }
@@ -1329,6 +1768,12 @@
             "state" : "translated",
             "value" : "Önizleme için Face ID / Şifre gerekli"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレビューにはFace ID / パスコードが必要です"
+          }
         }
       }
     },
@@ -1345,6 +1790,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu cihaz Face ID veya şifre kimlik doğrulaması yapamaz."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスではFace IDまたはパスコード認証を利用できません。"
           }
         }
       }
@@ -1363,6 +1814,12 @@
             "state" : "translated",
             "value" : "Devam Et"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続ける"
+          }
         }
       }
     },
@@ -1379,6 +1836,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İndiriliyor…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロード中…"
           }
         }
       }
@@ -1397,6 +1860,12 @@
             "state" : "translated",
             "value" : "Dönüştürülüyor…"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換中…"
+          }
         }
       }
     },
@@ -1413,6 +1882,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yükleniyor…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロード中…"
           }
         }
       }
@@ -1431,6 +1906,12 @@
             "state" : "translated",
             "value" : "Dönüştür"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換"
+          }
         }
       }
     },
@@ -1444,6 +1925,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ PDF"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ PDF"
@@ -1465,6 +1952,12 @@
             "state" : "translated",
             "value" : "Fotoğraf albümünden PDF oluşturun"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真アルバムからPDFを作成"
+          }
         }
       }
     },
@@ -1481,6 +1974,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu işlem klasörü ve klasördeki %d dosyayı silecektir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このフォルダと中の%d件のファイルが削除されます。"
           }
         }
       }
@@ -1499,6 +1998,12 @@
             "state" : "translated",
             "value" : "Klasör Silinsin mi?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダを削除しますか？"
+          }
         }
       }
     },
@@ -1515,6 +2020,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu işlem \"%@\" dosyasını cihazınızdan kaldıracak."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」をデバイスから削除します。"
           }
         }
       }
@@ -1533,6 +2044,12 @@
             "state" : "translated",
             "value" : "PDF Silinsin mi?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFを削除しますか？"
+          }
         }
       }
     },
@@ -1549,6 +2066,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kolay ve anında paylaşım"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "簡単ですぐに共有"
           }
         }
       }
@@ -1567,6 +2090,12 @@
             "state" : "translated",
             "value" : "Yeni Not"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいメモ"
+          }
         }
       }
     },
@@ -1583,6 +2112,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Düzenlemeye başlamak için bir PDF ekleyin veya içe aktarın."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編集を始めるにはPDFを追加またはインポートしてください。"
           }
         }
       }
@@ -1601,6 +2136,12 @@
             "state" : "translated",
             "value" : "PDF bulunamadı"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFが見つかりません"
+          }
         }
       }
     },
@@ -1617,6 +2158,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF Seç"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFを選択"
           }
         }
       }
@@ -1635,6 +2182,12 @@
             "state" : "translated",
             "value" : "Belgeleriniz burada görünecek. Başlamak için mavi butona basın."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドキュメントはここに表示されます。青いボタンを押して今すぐ始めましょう。"
+          }
         }
       }
     },
@@ -1651,6 +2204,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF Converter'a Hoş Geldiniz"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF Converterへようこそ"
           }
         }
       }
@@ -1669,6 +2228,12 @@
             "state" : "translated",
             "value" : "%d dosya yedeklenemedi"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d件のファイルのバックアップに失敗しました"
+          }
         }
       }
     },
@@ -1685,6 +2250,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dosya yedeklenemedi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルのバックアップに失敗しました"
           }
         }
       }
@@ -1703,22 +2274,11 @@
             "state" : "translated",
             "value" : "Dosyalar"
           }
-        }
-      }
-    },
-    "First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!" : {
-      "comment" : "Paywall subscription terms",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "First 7 days at $0.49. Auto-renews at $9.99/week.\nNo commitment, cancel anytime!"
-          }
         },
-        "tr" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "İlk 7 gün $0.49. Haftalık $9.99'a otomatik yenilenir.\nTaahhüt yok, istediğiniz zaman iptal edin!"
+            "value" : "ファイル"
           }
         }
       }
@@ -1737,6 +2297,12 @@
             "state" : "translated",
             "value" : "%d dosya"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d件のファイル"
+          }
         }
       }
     },
@@ -1753,6 +2319,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 dosya"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1件のファイル"
           }
         }
       }
@@ -1771,6 +2343,12 @@
             "state" : "translated",
             "value" : "Klasöre Taşı"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダへ移動"
+          }
         }
       }
     },
@@ -1787,6 +2365,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Klasör Adı"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダ名"
           }
         }
       }
@@ -1805,6 +2389,12 @@
             "state" : "translated",
             "value" : "Yeni Klasör"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいフォルダ"
+          }
         }
       }
     },
@@ -1821,6 +2411,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Klasörü Yeniden Adlandır"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダ名を変更"
           }
         }
       }
@@ -1839,6 +2435,12 @@
             "state" : "translated",
             "value" : "Üst Düzey"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最上位"
+          }
         }
       }
     },
@@ -1855,6 +2457,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud erişimi kısıtlı"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudへのアクセスが制限されています"
           }
         }
       }
@@ -1873,6 +2481,12 @@
             "state" : "translated",
             "value" : "iCloud yapılandırılmamış"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudが設定されていません"
+          }
         }
       }
     },
@@ -1889,6 +2503,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud Senkronizasyonu Başarısız"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期に失敗しました"
           }
         }
       }
@@ -1907,6 +2527,12 @@
             "state" : "translated",
             "value" : "iCloud geçici olarak kullanılamıyor"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudが一時的に利用できません"
+          }
         }
       }
     },
@@ -1923,6 +2549,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud Kullanılamıyor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudが利用できません"
           }
         }
       }
@@ -1941,6 +2573,12 @@
             "state" : "translated",
             "value" : "Orijinal tasarımlarınızı koruyun"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元のデザインを保持"
+          }
         }
       }
     },
@@ -1957,6 +2595,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud'a giriş yapılmamış"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudにサインインしていません"
           }
         }
       }
@@ -1976,6 +2620,12 @@
             "state" : "translated",
             "value" : "Devam'a basarak PDF Converter [Gizlilik Politikası](privacy) ve [Kullanım Koşulları](terms)'nı kabul ettiğinizi onaylıyorsunuz"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続けるを押すと、PDF Converterの[プライバシーポリシー](privacy)と[利用規約](terms)を確認し、同意したことになります"
+          }
         }
       }
     },
@@ -1993,6 +2643,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Herhangi bir dosya seçin & **Dönüştürün**"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意のファイルを選んで**変換**"
           }
         }
       }
@@ -2012,6 +2668,12 @@
             "state" : "translated",
             "value" : "Dosyalarınızı **Düzenli** tutun"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを**整理**"
+          }
         }
       }
     },
@@ -2029,6 +2691,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kameranızı kullanarak **Tarayın**"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カメラで**スキャン**"
           }
         }
       }
@@ -2048,6 +2716,12 @@
             "state" : "translated",
             "value" : "Kolay ve anında **Paylaşın**"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "簡単ですぐに**共有**"
+          }
         }
       }
     },
@@ -2066,6 +2740,12 @@
             "state" : "translated",
             "value" : "Belgelerinize **İmza** ekleyin"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書類に**署名**を追加"
+          }
         }
       }
     },
@@ -2082,6 +2762,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Düzenle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整理"
           }
         }
       }
@@ -2100,6 +2786,12 @@
             "state" : "translated",
             "value" : "Tüm dosyalarınızı düzenleyin"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのファイルを整理"
+          }
         }
       }
     },
@@ -2110,6 +2802,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sayfa: N/A"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ページ: N/A"
           }
         }
       }
@@ -2128,6 +2826,58 @@
             "state" : "translated",
             "value" : "Sınırsız **Erişim**"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無制限の**アクセス**"
+          }
+        }
+      }
+    },
+    "paywall.finePrint.fallback" : {
+      "comment" : "Paywall subscription terms fallback",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7-day trial, then weekly subscription.\nNo commitment, cancel anytime!"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 günlük deneme, ardından haftalık abonelik.\nTaahhüt yok, istediğiniz zaman iptal edin!"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7日間のトライアル、その後は週間サブスクリプション。\n契約の縛りはなく、いつでも解約できます！"
+          }
+        }
+      }
+    },
+    "paywall.trialPrice.fallback" : {
+      "comment" : "Trial price fallback",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "—"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "—"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "—"
+          }
         }
       }
     },
@@ -2145,6 +2895,12 @@
             "state" : "translated",
             "value" : "İlk 7 gün %@. %@ ile otomatik yenilenir.\nTaahhüt yok, istediğiniz zaman iptal edin!"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の7日間は%@。以降は%@で自動更新。\n契約の縛りはなく、いつでも解約できます！"
+          }
         }
       }
     },
@@ -2160,6 +2916,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF Converter"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF Converter"
@@ -2181,6 +2943,12 @@
             "state" : "translated",
             "value" : "Akış oluştur"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フローを作成"
+          }
         }
       }
     },
@@ -2197,6 +2965,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yeni Öğe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい項目"
           }
         }
       }
@@ -2215,6 +2989,12 @@
             "state" : "translated",
             "value" : "Gizlilik Politikası"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライバシーポリシー"
+          }
         }
       }
     },
@@ -2228,6 +3008,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro"
@@ -2249,6 +3035,12 @@
             "state" : "translated",
             "value" : "Pro Ol"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Proにアップグレード"
+          }
         }
       }
     },
@@ -2265,6 +3057,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dosya adı"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル名"
           }
         }
       }
@@ -2283,6 +3081,12 @@
             "state" : "translated",
             "value" : "Dosya Adı"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル名"
+          }
         }
       }
     },
@@ -2299,6 +3103,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yeniden Adlandır"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前を変更"
           }
         }
       }
@@ -2317,6 +3127,12 @@
             "state" : "translated",
             "value" : "Geri Yükle"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復元"
+          }
         }
       }
     },
@@ -2333,6 +3149,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hayır"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いいえ"
           }
         }
       }
@@ -2351,6 +3173,12 @@
             "state" : "translated",
             "value" : "Uygulamayı beğeniyor musunuz?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリを楽しんでいますか？"
+          }
         }
       }
     },
@@ -2367,6 +3195,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Evet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はい"
           }
         }
       }
@@ -2385,6 +3219,12 @@
             "state" : "translated",
             "value" : "Dosya adı"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル名"
+          }
         }
       }
     },
@@ -2401,6 +3241,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dosya adı"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル名"
           }
         }
       }
@@ -2419,6 +3265,12 @@
             "state" : "translated",
             "value" : "Önizleme"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレビュー"
+          }
         }
       }
     },
@@ -2435,6 +3287,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tara"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキャン"
           }
         }
       }
@@ -2453,6 +3311,12 @@
             "state" : "translated",
             "value" : "Tarama iptal edildi."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキャンがキャンセルされました。"
+          }
         }
       }
     },
@@ -2469,6 +3333,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hiçbir görsel seçilmedi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像が選択されませんでした。"
           }
         }
       }
@@ -2487,6 +3357,12 @@
             "state" : "translated",
             "value" : "Tarama bu cihazda desteklenmiyor."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスではスキャンはサポートされていません。"
+          }
         }
       }
     },
@@ -2503,6 +3379,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Farklı bir dosya adı veya belgeden bir anahtar kelime deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のファイル名または文書内のキーワードを試してください。"
           }
         }
       }
@@ -2521,6 +3403,12 @@
             "state" : "translated",
             "value" : "\"%@\" için eşleşme yok"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」に一致する結果がありません"
+          }
         }
       }
     },
@@ -2537,6 +3425,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF'leri Ara"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDFを検索"
           }
         }
       }
@@ -2555,6 +3449,12 @@
             "state" : "translated",
             "value" : "Ayarlar"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
         }
       }
     },
@@ -2571,6 +3471,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dosyaları önizlemeden önce Face ID veya şifre iste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルのプレビュー前にFace IDまたはパスコードを求める"
           }
         }
       }
@@ -2589,6 +3495,12 @@
             "state" : "translated",
             "value" : "Face ID / Şifre Gerektir"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID / パスコードを必須にする"
+          }
         }
       }
     },
@@ -2605,6 +3517,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ayarlar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
           }
         }
       }
@@ -2623,6 +3541,12 @@
             "state" : "translated",
             "value" : "SSS"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FAQ"
+          }
         }
       }
     },
@@ -2639,6 +3563,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gizlilik Politikası"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライバシーポリシー"
           }
         }
       }
@@ -2657,6 +3587,12 @@
             "state" : "translated",
             "value" : "Bilgi"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情報"
+          }
         }
       }
     },
@@ -2673,6 +3609,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kullanım Koşulları"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用規約"
           }
         }
       }
@@ -2691,6 +3633,12 @@
             "state" : "translated",
             "value" : "İmza ekle"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を追加"
+          }
         }
       }
     },
@@ -2707,6 +3655,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mevcut: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在: %@"
           }
         }
       }
@@ -2725,6 +3679,12 @@
             "state" : "translated",
             "value" : "İmzayı güncelle"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を更新"
+          }
         }
       }
     },
@@ -2741,6 +3701,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sınırsız dönüştürme ve pro araçların keyfini çıkarın"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無制限の変換とProツールをお楽しみください"
           }
         }
       }
@@ -2759,6 +3725,12 @@
             "state" : "translated",
             "value" : "PDF Converter Pro Aktif"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF Converter Proが有効"
+          }
         }
       }
     },
@@ -2775,6 +3747,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "App Store aboneliklerinizden istediğiniz zaman yönetin veya iptal edin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Storeのサブスクリプションからいつでも管理またはキャンセルできます。"
           }
         }
       }
@@ -2793,6 +3771,12 @@
             "state" : "translated",
             "value" : "App Store ile iletişim kuruluyor..."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Storeに問い合わせ中..."
+          }
         }
       }
     },
@@ -2809,6 +3793,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abonelik"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サブスクリプション"
           }
         }
       }
@@ -2827,6 +3817,12 @@
             "state" : "translated",
             "value" : "1 haftalık reklamsız %@ abonelik başlatın, ardından %@. İstediğiniz zaman iptal edin."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1週間の広告なし%@サブスクリプションを開始し、その後%@。いつでもキャンセルできます。"
+          }
         }
       }
     },
@@ -2843,6 +3839,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 haftalık reklamsız $0.49 abonelik başlatın, ardından haftada $9.99. İstediğiniz zaman iptal edin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1週間の広告なし$0.49サブスクリプションを開始し、その後$9.99/週。いつでもキャンセルできます。"
           }
         }
       }
@@ -2861,6 +3863,12 @@
             "state" : "translated",
             "value" : "Sınırsız dönüştürme ve pro araçların kilidini aç"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無制限の変換とProツールをアンロック"
+          }
         }
       }
     },
@@ -2877,6 +3885,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF Converter Pro'ya Yükselt"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF Converter Proにアップグレード"
           }
         }
       }
@@ -2895,39 +3909,11 @@
             "state" : "translated",
             "value" : "Destek ile İletişime Geç"
           }
-        }
-      }
-    },
-    "settings.support.contactMessage" : {
-      "comment" : "Contact support message",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Email us at pdfconverter@roguewaveapps.com and we’ll be happy to help!"
-          }
         },
-        "tr" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "pdfconverter@roguewaveapps.com adresinden bize e-posta gönderin, size yardımcı olmaktan mutluluk duyarız!"
-          }
-        }
-      }
-    },
-    "settings.support.contactTitle" : {
-      "comment" : "Contact support title",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contact Support"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Destek ile İletişime Geç"
+            "value" : "サポートに連絡"
           }
         }
       }
@@ -2946,6 +3932,12 @@
             "state" : "translated",
             "value" : "Destek"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サポート"
+          }
         }
       }
     },
@@ -2962,6 +3954,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Uygulamayı Paylaş"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリを共有"
           }
         }
       }
@@ -2980,6 +3978,12 @@
             "state" : "translated",
             "value" : "Ayarlar"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
         }
       }
     },
@@ -2996,6 +4000,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Paylaş"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有"
           }
         }
       }
@@ -3014,6 +4024,12 @@
             "state" : "translated",
             "value" : "Belgeleri imzalayın"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書類に署名"
+          }
         }
       }
     },
@@ -3030,6 +4046,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmza Ekle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を追加"
           }
         }
       }
@@ -3048,6 +4070,12 @@
             "state" : "translated",
             "value" : "İmzayı yerleştirmek istediğiniz sayfaya gidin, ardından İmza Ekle'ye dokunun."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を配置したいページに移動してから、［署名を挿入］をタップしてください。"
+          }
         }
       }
     },
@@ -3064,6 +4092,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmza Eklenemiyor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を挿入できません"
           }
         }
       }
@@ -3082,6 +4116,12 @@
             "state" : "translated",
             "value" : "İmzam"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の署名"
+          }
         }
       }
     },
@@ -3098,6 +4138,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lütfen kaydetmeden önce imzanızı çizin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存する前に署名を描いてください。"
           }
         }
       }
@@ -3116,6 +4162,12 @@
             "state" : "translated",
             "value" : "Boş İmza"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空の署名"
+          }
         }
       }
     },
@@ -3132,6 +4184,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vurgula"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ハイライト"
           }
         }
       }
@@ -3150,6 +4208,12 @@
             "state" : "translated",
             "value" : "Vurgulamak istediğiniz metni seçin, ardından Vurgula'ya dokunun."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ハイライトしたいテキストを選択してから、［ハイライト］をタップしてください。"
+          }
         }
       }
     },
@@ -3166,6 +4230,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Metin Seç"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テキストを選択"
           }
         }
       }
@@ -3184,6 +4254,12 @@
             "state" : "translated",
             "value" : "İmza Ekle"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を挿入"
+          }
         }
       }
     },
@@ -3200,6 +4276,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmzanızı çizmek için parmağınızı kullanın. Baştan başlamak için Temizle'ye dokunun."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指で署名を描いてください。やり直すには［クリア］をタップします。"
           }
         }
       }
@@ -3218,6 +4300,12 @@
             "state" : "translated",
             "value" : "İmza Adı"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名名"
+          }
         }
       }
     },
@@ -3234,6 +4322,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmzam"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の署名"
           }
         }
       }
@@ -3252,6 +4346,12 @@
             "state" : "translated",
             "value" : "Buraya eklemeden önce Ayarlar'a bir imza ekleyin."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ここに挿入する前に、設定で署名を追加してください。"
+          }
         }
       }
     },
@@ -3268,6 +4368,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmza Bulunamadı"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名が見つかりません"
           }
         }
       }
@@ -3286,6 +4392,12 @@
             "state" : "translated",
             "value" : "Yerleştir"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
+          }
         }
       }
     },
@@ -3302,6 +4414,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmzayı bu sayfaya ekleyemedik. Lütfen tekrar deneyin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このページに署名を追加できませんでした。もう一度お試しください。"
           }
         }
       }
@@ -3320,6 +4438,12 @@
             "state" : "translated",
             "value" : "Yerleştirme Başarısız"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置に失敗しました"
+          }
         }
       }
     },
@@ -3336,6 +4460,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmzayı Güncelle"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名を更新"
           }
         }
       }
@@ -3354,6 +4484,12 @@
             "state" : "translated",
             "value" : "Tarih"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付"
+          }
         }
       }
     },
@@ -3370,6 +4506,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前"
           }
         }
       }
@@ -3388,6 +4530,12 @@
             "state" : "translated",
             "value" : "Dönüştürülüyor…"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換中…"
+          }
         }
       }
     },
@@ -3404,6 +4552,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doğrulama başarısız. %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検証に失敗しました。%@"
           }
         }
       }
@@ -3422,6 +4576,12 @@
             "state" : "translated",
             "value" : "Senkronizasyon başarısız, tekrar denemek için dokun"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期に失敗しました。タップして再試行"
+          }
         }
       }
     },
@@ -3438,6 +4598,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud'a senkronize edildi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudに同期済み"
           }
         }
       }
@@ -3456,6 +4622,12 @@
             "state" : "translated",
             "value" : "%d dosya senkronize ediliyor..."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d件のファイルを同期中..."
+          }
         }
       }
     },
@@ -3472,6 +4644,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 dosya senkronize ediliyor..."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1件のファイルを同期中..."
           }
         }
       }
@@ -3490,6 +4668,12 @@
             "state" : "translated",
             "value" : "iCloud'a senkronize ediliyor"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudに同期中"
+          }
         }
       }
     },
@@ -3506,6 +4690,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hesap"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウント"
           }
         }
       }
@@ -3524,6 +4714,12 @@
             "state" : "translated",
             "value" : "Dosyalar"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル"
+          }
         }
       }
     },
@@ -3540,6 +4736,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ayarlar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
           }
         }
       }
@@ -3558,6 +4760,12 @@
             "state" : "translated",
             "value" : "Araçlar"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ツール"
+          }
         }
       }
     },
@@ -3574,6 +4782,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kullanım Koşulları"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用規約"
           }
         }
       }
@@ -3592,6 +4806,12 @@
             "state" : "translated",
             "value" : "Dosyaları\nPDF'ye Dönüştür"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを\nPDFに変換"
+          }
         }
       }
     },
@@ -3608,6 +4828,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fotoğrafları\nPDF'ye Dönüştür"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真を\nPDFに変換"
           }
         }
       }
@@ -3626,6 +4852,12 @@
             "state" : "translated",
             "value" : "Belgeleri\nDüzenle"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドキュメントを\n編集"
+          }
         }
       }
     },
@@ -3642,6 +4874,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belgeleri\nİçe Aktar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドキュメントを\n取り込み"
           }
         }
       }
@@ -3660,6 +4898,12 @@
             "state" : "translated",
             "value" : "Belgeleri\nTara"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドキュメントを\nスキャン"
+          }
         }
       }
     },
@@ -3676,6 +4920,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Web Sayfasını\nDönüştür"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webページを\n変換"
           }
         }
       }
@@ -3694,6 +4944,12 @@
             "state" : "translated",
             "value" : "Araçlar"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ツール"
+          }
         }
       }
     },
@@ -3710,6 +4966,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belgeler klasörüne erişilemiyor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Documentsフォルダにアクセスできません"
           }
         }
       }
@@ -3728,6 +4990,12 @@
             "state" : "translated",
             "value" : "iCloud durumu doğrulanamıyor"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudの状態を確認できません"
+          }
         }
       }
     },
@@ -3744,6 +5012,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bilinmeyen iCloud durumu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不明なiCloudの状態"
           }
         }
       }
@@ -3762,6 +5036,12 @@
             "state" : "translated",
             "value" : "Sınırsız tarama ve dönüştürme"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキャンと変換が無制限"
+          }
         }
       }
     },
@@ -3778,6 +5058,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Isimsiz"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無題"
           }
         }
       }
@@ -3796,6 +5082,12 @@
             "state" : "translated",
             "value" : "Taranan sayfalardan PDF verisi oluşturamadık."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキャンしたページからPDFデータを作成できませんでした。"
+          }
         }
       }
     },
@@ -3812,6 +5104,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Web Sayfası"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webページ"
           }
         }
       }
@@ -3830,6 +5128,12 @@
             "state" : "translated",
             "value" : "Bu sayfayı dönüştüremedik. URL'yi kontrol edin ve tekrar deneyin."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "そのページを変換できませんでした。URLを確認してもう一度お試しください。"
+          }
         }
       }
     },
@@ -3843,6 +5147,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "https://example.com/article"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "https://example.com/article"
@@ -3864,6 +5174,12 @@
             "state" : "translated",
             "value" : "Web Sayfası URL'si"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebページURL"
+          }
         }
       }
     },
@@ -3880,6 +5196,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Web Sayfasını Dönüştür"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webページを変換"
           }
         }
       }
@@ -3898,6 +5220,12 @@
             "state" : "translated",
             "value" : "**PDF Converter**'dan Merhaba"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "**PDF Converter**へようこそ"
+          }
         }
       }
     },
@@ -3914,6 +5242,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yardım & SSS"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘルプとFAQ"
           }
         }
       }
@@ -3932,6 +5266,12 @@
             "state" : "translated",
             "value" : "Kağıtsız yaşam için bilmeniz gereken her şey."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペーパーレスに必要なことがすべてわかります。"
+          }
         }
       }
     },
@@ -3948,6 +5288,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SSS'de Ara"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FAQを検索"
           }
         }
       }
@@ -3966,6 +5312,12 @@
             "state" : "translated",
             "value" : "Başlarken"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はじめに"
+          }
         }
       }
     },
@@ -3982,6 +5334,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mavi Düğme (+) Ne İçin?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "青いボタン（+）は何のため？"
           }
         }
       }
@@ -4000,6 +5358,12 @@
             "state" : "translated",
             "value" : "Ana ekrandaki Mavi Düğme (+) \"Başlat\" düğmeniz gibi düşünün. Yeni bir PDF oluşturmanın en hızlı yolu budur. Dokunduğunuzda hemen erişebilirsiniz:\n\n• Belgeleri Tara: Makbuzları, kimlikleri ve notları anında dijitalleştirin.\n• Dosyaları Dönüştür: Dosyalarınızdaki veya buluttaki belgeleri PDF'ye dönüştürün.\n• Fotoğrafları Dönüştür: Kamera Rulosunuzdaki resimleri PDF'ye dönüştürün.\n\nBelgenizi nasıl veya ne zaman yakalayacağınız konusunda tam kontrole sahip olmak için tarama sırasında \"otomatik deklanşör\" seçeneğini her zaman kapatabilirsiniz.\n\nDaha iyi sonuçlar için bir belgeyi tararken zıt bir yüzey rengi seçmenizi öneririz. [Örneğin beyaz bir A4 kağıdı tararken beyaz bir yüzey kullanmaktan kaçının.]"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メイン画面の青いボタン（+）は「開始」ボタンだと考えてください。新しいPDFを作成する最も速い方法です。タップするとすぐに次の機能にアクセスできます：\n\n• 書類をスキャン：領収書、ID、メモをすぐにデジタル化します。\n• ファイルを変換：端末内やクラウドの文書をPDFに変換します。\n• 写真を変換：カメラロールの画像をPDFに変換します。\n\nスキャン中は「自動シャッター」をオフにして、撮影のタイミングを完全にコントロールできます。\n\nより良い結果のために、スキャンする文書と対照的な色の台を選ぶことをおすすめします。[例：白いA4用紙をスキャンする際は白い台を避けてください。]"
+          }
         }
       }
     },
@@ -4016,6 +5380,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gelişmiş araçları nerede bulabilirim?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高度なツールはどこにありますか？"
           }
         }
       }
@@ -4034,6 +5404,12 @@
             "state" : "translated",
             "value" : "Ekranın alt kısmındaki Araçlar sekmesine gidin. Burada Belgeleri İçe Aktar, Belgeleri Düzenle ve Web Sayfalarını Dönüştür gibi özel güçlü özelliklere erişebilirsiniz."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面下部のツールタブに移動してください。ここから、書類の取り込み、書類の編集、Webページの変換などの高度な機能にアクセスできます。"
+          }
         }
       }
     },
@@ -4050,6 +5426,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dönüştürme & Tarama"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換とスキャン"
           }
         }
       }
@@ -4068,6 +5450,12 @@
             "state" : "translated",
             "value" : "Hangi dosya formatlarını PDF'ye dönüştürebilirim?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どのファイル形式をPDFに変換できますか？"
+          }
         }
       }
     },
@@ -4084,6 +5472,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "100'den fazla dosya formatını destekliyoruz.\n\n• Belgeler: DOC, DOCX, PPT, PPTX, XLS, XLSX, PAGES, NUMBERS, KEY, TXT, RTF ve daha fazlası.\n• Görseller: JPG, PNG, BMP, TIFF, SVG, HEIC ve düzinelerce diğer format.\n• Diğerleri: HTML, EPUB, XML, VSD ve birçok özel format.\n\nBir dosyanız varsa, muhtemelen onu dönüştürebiliriz!"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100種類以上のファイル形式に対応しています。\n\n• ドキュメント：DOC、DOCX、PPT、PPTX、XLS、XLSX、PAGES、NUMBERS、KEY、TXT、RTF など。\n• 画像：JPG、PNG、BMP、TIFF、SVG、HEIC など多数。\n• その他：HTML、EPUB、XML、VSD などの特殊形式。\n\nファイルがあれば、ほとんどの場合変換できます！"
           }
         }
       }
@@ -4102,6 +5496,12 @@
             "state" : "translated",
             "value" : "Belgem orijinaliyle birebir aynı görünecek mi?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変換後の書類は元と同じ見た目になりますか？"
+          }
         }
       }
     },
@@ -4118,6 +5518,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Evet. Biçimlendirmenizi %100 bozulmadan koruyan yüksek kaliteli bir dönüştürme motoru kullanıyoruz. Karmaşık bir PowerPoint slaytı veya biçimlendirilmiş bir Word belgesi olsun, düzenleriniz, yazı tipleriniz ve resimleriniz orijinal dosyadaki gibi mükemmel şekilde korunur."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はい。高精度の変換エンジンにより、書式を100%維持します。複雑なPowerPointスライドでも、整形されたWord文書でも、レイアウト、フォント、画像は元のファイルのまま完全に保たれます。"
           }
         }
       }
@@ -4136,6 +5542,12 @@
             "state" : "translated",
             "value" : "Bir web sitesi URL'sini PDF'ye nasıl dönüştürürüm?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウェブサイトのURLをPDFに変換するには？"
+          }
         }
       }
     },
@@ -4152,6 +5564,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Araçlar sayfasına gidin ve \"Web Sayfasını Dönüştür\"ü seçin. Bağlantıyı yapıştırın, uygulama sizin için sitenin PDF'ini oluşturacaktır."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ツール画面で「Webページを変換」を選択し、リンクを貼り付けると、アプリがサイトのPDFを生成します。"
           }
         }
       }
@@ -4170,6 +5588,12 @@
             "state" : "translated",
             "value" : "Aynı anda birden fazla sayfa tarayabilir miyim?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数ページを一度にスキャンできますか？"
+          }
         }
       }
     },
@@ -4186,6 +5610,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Evet! Belgeleri Tara özelliğini kullandığınızda (Mavi Düğme aracılığıyla), notların veya makbuzların birden fazla fotoğrafını çekebilirsiniz ve uygulama bunları tek, temiz bir PDF dosyasında birleştirecektir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はい。青いボタンから「書類をスキャン」を使うと、メモや領収書を複数枚撮影でき、アプリがそれらを1つのきれいなPDFにまとめます。"
           }
         }
       }
@@ -4204,6 +5634,12 @@
             "state" : "translated",
             "value" : "Düzenleme & İmzalar"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編集と署名"
+          }
         }
       }
     },
@@ -4220,6 +5656,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İmzamı nasıl oluşturur ve kullanırım?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名の作成と使用方法は？"
           }
         }
       }
@@ -4238,6 +5680,12 @@
             "state" : "translated",
             "value" : "Belgeleri imzalamak basit iki adımlı bir süreçtir:\n\n1. Oluşturun: Ayarlar > İmza Ekle'ye giderek imzanızı çizin ve kaydedin. İmzanızı aynı menüden istediğiniz zaman güncelleyebilirsiniz.\n\n2. Kullanın: Araçlar > Belgeleri Düzenle'ye gidin, PDF'nizi açın ve kayıtlı imzanızı sayfada istediğiniz yere yerleştirmek için dokunun."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書類への署名は簡単な2ステップです：\n\n1. 作成：設定 > 署名を追加 で署名を描いて保存します。同じメニューからいつでも更新できます。\n\n2. 使用：ツール > 書類を編集 を開き、PDFを開いて、保存した署名をページ上の任意の場所にタップして配置します。"
+          }
         }
       }
     },
@@ -4254,6 +5702,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "PDF'lerimdeki metni vurgulayabilir miyim?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF内のテキストをハイライトできますか？"
           }
         }
       }
@@ -4272,6 +5726,12 @@
             "state" : "translated",
             "value" : "Kesinlikle. Araçlar > Belgeleri Düzenle'ye gidin. Oradan belgelerinizdeki önemli metni vurgulamak için araçları seçebilirsiniz."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はい。ツール > 書類を編集 に進み、そこで重要なテキストをハイライトするツールを選択できます。"
+          }
         }
       }
     },
@@ -4288,6 +5748,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dosya Yönetimi & Organizasyon"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル管理と整理"
           }
         }
       }
@@ -4306,6 +5772,12 @@
             "state" : "translated",
             "value" : "Dosyalarımı nasıl düzenli tutarım?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを整理するには？"
+          }
         }
       }
     },
@@ -4322,6 +5794,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belgelerinizi kategorize etmek için doğrudan Dosyalar (Ana Sayfa) sayfasında özel klasörler oluşturabilirsiniz (örn. \"İş,\" \"Makbuzlar,\" \"Kişisel\")."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル（ホーム）ページでカスタムフォルダを作成し、「仕事」「領収書」「個人」などに分類できます。"
           }
         }
       }
@@ -4340,6 +5818,12 @@
             "state" : "translated",
             "value" : "Bir dosyayı nasıl taşır, yeniden adlandırır veya paylaşırım?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを移動・名前変更・共有するには？"
+          }
         }
       }
     },
@@ -4356,6 +5840,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dosyalar sayfasında, seçeneklerinizi görmek için bir dosyaya veya sağdaki seçenekler düğmesine dokunun. Kolayca yapabilirsiniz:\n\n• Daha iyi netlik için dosyaları yeniden adlandırın.\n• Dosyaları belirli klasörlere taşıyın.\n• Göndermeden önce dosyaları önizleyin.\n• E-posta, WhatsApp veya AirDrop aracılığıyla dosyaları paylaşın."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルページでファイルをタップするか、右側のオプションボタンをタップして操作を選択します。簡単に次のことができます：\n\n• ファイル名をわかりやすく変更\n• ファイルを特定のフォルダへ移動\n• 送信前にファイルをプレビュー\n• メール、WhatsApp、AirDropで共有"
           }
         }
       }
@@ -4374,6 +5864,12 @@
             "state" : "translated",
             "value" : "Telefonumda zaten bulunan PDF'leri içe aktarabilir miyim?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既に端末にあるPDFをインポートできますか？"
+          }
         }
       }
     },
@@ -4390,6 +5886,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Evet. Bunun ihtiyacınız olan tek PDF uygulaması olmasını istiyoruz. Cihaz depolamanızdan veya iCloud'dan PDF'leri getirmek için Araçlar > Belgeleri İçe Aktar'a gidin, böylece her şeyi tek bir yerden yönetebilirsiniz."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はい。このアプリだけでPDF管理が完結するように設計しています。ツール > 書類を取り込み から、端末ストレージやiCloudのPDFを取り込んで一元管理できます。"
           }
         }
       }
@@ -4408,6 +5910,12 @@
             "state" : "translated",
             "value" : "Hesap & Destek"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントとサポート"
+          }
         }
       }
     },
@@ -4424,6 +5932,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro aboneliğimi nasıl yönetirim?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Proサブスクリプションを管理するには？"
           }
         }
       }
@@ -4442,6 +5956,12 @@
             "state" : "translated",
             "value" : "Plan ayrıntılarınızı görüntüleyebilir veya aboneliğinizi istediğiniz zaman Ayarlar sayfasını veya Hesap sekmesini ziyaret ederek yönetebilirsiniz."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定ページまたはアカウントタブから、プランの詳細確認やサブスクリプションの管理をいつでも行えます。"
+          }
         }
       }
     },
@@ -4459,6 +5979,12 @@
             "state" : "translated",
             "value" : "Bir sorum var veya bir hata buldum. Size nasıl ulaşabilirim?"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "質問がある、または不具合を見つけた場合はどう連絡すればよいですか？"
+          }
         }
       }
     },
@@ -4475,6 +6001,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Topluluğumuzdan haber almayı çok seviyoruz! Ayarlar'a gidin ve Desteğe Başvur'a dokunun. Size yardımcı olmak için buradayız."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コミュニティからの声を歓迎しています！設定で［サポートに連絡］をタップしてください。いつでもお手伝いします。"
           }
         }
       }

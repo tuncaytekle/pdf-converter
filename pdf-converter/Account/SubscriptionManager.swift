@@ -129,13 +129,30 @@ final class SubscriptionManager: ObservableObject {
     private func refreshEntitlements() async {
         debugLog("Refreshing entitlements from StoreKit")
 
+        var foundActiveSubscription = false
         for await entitlement in StoreKit.Transaction.currentEntitlements {
-            await updateSubscriptionState(from: entitlement)
-            // Only process the first matching entitlement
             if case .verified(let transaction) = entitlement,
                transaction.productID == productID {
+                let expirationDate = transaction.expirationDate ?? .distantFuture
+                let isActive = transaction.revocationDate == nil && expirationDate > Date()
+
+                if isActive {
+                    foundActiveSubscription = true
+                    isSubscribed = true
+                    cacheSubscriptionState(isActive: true, expirationDate: expirationDate)
+                    debugLog("Found active subscription during refresh, expires: \(expirationDate)")
+                } else {
+                    debugLog("Found expired or revoked subscription during refresh")
+                }
                 break
             }
+        }
+
+        // If no active subscription found, mark as unsubscribed
+        if !foundActiveSubscription && isSubscribed {
+            debugLog("No active subscription found during refresh - setting isSubscribed to false")
+            isSubscribed = false
+            cacheSubscriptionState(isActive: false, expirationDate: nil)
         }
     }
 
@@ -182,8 +199,10 @@ final class SubscriptionManager: ObservableObject {
                 purchaseState = .purchased
                 debugLog("Restore successful - subscription active")
             } else {
+                isSubscribed = false
+                cacheSubscriptionState(isActive: false, expirationDate: nil)
                 purchaseState = .failed("No active subscription found.\n\nIf you previously purchased, ensure you're signed in with the same Apple ID.")
-                debugLog("No active subscription found during restore")
+                debugLog("No active subscription found during restore - setting isSubscribed to false")
             }
         } catch {
             logError("Restore failed: \(error.localizedDescription)")
@@ -234,8 +253,26 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func monitorEntitlements() async {
+        var foundActiveSubscription = false
         for await entitlement in StoreKit.Transaction.currentEntitlements {
-            await updateSubscriptionState(from: entitlement)
+            if case .verified(let transaction) = entitlement,
+               transaction.productID == productID {
+                let expirationDate = transaction.expirationDate ?? .distantFuture
+                let isActive = transaction.revocationDate == nil && expirationDate > Date()
+
+                if isActive {
+                    foundActiveSubscription = true
+                }
+
+                await updateSubscriptionState(from: entitlement)
+            }
+        }
+
+        // If we've finished iterating and found no active subscription, mark as unsubscribed
+        if !foundActiveSubscription && isSubscribed {
+            debugLog("No active subscription found during monitoring - setting isSubscribed to false")
+            isSubscribed = false
+            cacheSubscriptionState(isActive: false, expirationDate: nil)
         }
     }
 
@@ -356,9 +393,21 @@ final class SubscriptionManager: ObservableObject {
     private func handlePurchaseResult(_ verification: VerificationResult<StoreKit.Transaction>) async {
         switch verification {
         case .verified(let transaction):
-            isSubscribed = true
-            purchaseState = .purchased
-            markPurchaseCompleted()
+            let expirationDate = transaction.expirationDate ?? .distantFuture
+            let isActive = transaction.revocationDate == nil && expirationDate > Date()
+
+            isSubscribed = isActive
+
+            if isActive {
+                purchaseState = .purchased
+                markPurchaseCompleted()
+                cacheSubscriptionState(isActive: true, expirationDate: expirationDate)
+                debugLog("Purchase completed - subscription active until \(expirationDate)")
+            } else {
+                purchaseState = .failed("Subscription is not active")
+                debugLog("Purchase verified but subscription is not active (expired or revoked)")
+            }
+
             await transaction.finish()
         case .unverified(_, let error):
             purchaseState = .failed(String(format: NSLocalizedString("subscription.verificationFailed", comment: "Verification failed message"), error.localizedDescription))
@@ -408,7 +457,7 @@ struct ProButton: View {
         } label: {
             HStack {
                 Image(systemName: subscriptionManager.isSubscribed ? "checkmark.seal.fill" : "crown.fill")
-                    .imageScale(.medium)
+                    .imageScale(.small)
                 Text(subscriptionManager.isSubscribed ? NSLocalizedString("proButton.active", comment: "Active Pro label") : NSLocalizedString("proButton.upsell", comment: "Upgrade to Pro label"))
                     .font(.footnote.weight(.semibold))
             }

@@ -98,22 +98,6 @@ struct RatingPromptHelper {
     }
 }
 
-// MARK: - Contact Support Alert Model
-
-/// Alert model for contact support (reuses SettingsAlert pattern)
-struct ContactSupportAlert: Identifiable {
-    let id = UUID()
-    let title: String
-    let message: String
-
-    static func make() -> ContactSupportAlert {
-        ContactSupportAlert(
-            title: NSLocalizedString("settings.support.contactTitle", comment: "Contact support title"),
-            message: NSLocalizedString("settings.support.contactMessage", comment: "Contact support message")
-        )
-    }
-}
-
 // MARK: - Preview
 
 #Preview {

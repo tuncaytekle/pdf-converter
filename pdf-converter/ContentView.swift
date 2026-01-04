@@ -758,32 +758,12 @@ struct SettingsView: View {
     @State private var savedSignature: SignatureStore.Signature? = SignatureStore.load()
     @State private var showManageSubscriptionsSheet = false
     @SceneStorage("requireBiometrics") private var requireBiometrics = false
-    @State private var infoSheet: InfoSheet?
     @State private var showFAQ = false
     @State private var showTerms = false
+    @State private var showPrivacyPolicy = false
+    @State private var showContactWebsite = false
     @State private var shareItem: ShareItem?
     @State private var settingsAlert: SettingsAlert?
-
-    /// Light-weight presentation enum used to drive the Privacy sheet.
-    private enum InfoSheet: Identifiable {
-        case privacy
-
-        var id: Int {
-            switch self {
-            case .privacy: return 2
-            }
-        }
-
-        var title: String {
-            switch self {
-            case .privacy: return NSLocalizedString("settings.info.privacy", comment: "Privacy title")
-            }
-        }
-
-        var message: String {
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi commodo quam eget ligula consectetur, ut fermentum massa luctus."
-        }
-    }
 
     var body: some View {
         NavigationView {
@@ -809,19 +789,14 @@ struct SettingsView: View {
                     SafariView(url: url)
                 }
             }
-            .sheet(item: $infoSheet) { sheet in
-                NavigationView {
-                    ScrollView {
-                        Text(sheet.message)
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .navigationTitle(sheet.title)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button(NSLocalizedString("action.done", comment: "Done action")) { infoSheet = nil }
-                        }
-                    }
+            .sheet(isPresented: $showContactWebsite) {
+                if let url = URL(string: "https://roguewaveapps.com") {
+                    SafariView(url: url)
+                }
+            }
+            .sheet(isPresented: $showPrivacyPolicy) {
+                if let url = URL(string: "https://roguewaveapps.com/pdf-converter/privacy-policy") {
+                    SafariView(url: url)
                 }
             }
             .sheet(isPresented: $showSignatureSheet) {
@@ -1006,7 +981,7 @@ struct SettingsView: View {
             Button { showTerms = true } label: {
                 Label(NSLocalizedString("settings.info.terms", comment: "Terms title"), systemImage: "doc.append")
             }
-            Button { infoSheet = .privacy } label: {
+            Button { showPrivacyPolicy = true } label: {
                 Label(NSLocalizedString("settings.info.privacy", comment: "Privacy title"), systemImage: "lock.shield")
             }
         }
@@ -1015,7 +990,7 @@ struct SettingsView: View {
     private var supportSection: some View {
         Section(NSLocalizedString("settings.support.section", comment: "Support section title")) {
             Button {
-                if let shareURL = URL(string: "https://roguewaveapps.com/pdf-converter") {
+                if let shareURL = URL(string: "https://roguewaveapps.com/pdf-converter-app") {
                     shareItem = ShareItem(url: shareURL, cleanupHandler: nil)
                 }
             } label: {
@@ -1023,10 +998,7 @@ struct SettingsView: View {
             }
 
             Button {
-                settingsAlert = SettingsAlert(
-                    title: NSLocalizedString("settings.support.contactTitle", comment: "Contact support title"),
-                    message: NSLocalizedString("settings.support.contactMessage", comment: "Contact support message")
-                )
+                showContactWebsite = true
             } label: {
                 Label(NSLocalizedString("settings.support.contactButton", comment: "Contact support button"), systemImage: "envelope")
             }
@@ -1754,6 +1726,9 @@ struct ScanReviewSheet: View {
                         let updated = sanitizedDocument()
                         if let item = onShare(updated) {
                             shareItem = item
+                        } else {
+                            // Paywall was shown, dismiss to avoid sheet stacking
+                            dismiss()
                         }
                     } label: {
                         Label(NSLocalizedString("action.share", comment: "Share action"), systemImage: "square.and.arrow.up")
@@ -1852,19 +1827,9 @@ private struct RatingPromptDialogs: ViewModifier {
                 )
                 .presentationBackground(.clear)
             }
-            .alert(
-                coordinator.showContactAlert?.title ?? "",
-                isPresented: Binding(
-                    get: { coordinator.showContactAlert != nil },
-                    set: { if !$0 { coordinator.dismissContactAlert() } }
-                )
-            ) {
-                Button(NSLocalizedString("action.ok", comment: "OK action")) {
-                    coordinator.dismissContactAlert()
-                }
-            } message: {
-                if let alert = coordinator.showContactAlert {
-                    Text(alert.message)
+            .sheet(isPresented: $coordinator.showContactWebsite) {
+                if let url = URL(string: "https://roguewaveapps.com") {
+                    SafariView(url: url)
                 }
             }
     }

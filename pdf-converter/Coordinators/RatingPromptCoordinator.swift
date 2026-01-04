@@ -18,8 +18,8 @@ final class RatingPromptCoordinator {
     /// Whether to show the enjoyment dialog
     var showEnjoymentDialog = false
 
-    /// Contact support alert to display
-    var showContactAlert: ContactSupportAlert?
+    /// Whether to show the contact support website
+    var showContactWebsite = false
 
     // MARK: - Dependencies
 
@@ -45,9 +45,9 @@ final class RatingPromptCoordinator {
         manager.markUserRated()
     }
 
-    /// Presents the contact support alert
-    func presentContactAlert() {
-        showContactAlert = ContactSupportAlert.make()
+    /// Presents the contact support website
+    func presentContactWebsite() {
+        showContactWebsite = true
     }
 
     // MARK: - Dialog Handlers
@@ -61,12 +61,7 @@ final class RatingPromptCoordinator {
 
     /// Handle user tapping "No" in enjoyment dialog
     func handleEnjoymentNo() {
-        // Show contact support alert
-        showContactAlert = ContactSupportAlert.make()
-    }
-
-    /// Dismiss contact alert
-    func dismissContactAlert() {
-        showContactAlert = nil
+        // Show contact support website
+        showContactWebsite = true
     }
 }
