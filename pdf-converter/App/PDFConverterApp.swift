@@ -17,6 +17,8 @@ struct PDFConverterApp: App {
     private let persistenceController = PersistenceController.shared
     private let tracker: AnalyticsTracking
     @StateObject private var cloudSyncStatus = CloudSyncStatus()
+    @StateObject private var subscriptionManager = SubscriptionManager()
+    @StateObject private var subscriptionGate: SubscriptionGate
     private let ratingPromptManager = RatingPromptManager()
     private let ratingPromptCoordinator: RatingPromptCoordinator
 
@@ -24,10 +26,10 @@ struct PDFConverterApp: App {
         let POSTHOG_API_KEY = "phc_FQdK7M4eYcjjhgNYiHScD1OoeOyYFVMwqWR2xvoq4yR"
         // usually 'https://us.i.posthog.com' or 'https://eu.i.posthog.com'
         let POSTHOG_HOST = "https://us.i.posthog.com"
-        
-        
+
+
         let config = PostHogConfig(apiKey: POSTHOG_API_KEY, host: POSTHOG_HOST)
-        
+
         // check https://posthog.com/docs/session-replay/installation?tab=iOS
         // for more config and to learn about how we capture sessions on mobile
         // and what to expect
@@ -41,7 +43,7 @@ struct PDFConverterApp: App {
         config.captureElementInteractions = true // Disabled by default
         config.captureApplicationLifecycleEvents = true // Disabled by default
         config.captureScreenViews = false // Disabled - using manual .postHogScreenView() instead
-        
+
         PostHogSDK.shared.setup(config)
         PostHogSDK.shared.capture("Test Event")
         let anonId = AnonymousIdProvider.getOrCreate()
@@ -50,9 +52,14 @@ struct PDFConverterApp: App {
         t.identify(anonId)
         self.tracker = t
 
+        // Initialize subscription system
+        let subManager = SubscriptionManager()
+        _subscriptionManager = StateObject(wrappedValue: subManager)
+        _subscriptionGate = StateObject(wrappedValue: SubscriptionGate(subscriptionManager: subManager))
+
         // Initialize rating prompt system
         self.ratingPromptCoordinator = RatingPromptCoordinator(manager: ratingPromptManager)
-        
+
         ASAUploader.sendIfNeeded()
     }
     var body: some Scene {
@@ -61,6 +68,8 @@ struct PDFConverterApp: App {
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(\.analytics, tracker)
                 .environmentObject(cloudSyncStatus)
+                .environmentObject(subscriptionManager)
+                .environmentObject(subscriptionGate)
         }
     }
 }

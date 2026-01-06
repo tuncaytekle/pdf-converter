@@ -88,6 +88,9 @@ final class AppCoordinator {
     /// Editing context to restore after paywall dismissal
     var editingContextPendingAfterPaywall: PDFEditingContext?
 
+    /// File preview to restore after paywall dismissal
+    var previewFilePendingAfterPaywall: PDFFile?
+
     /// Whether paywall check has completed
     var hasCheckedPaywall = false
 
@@ -315,6 +318,14 @@ final class AppCoordinator {
             editingContextPendingAfterPaywall = nil
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.editingContext = savedContext
+            }
+        }
+
+        // Restore pending file preview
+        if let savedFile = previewFilePendingAfterPaywall {
+            previewFilePendingAfterPaywall = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.previewFile = savedFile
             }
         }
     }

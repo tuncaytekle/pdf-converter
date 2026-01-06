@@ -25,6 +25,7 @@ struct AccountView: View {
     @State private var showManageSubscriptionsSheet = false
     @StateObject private var vm = AccountViewModel()
     @Environment(\.analytics) private var analytics
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationView {
@@ -51,9 +52,11 @@ struct AccountView: View {
                                         VStack(alignment: .leading, spacing: 0) {
                                             Text(NSLocalizedString("account.help.title", comment: "Help us grow title"))
                                                 .font(metrics.accountSectionTitleFont)
+                                                .foregroundColor(.black)
                                                 .lineLimit(1)
                                             Text(NSLocalizedString("account.help.subtitle", comment: "We are a small community subtitle"))
                                                 .font(metrics.accountSubtitleFont)
+                                                .foregroundColor(Color(.systemGray))
                                                 .lineLimit(1)
                                         }
                                         
@@ -90,9 +93,10 @@ struct AccountView: View {
                                     VStack(alignment: .leading, spacing: 0) {
                                         Text(NSLocalizedString("account.support.title", comment: "Support our work title"))
                                             .font(metrics.accountSectionTitleFont)
+                                            .foregroundColor(.black)
                                         Text(NSLocalizedString("account.support.subtitle", comment: "Help us grow by subscribing subtitle"))
                                             .font(metrics.accountSubtitleFont)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundColor(Color(.systemGray))
                                     }
                                     .padding(.horizontal, metrics.horizontalPadding)
                                     .frame(maxWidth: .infinity, minHeight: metrics.accountGradientHeight, maxHeight: metrics.accountGradientHeight, alignment: .bottomLeading)
@@ -142,17 +146,17 @@ struct AccountView: View {
                         }
 
                         VStack(spacing: metrics.separatorHeight * 4) {
-                            FeatureRow(metrics: metrics, text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"))
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Unlimited scans & conversions", comment: "Paywall feature description"), checkmarkInnerColor: .white, textColor: colorScheme == .dark ? .white : Color(hex: "#363636"))
                             featureDivider(metrics: metrics)
-                            FeatureRow(metrics: metrics, text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"))
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Create PDFs from photo album", comment: "Paywall feature description"), checkmarkInnerColor: .white, textColor: colorScheme == .dark ? .white : Color(hex: "#363636"))
                             featureDivider(metrics: metrics)
-                            FeatureRow(metrics: metrics, text: NSLocalizedString("Sign documents", comment: "Paywall feature description"))
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Sign documents", comment: "Paywall feature description"), checkmarkInnerColor: .white, textColor: colorScheme == .dark ? .white : Color(hex: "#363636"))
                             featureDivider(metrics: metrics)
-                            FeatureRow(metrics: metrics, text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"))
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Easy & instant share", comment: "Paywall feature description"), checkmarkInnerColor: .white, textColor: colorScheme == .dark ? .white : Color(hex: "#363636"))
                             featureDivider(metrics: metrics)
-                            FeatureRow(metrics: metrics, text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"))
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Organize all your files", comment: "Paywall feature description"), checkmarkInnerColor: .white, textColor: colorScheme == .dark ? .white : Color(hex: "#363636"))
                             featureDivider(metrics: metrics)
-                            FeatureRow(metrics: metrics, text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"))
+                            FeatureRow(metrics: metrics, text: NSLocalizedString("Keep your original designs", comment: "Paywall feature description"), checkmarkInnerColor: .white, textColor: colorScheme == .dark ? .white : Color(hex: "#363636"))
                         }
 
                         if subscriptionManager.isSubscribed {

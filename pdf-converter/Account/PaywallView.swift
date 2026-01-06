@@ -476,16 +476,27 @@ struct FeatureTag: View {
 struct FeatureRow: View {
     let metrics: PaywallMetrics
     let text: String
+    var checkmarkInnerColor: Color? = nil  // Optional: inner checkmark color for dark mode support
+    var textColor: Color? = nil  // Optional: text color for dark mode support
 
     var body: some View {
         HStack(spacing: metrics.checkmarkTrailingPadding) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(metrics.f3Font)
-                .foregroundColor(Color(hex: "#007AFF"))
+            if let innerColor = checkmarkInnerColor {
+                // Use palette rendering for separate inner (checkmark) and outer (circle) colors
+                Image(systemName: "checkmark.circle.fill")
+                    .font(metrics.f3Font)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(innerColor, Color(hex: "#007AFF"))
+            } else {
+                // Original single-color rendering (for PaywallView)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(metrics.f3Font)
+                    .foregroundColor(Color(hex: "#007AFF"))
+            }
 
             Text(text)
                 .font(metrics.f3Font)
-                .foregroundColor(Color(hex: "#363636"))
+                .foregroundColor(textColor ?? Color(hex: "#363636"))
 
             Spacer()
         }

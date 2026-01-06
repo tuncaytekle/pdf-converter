@@ -28,8 +28,8 @@ struct ContentView: View {
 
     // MARK: - Environment
 
-    @StateObject private var subscriptionManager = SubscriptionManager()
-    @State private var subscriptionGate: SubscriptionGate!
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var subscriptionGate: SubscriptionGate
     @StateObject private var tabNavVM = TabNavigationViewModel()
     @EnvironmentObject private var cloudSyncStatus: CloudSyncStatus
     @Environment(\.analytics) private var analytics
@@ -79,7 +79,7 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if let coordinator = coordinator, let subscriptionGate = subscriptionGate {
+            if let coordinator = coordinator {
                 contentView(coordinator: coordinator, subscriptionGate: subscriptionGate)
             } else {
                 Color(.systemBackground).ignoresSafeArea()
@@ -96,17 +96,14 @@ struct ContentView: View {
             // Record app open for rating prompt system
             ratingPromptManager.recordAppOpen()
 
-            // Initialize subscription gate and coordinator on first appearance
-            if subscriptionGate == nil {
-                subscriptionGate = SubscriptionGate(subscriptionManager: subscriptionManager)
-            }
+            // Initialize coordinator on first appearance
             if coordinator == nil {
                 // Set sync status in file service for cloud backup feedback
                 fileService.setSyncStatus(cloudSyncStatus)
 
                 coordinator = AppCoordinator(
                     subscriptionManager: subscriptionManager,
-                    subscriptionGate: subscriptionGate!,
+                    subscriptionGate: subscriptionGate,
                     fileService: fileService,
                     scanCoordinator: scanCoordinator,
                     ratingPromptCoordinator: ratingPromptCoordinator
@@ -176,7 +173,7 @@ private struct FileManagementSheets: ViewModifier {
         content
         .sheet(item: coordinator.binding(for: \.previewFile)) { file in
             NavigationView {
-                SavedPDFDetailView(file: file)
+                SavedPDFDetailView(file: file, coordinator: coordinator)
             }
         }
         .sheet(item: coordinator.binding(for: \.renameTarget)) { file in

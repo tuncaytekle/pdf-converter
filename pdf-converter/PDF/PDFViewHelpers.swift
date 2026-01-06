@@ -83,8 +83,10 @@ struct PDFThumbnailView: View {
 /// Full-screen PDF viewer with share functionality.
 struct SavedPDFDetailView: View {
     let file: PDFFile
+    let coordinator: AppCoordinator
     @State private var showShareSheet = false
     @EnvironmentObject private var subscriptionGate: SubscriptionGate
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         PDFPreviewView(url: file.url)
@@ -94,8 +96,13 @@ struct SavedPDFDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        subscriptionGate.requireSubscription(for: "pdf_preview_share") {
+                        let hasSubscription = subscriptionGate.requireSubscription(for: "pdf_preview_share") {
                             showShareSheet = true
+                        }
+                        if !hasSubscription {
+                            // Paywall was shown, save file for restoration and dismiss to avoid sheet stacking
+                            coordinator.previewFilePendingAfterPaywall = file
+                            dismiss()
                         }
                     } label: {
                         Image(systemName: "square.and.arrow.up")
