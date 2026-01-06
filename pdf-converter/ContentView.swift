@@ -664,11 +664,6 @@ extension ContentView {
         withAnimation(animation) {
             createButtonPulse = true
         }
-
-        try? await Task.sleep(nanoseconds: 6_000_000_000)
-        withAnimation(.easeOut(duration: 0.4)) {
-            createButtonPulse = false
-        }
     }
 
     // MARK: - Rating Prompts
