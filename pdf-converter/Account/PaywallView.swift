@@ -122,11 +122,11 @@ struct PaywallView: View {
     private func bottomSection(metrics: PaywallMetrics) -> some View {
         VStack(spacing: metrics.verticalSpacingIntraSection) {
             trialButtonLike(metrics: metrics)
-            
+
             continueButton(metrics: metrics)
-            
+
             finePrint(metrics: metrics)
-            
+
             footerLinks(metrics: metrics)
         }
 
@@ -184,7 +184,7 @@ struct PaywallView: View {
         )
         .padding(.horizontal, metrics.horizontalPadding)
     }
-    
+
     private func finePrint(metrics: PaywallMetrics) -> some View {
         Group {
             if let product = subscriptionManager.product,
