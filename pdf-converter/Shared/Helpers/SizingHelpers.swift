@@ -26,6 +26,7 @@ struct PaywallMetrics {
     var f3BoldFont: Font { .system(size: 20 * scale, weight: .bold)  }
     var f3LightFont: Font { .system(size: 20 * scale, weight: .light)  }
     var f4Font: Font  { .system(size: 14 * scale) }
+    var f5Font: Font { .system(size: 16 * scale) }
 
     // Account view fonts
     var accountTitleFont: Font { .system(size: 48 * scale, weight: .bold) }
@@ -43,13 +44,17 @@ struct PaywallMetrics {
     var cardCornerRadius: CGFloat { 16 }
     var featureCornerRadius: CGFloat { 4 }
     var buttonHeight: CGFloat { 60 * scale }
+    var dollarCardHeight: CGFloat { 96 * scale }
 
     var checkmarkLeadingPadding: CGFloat { 18 * scale }
     var checkmarkTrailingPadding: CGFloat { 12 * scale }
     var dividerTrailingPadding: CGFloat { 40 * scale }
+    var dollardividerTrailingPadding: CGFloat { 0 * scale }
+    var dollarcheckmarkLeadingPadding: CGFloat { 0 * scale }
 
-    var verticalSpacingLarge: CGFloat { 64 * scale }
+    var verticalSpacingLarge: CGFloat { 43 * scale }
     var verticalSpacingIntraSection: CGFloat { 16 * scale }
+    var verticalSpacingIntraCard: CGFloat { 10.5 * scale }
     var verticalSpacingMedium: CGFloat { 24 * scale }
     var verticalSpacingSmall: CGFloat { 8 * scale }
     var verticalSpacingExtraLarge: CGFloat { 32 * scale }

@@ -150,31 +150,40 @@ struct PaywallView: View {
     }
     
     private func trialButtonLike(metrics: PaywallMetrics) -> some View {
-        HStack(alignment: .center, spacing: 0) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(metrics.f3Font)
-                .foregroundColor(Color(hex: "#007AFF"))
-                .padding(.trailing, metrics.checkmarkTrailingPadding)
-            
-            Text(NSLocalizedString("7-Day Full Access", comment: "Paywall pricing option title"))
-                .font(metrics.f3Font)
-                .foregroundColor(Color(hex: "#363636"))
-
-            Spacer()
-
-            if let product = subscriptionManager.product,
-               let introOffer = product.subscription?.introductoryOffer {
-                Text(introOffer.displayPrice)
+        VStack(spacing: metrics.verticalSpacingIntraCard) {
+            HStack(alignment: .center, spacing: 0) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(metrics.f3Font)
+                    .foregroundColor(Color(hex: "#007AFF"))
+                    .padding(.trailing, metrics.checkmarkTrailingPadding)
+                
+                Text(NSLocalizedString("PDF Converter Pro Weekly", comment: "Paywall pricing option title"))
                     .font(metrics.f3Font)
                     .foregroundColor(Color(hex: "#363636"))
-            } else {
-                Text(NSLocalizedString("paywall.trialPrice.fallback", comment: "Trial price fallback"))
-                    .font(metrics.f3Font)
-                    .foregroundColor(Color(hex: "#363636"))
+                
+                Spacer()
             }
-         }
+            dollarDivider(metrics: metrics)
+            HStack(spacing: 0) {
+                if let product = subscriptionManager.product,
+                   let subscription = product.subscription {
+                    let trialPrice = subscription.introductoryOffer?.displayPrice ?? "$0.49"
+                    let regularPrice = product.displayPrice
+                    Text(String(format: NSLocalizedString("paywall.pricing.grey", comment: "Paywall pricing option title"), trialPrice, regularPrice))
+                        .font(metrics.f5Font)
+                        .foregroundColor(Color(hex: "#999999"))
+                } else {
+                    Text(NSLocalizedString("paywall.pricing.grey.fallback", comment: "Paywall pricing option title"))
+                        .font(metrics.f5Font)
+                        .foregroundColor(Color(hex: "#999999"))
+                }
+                
+                Spacer()
+            }
+
+        }
         .padding(metrics.verticalSpacingIntraSection)
-        .frame(maxWidth: .infinity, minHeight: metrics.buttonHeight, maxHeight: metrics.buttonHeight, alignment: .center)
+        .frame(maxWidth: .infinity, minHeight: metrics.dollarCardHeight, maxHeight: metrics.dollarCardHeight, alignment: .center)
         .background(Color(red: 0, green: 0.48, blue: 1).opacity(0.2))
         .cornerRadius(metrics.cardCornerRadius)
         .overlay(
@@ -192,14 +201,14 @@ struct PaywallView: View {
                 let trialPrice = subscription.introductoryOffer?.displayPrice ?? "$0.49"
                 let regularPrice = product.displayPrice
                 Text(String(format: NSLocalizedString("paywall.finePrint.withPrices", comment: "Paywall subscription terms with prices"), trialPrice, regularPrice))
-                    .font(metrics.f4Font)
+                    .font(metrics.f5Font)
                     .foregroundColor(Color(hex: "#363636"))
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(NSLocalizedString("paywall.finePrint.fallback", comment: "Paywall subscription terms fallback"))
-                    .font(metrics.f4Font)
+                    .font(metrics.f5Font)
                     .foregroundColor(Color(hex: "#363636"))
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -256,37 +265,43 @@ struct PaywallView: View {
     private func badgeSection(metrics: PaywallMetrics) -> some View {
         HStack(spacing: 0) {
             // Left laurel (simplified)
+            /*
             Image(systemName: "laurel.leading")
                 .font(metrics.laurelFont)
                 .foregroundColor(Color(hex: "#FFCE44"))
                 .rotationEffect(.degrees(0))
+            */
             VStack(spacing: metrics.separatorHeight * 3) {
                 // Stars
                 HStack(spacing: metrics.separatorHeight * 2) {
                     ForEach(0..<5) { _ in
                         Image(systemName: "star.fill")
                             .font(metrics.f3Font)
-                            .foregroundColor(Color(hex: "#FFCE44"))
+                            .foregroundColor(Color(hex: "#007AFF"))
                     }
                 }
                 // "#1 Converter App" with laurel wreaths
                 Text(NSLocalizedString("#1 Converter App", comment: "App ranking badge"))
                     .font(metrics.f2BoldFont)
                     .foregroundColor(Color(hex: "#363636"))
-                Rectangle()
-                    .foregroundColor(.clear)
-                    .frame(width: metrics.separatorWidth, height: metrics.separatorHeight)
-                    .background(
-                        LinearGradient(
-                            stops: [
-                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: 0.00),
-                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21), location: metrics.separatorHeight / 4),
-                                Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: metrics.separatorHeight / 2),
-                            ],
-                            startPoint: UnitPoint(x: 0, y: metrics.separatorHeight / 4),
-                            endPoint: UnitPoint(x: metrics.separatorHeight / 2, y: metrics.separatorHeight / 4)
+                HStack {
+                    Spacer()
+                    Rectangle()
+                        .foregroundColor(.clear)
+                        .frame(width: metrics.separatorWidth, height: metrics.separatorHeight)
+                        .background(
+                            LinearGradient(
+                                stops: [
+                                    Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: 0.0),
+                                    Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21), location: 0.5),
+                                    Gradient.Stop(color: Color(red: 0.21, green: 0.21, blue: 0.21).opacity(0), location: 1.0),
+                                ],
+                                startPoint: UnitPoint(x: 0, y: 0.5),
+                                endPoint: UnitPoint(x: 1, y: 0.5)
+                            )
                         )
-                    )
+                    Spacer()
+                }
                 HStack(spacing: 0) {
                     markdownText(
                         key: "100formats",
@@ -302,10 +317,12 @@ struct PaywallView: View {
 
             
             // Right laurel (simplified)
+            /*
             Image(systemName: "laurel.trailing")
                 .font(metrics.laurelFont)
                 .foregroundColor(Color(hex: "#FFCE44"))
                 .rotationEffect(.degrees(0))
+            */
         }
     }
 
@@ -323,6 +340,12 @@ struct PaywallView: View {
         Divider().overlay(Color(hex: "#979494"))
             .padding(.trailing, metrics.dividerTrailingPadding)
             .padding(.leading, metrics.checkmarkLeadingPadding)
+    }
+
+    private func dollarDivider(metrics: PaywallMetrics) -> some View {
+        Divider().overlay(Color(hex: "#979494"))
+            .padding(.trailing, metrics.dollardividerTrailingPadding)
+            .padding(.leading, metrics.dollarcheckmarkLeadingPadding)
     }
 
     public func featuresList(metrics: PaywallMetrics) -> some View {
@@ -349,13 +372,26 @@ struct PaywallView: View {
         }) {
             HStack(alignment: .center) {
                 Spacer()
-                Text(NSLocalizedString("Continue", comment: "Continue button"))
-                    .font(metrics.f3Font)
-                    .foregroundColor(.white)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(metrics.f3Font)
-                    .foregroundColor(.white)
+                if let product = subscriptionManager.product,
+                   let subscription = product.subscription {
+                    let trialPrice = subscription.introductoryOffer?.displayPrice ?? "$0.49"
+                    Text(String(format: NSLocalizedString("continue.withPrice", comment: "Continue button"), trialPrice))
+                        .font(metrics.f3Font)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(metrics.f3Font)
+                        .foregroundColor(.white)
+
+                } else {
+                    Text(NSLocalizedString("continue.fallback", comment: "Continue button"))
+                        .font(metrics.f3Font)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(metrics.f3Font)
+                        .foregroundColor(.white)
+                }
             }
             .padding(metrics.verticalSpacingIntraSection)
             .frame(maxWidth: .infinity, minHeight: metrics.buttonHeight, maxHeight: metrics.buttonHeight, alignment: .center)
@@ -541,3 +577,4 @@ struct PaywallView_Previews: PreviewProvider {
         }
     }
 }
+
